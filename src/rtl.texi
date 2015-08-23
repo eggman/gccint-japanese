@@ -48,80 +48,63 @@ RTL は、Lisp 言語のリストにヒントを得たものである。RTL は�
 @cindex RTL vectors
 @cindex RTL expression
 @cindex RTX (See RTL)
-RTL uses five kinds of objects: expressions, integers, wide integers,
-strings and vectors.  Expressions are the most important ones.  An RTL
-expression (``RTX'', for short) is a C structure, but it is usually
-referred to with a pointer; a type that is given the typedef name
-@code{rtx}.
+RTL は5種類のオブジェクトを使う。式、整数、幅広整数、文字列、ベクトル
+である。式が最も重要である。ある RTL 式(省略形は``RTX'') は、C 言語の
+構造体だが、普通はポインタで参照される。RTL 式の型は typedef 名
+@code{rtx} で与えられる。
 
-An integer is simply an @code{int}; their written form uses decimal
-digits.  A wide integer is an integral object whose type is
-@code{HOST_WIDE_INT}; their written form uses decimal digits.
+整数は、単に @code{int} である。10進数を使って表記する。
+幅広整数は、整数型のオブジェクトのうちで、その型が @code{HOST_WIDE_INT} の
+ものである(@pxref{Config})。やはり、10進数を使って表記する。
 
-A string is a sequence of characters.  In core it is represented as a
-@code{char *} in usual C fashion, and it is written in C syntax as well.
-However, strings in RTL may never be null.  If you write an empty string in
-a machine description, it is represented in core as a null pointer rather
-than as a pointer to a null character.  In certain contexts, these null
-pointers instead of strings are valid.  Within RTL code, strings are most
-commonly found inside @code{symbol_ref} expressions, but they appear in
-other contexts in the RTL expressions that make up machine descriptions.
+文字列は文字の連なりである。メモリ中では、通常の C 言語の形式である、
+@code{char *} で表現され、C 言語と同じ文法にしたがって表記する。
+ただし、RTL での文字列は決してヌルにはならない。マシン記述中で
+空文字列を書いた場合、メモリ中ではヌルポインタではなく、ヌル文字への
+ポインタとして表現される。文脈によっては、文字列の代わりにヌルポインタ
+を使っても有効である。RTL のコード内では、文字列は @code{symbol_ref} 式
+の中で最も良く使われる。しかし、マシン記述を構成する RTL 式の他の
+文脈にも現れる。
 
-In a machine description, strings are normally written with double
-quotes, as you would in C@.  However, strings in machine descriptions may
-extend over many lines, which is invalid C, and adjacent string
-constants are not concatenated as they are in C@.  Any string constant
-may be surrounded with a single set of parentheses.  Sometimes this
-makes the machine description easier to read.
-
-There is also a special syntax for strings, which can be useful when C
-code is embedded in a machine description.  Wherever a string can
-appear, it is also valid to write a C-style brace block.  The entire
-brace block, including the outermost pair of braces, is considered to be
-the string constant.  Double quote characters inside the braces are not
-special.  Therefore, if you write string constants in the C code, you
-need not escape each quote character with a backslash.
-
-A vector contains an arbitrary number of pointers to expressions.  The
-number of elements in the vector is explicitly present in the vector.
-The written form of a vector consists of square brackets
-(@samp{[@dots{}]}) surrounding the elements, in sequence and with
-whitespace separating them.  Vectors of length zero are not created;
-null pointers are used instead.
+ベクトルは、式を指す任意個数のポインタから成る。ベクトルの要素数は
+ベクトルの中で明示的に表現される。ベクトルは、
+空白で区切られた要素を順番に並べたものを、鍵括弧(@samp{[@dots{}]})で
+囲んで表記する。長さ 0 のベクトルは作成されない。代わりに
+ヌルポインタが使われる。
 
 @cindex expression codes
 @cindex codes, RTL expression
 @findex GET_CODE
 @findex PUT_CODE
-Expressions are classified by @dfn{expression codes} (also called RTX
-codes).  The expression code is a name defined in @file{rtl.def}, which is
-also (in uppercase) a C enumeration constant.  The possible expression
-codes and their meanings are machine-independent.  The code of an RTX can
-be extracted with the macro @code{GET_CODE (@var{x})} and altered with
-@code{PUT_CODE (@var{x}, @var{newcode})}.
+式は@dfn{式コード}(または RTX コードと呼ばれる) で分類される。
+式コードは @file{rtl.def} で定義される名前であり、大文字で記述した
+C の列挙型定数でもある。許される式コードとその意味は機種には依存しない。
+ある RTX のコードはマクロ @code{GET_CODE (@var{x})} によって
+取り出すことができ、また、マクロ @code{PUT_CODE (@var{x}, @var{newcode})}
+で変更することができる。
 
-The expression code determines how many operands the expression contains,
-and what kinds of objects they are.  In RTL, unlike Lisp, you cannot tell
-by looking at an operand what kind of object it is.  Instead, you must know
-from its context---from the expression code of the containing expression.
-For example, in an expression of code @code{subreg}, the first operand is
-to be regarded as an expression and the second operand as an integer.  In
-an expression of code @code{plus}, there are two operands, both of which
-are to be regarded as expressions.  In a @code{symbol_ref} expression,
-there is one operand, which is to be regarded as a string.
+式コードは、式の中にオペランドが幾つあるか、およびオペランドがどんな種類の
+オブジェクトかを決定する。
+Lisp と違って RTL では、オペランドを見てもどんな種類の
+オブジェクトか知ることはできない。代わりに、文脈から知る必要がある。
+つまり、オペランドを含む式の式コードから知る必要がある。
+例えば、式コードが @code{subreg} である式の中では、最初のオペランドが
+式と見なされ、二番目のオペランドが整数とみなされる。式コード @code{plus}
+の式では、二つのオペランドがあり、どちらも式としてみなされる。
+式コード @code{symbol_ref} の式では、オペランドは一つであり、
+文字列としてみなされる。
 
-Expressions are written as parentheses containing the name of the
-expression type, its flags and machine mode if any, and then the operands
-of the expression (separated by spaces).
+式は、式のタイプ名と、そのフラグとあればマシンモード、式のオペランドを
+空白で区切り、括弧で囲んで表記する。
 
-Expression code names in the @samp{md} file are written in lowercase,
-but when they appear in C code they are written in uppercase.  In this
-manual, they are shown as follows: @code{const_int}.
+式コード名は、@samp{md} ファイル中では小文字で書くが、
+C のコードとしては大文字となって現れる。このマニュアルでは、
+@code{const_int} のように書くことにする。
 
 @cindex (nil)
 @cindex nil
-In a few contexts a null pointer is valid where an expression is normally
-wanted.  The written form of this is @code{(nil)}.
+通常、式が要求される場合でも、ヌルポインタが有効なコンテキストが
+二、三存在する。その場合には、@code{(nil)} と表記する。
 
 @node RTL Classes
 @section RTL Classes and Formats
