@@ -2219,15 +2219,15 @@ GNU CC は、その時点で一時的に使用可能なハードレジスタを�
 
 @findex parallel
 @item (parallel [@var{x0} @var{x1} @dots{}])
-Represents several side effects performed in parallel.  The square
-brackets stand for a vector; the operand of @code{parallel} is a
-vector of expressions.  @var{x0}, @var{x1} and so on are individual
-side effect expressions---expressions of code @code{set}, @code{call},
-@code{return}, @code{simple_return}, @code{clobber} or @code{use}.
+並列に実行される様々な副作用を表す。
+大カッコはベクトルを表す。@code{parallel} のオペランドは
+式を要素とする一個のベクトルである。
+@var{x0}、@var{x1} 等は個々の副作用を表す式である。
+これらの式のコードは、@code{set}や @code{call}、@code{return}、
+@code{clobber}、@code{use} のどれかである。
 
-``In parallel'' means that first all the values used in the individual
-side-effects are computed, and second all the actual side-effects are
-performed.  For example,
+「並列に」という意味は、最初に個々の副作用で使われる全ての値が
+計算され、次に全ての副作用が実行されることを表す。
 
 @smallexample
 (parallel [(set (reg:SI 1) (mem:SI (reg:SI 1)))
@@ -2235,15 +2235,16 @@ performed.  For example,
 @end smallexample
 
 @noindent
-says unambiguously that the values of hard register 1 and the memory
-location addressed by it are interchanged.  In both places where
-@code{(reg:SI 1)} appears as a memory address it refers to the value
-in register 1 @emph{before} the execution of the insn.
+例えば、上の式はハードレジスタ 1 の値と、ハードレジスタ 1 により
+指定されるメモリ位置の値を交換するということを曖昧さなしに
+表している。
+@code{(reg:SI 1)} がメモリアドレスとして現れているところでは、どちらも、
+insn を実行する@emph{前}のレジスタ 1 の値を参照している。
 
-It follows that it is @emph{incorrect} to use @code{parallel} and
-expect the result of one @code{set} to be available for the next one.
-For example, people sometimes attempt to represent a jump-if-zero
-instruction this way:
+このため、@code{parallel} を使ったときに、ある一つの @code{set} の
+結果が次の @code{set} で使えると考えるのは@emph{間違い}という
+ことになる。
+例えば、人は良く、条件が 0 なら分岐する命令を以下のように表そうとする。
 
 @smallexample
 (parallel [(set (cc0) (reg:SI 34))
@@ -2254,113 +2255,89 @@ instruction this way:
 @end smallexample
 
 @noindent
-But this is incorrect, because it says that the jump condition depends
-on the condition code value @emph{before} this instruction, not on the
-new value that is set by this instruction.
+しかし、この書き方は間違いである。何故なら、これだと分岐条件は
+この命令の@emph{前の}条件コードの値に依存しており、
+この命令により設定される新しい値を使っていないからである。
 
 @cindex peephole optimization, RTL representation
-Peephole optimization, which takes place together with final assembly
-code output, can produce insns whose patterns consist of a @code{parallel}
-whose elements are the operands needed to output the resulting
-assembler code---often @code{reg}, @code{mem} or constant expressions.
-This would not be well-formed RTL at any other stage in compilation,
-but it is OK then because no further optimization remains to be done.
-However, the definition of the macro @code{NOTICE_UPDATE_CC}, if
-any, must deal with such insns if you define any peephole optimizations.
-
-@findex cond_exec
-@item (cond_exec [@var{cond} @var{expr}])
-Represents a conditionally executed expression.  The @var{expr} is
-executed only if the @var{cond} is nonzero.  The @var{cond} expression
-must not have side-effects, but the @var{expr} may very well have
-side-effects.
+のぞき穴最適化は、最終フェーズのアセンブリコード出力と一緒に行なわれる。
+この最適化により、一個の @code{parallel} からなるパターンの insn を
+生成することができる。この場合、@code{parallel} の各要素は、
+結果となるアセンブラコードを出力するのに必要なオペランド---多くの場合、
+@code{reg} あるいは @code{mem}、定数式である。
+これは、他のどのコンパイル過程でも適切な形式の RTL ではないが、
+その後には、もはや実行すべき最適化過程が残っていないので、問題ないのである。
+ただし、マクロ @code{NOTICE_UPDATE_CC} をもし定義するなら、
+その定義では、なんらかののぞき穴最適化を定義するなら上記のような
+ insn を取り扱わなければならない。
 
 @findex sequence
 @item (sequence [@var{insns} @dots{}])
-Represents a sequence of insns.  If a @code{sequence} appears in the
-chain of insns, then each of the @var{insns} that appears in the sequence
-must be suitable for appearing in the chain of insns, i.e. must satisfy
-the @code{INSN_P} predicate.
+ある insn の列を表す。ベクトル中に現れる @var{insns} のそれぞれは、
+insn の連鎖に現れるのに適したものであるために、@code{insn}、
+@code{jump_insn}、@code{call_insn}、@code{code_labe}、@code{barrier}、
+@code{note} のどれかでなければならない。
 
-After delay-slot scheduling is completed, an insn and all the insns that
-reside in its delay slots are grouped together into a @code{sequence}.
-The insn requiring the delay slot is the first insn in the vector;
-subsequent insns are to be placed in the delay slot.
+@code{sequence} RTX は、RTL 生成の間は実際の insn には決して置かれること
+がない。
+この RTX は @code{define_expand} から生ずる insn の列を表しており、
+それは、insn が @code{emit_insn} に渡され、insn の連鎖に挿入
+されるまえに行なわれる。
+実際に挿入された時点で、個々のサブ insn が分離し、@code{sequence} が
+捨てられる。
 
-@code{INSN_ANNULLED_BRANCH_P} is set on an insn in a delay slot to
-indicate that a branch insn should be used that will conditionally annul
-the effect of the insns in the delay slots.  In such a case,
+遅延スロットスケジューリングが完了した後、ある insn とその遅延スロットに
+置かれている全ての insn は一まとめにされて、一個の @code{sequence} に
+収められる。遅延スロットを必要とする insn は、ベクトル中の先頭の
+insn である。その後ろに続く insn は遅延スロットに置かれる。
+
+遅延スロット中の insn には @code{INSN_ANNULLED_BRANCH_P} が設定され、
+遅延スロット中の insn の効果を条件により無効化するような
+分岐 insn を使うべきであることを指示する。
 @code{INSN_FROM_TARGET_P} indicates that the insn is from the target of
 the branch and should be executed only if the branch is taken; otherwise
 the insn should be executed only if the branch is not taken.
 @xref{Delay Slots}.
-
-Some back ends also use @code{sequence} objects for purposes other than
-delay-slot groups.  This is not supported in the common parts of the
-compiler, which treat such sequences as delay-slot groups.
-
-DWARF2 Call Frame Address (CFA) adjustments are sometimes also expressed
-using @code{sequence} objects as the value of a @code{RTX_FRAME_RELATED_P}
-note.  This only happens if the CFA adjustments cannot be easily derived
-from the pattern of the instruction to which the note is attached.  In
-such cases, the value of the note is used instead of best-guesing the
-semantics of the instruction.  The back end can attach notes containing
-a @code{sequence} of @code{set} patterns that express the effect of the
-parent instruction.
 @end table
 
-These expression codes appear in place of a side effect, as the body of
-an insn, though strictly speaking they do not always describe side
-effects as such:
+以下の式コードは副作用の代わりに、insn の本体として現れる。
+だが、厳密に言えばいつでも副作用を表すわけではない。
 
 @table @code
 @findex asm_input
 @item (asm_input @var{s})
-Represents literal assembler code as described by the string @var{s}.
+文字列 @var{s} で表されるアセンブラコードそのものを表す。
 
 @findex unspec
 @findex unspec_volatile
 @item (unspec [@var{operands} @dots{}] @var{index})
 @itemx (unspec_volatile [@var{operands} @dots{}] @var{index})
-Represents a machine-specific operation on @var{operands}.  @var{index}
-selects between multiple machine-specific operations.
-@code{unspec_volatile} is used for volatile operations and operations
-that may trap; @code{unspec} is used for other operations.
+@var{operands} についてのマシン固有の演算を表す。
+@var{index} で、複数のマシン固有演算の一つを選び出す。
+@code{unspec_volatile} を使って、揮発性の演算とトラップを起こす可能性の
+ある演算を表す。
+その他の演算には @code{unspec} が使われる。
 
-These codes may appear inside a @code{pattern} of an
-insn, inside a @code{parallel}, or inside an expression.
+これらのコードは insn の @code{pattern} の内側、
+@code{parallel} の内側、式の内側に現れる可能性がある。
 
 @findex addr_vec
 @item (addr_vec:@var{m} [@var{lr0} @var{lr1} @dots{}])
-Represents a table of jump addresses.  The vector elements @var{lr0},
-etc., are @code{label_ref} expressions.  The mode @var{m} specifies
-how much space is given to each address; normally @var{m} would be
-@code{Pmode}.
+ジャンプ先アドレスのテーブルを表す。
+ベクトルの要素 @var{lr0}... 等は @code{label_ref} 式である。
+モード @var{m} で各アドレスにどれだけのメモリを与えるかを指定する。
+普通は @var{m} は @code{Pmode} になる。
 
 @findex addr_diff_vec
-@item (addr_diff_vec:@var{m} @var{base} [@var{lr0} @var{lr1} @dots{}] @var{min} @var{max} @var{flags})
-Represents a table of jump addresses expressed as offsets from
-@var{base}.  The vector elements @var{lr0}, etc., are @code{label_ref}
-expressions and so is @var{base}.  The mode @var{m} specifies how much
-space is given to each address-difference.  @var{min} and @var{max}
-are set up by branch shortening and hold a label with a minimum and a
-maximum address, respectively.  @var{flags} indicates the relative
-position of @var{base}, @var{min} and @var{max} to the containing insn
-and of @var{min} and @var{max} to @var{base}.  See rtl.def for details.
-
-@findex prefetch
-@item (prefetch:@var{m} @var{addr} @var{rw} @var{locality})
-Represents prefetch of memory at address @var{addr}.
-Operand @var{rw} is 1 if the prefetch is for data to be written, 0 otherwise;
-targets that do not support write prefetches should treat this as a normal
-prefetch.
-Operand @var{locality} specifies the amount of temporal locality; 0 if there
-is none or 1, 2, or 3 for increasing levels of temporal locality;
-targets that do not support locality hints should ignore this.
-
-This insn is used to minimize cache-miss latency by moving data into a
-cache before it is accessed.  It should use only non-faulting data prefetch
-instructions.
+ジャンプ先アドレスを @var{base} からのオフセットで表したテーブルを
+表す。ベクトルの要素 @var{lr0}... 等は、@code{label_ref} 式であり、
+@var{base} も @code{label_ref} 式である。
+モード @var{m} で各アドレスの差分にどれだけのメモリを与えるかを
+指定する。@var{min} と @var{max} は分岐の近距離化により設定され、
+それぞれ最小と最大のアドレスを持つラベルを保持する。
+@var{flags} は、それを保持する insn に対する @var{base}、@var{min}、
+@var{max} と、@var{base} に対する @var{min}、@var{max} の相対的な
+位置を表す。詳細については @file{rtl.def} を参照のこと。
 @end table
 
 @node Incdec
