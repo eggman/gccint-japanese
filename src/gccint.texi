@@ -1,7 +1,6 @@
 \input texinfo  @c -*-texinfo-*-
 @c %**start of header
 @setfilename gccint.info
-@documentlanguage ja
 @documentencoding UTF-8
 @c INTERNALS is used by md.texi to determine whether to include the
 @c whole of that file, in the internals manual, or only the part
