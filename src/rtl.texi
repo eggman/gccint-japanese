@@ -2442,42 +2442,39 @@ for insn attributes.  @xref{Insn Attributes}.
 @section Bit-Fields
 @cindex bit-fields
 
-Special expression codes exist to represent bit-field instructions.
+特別な式コードがあり、ビットフィールド命令を表現することができる。
+この型の式は、RTL 中で左辺値となる。代入式の左辺に置くことが可能で、
+その式で指定されたビットフィールドにある値を代入することを指示する。
 
 @table @code
 @findex sign_extract
 @cindex @code{BITS_BIG_ENDIAN}, effect on @code{sign_extract}
 @item (sign_extract:@var{m} @var{loc} @var{size} @var{pos})
-This represents a reference to a sign-extended bit-field contained or
-starting in @var{loc} (a memory or register reference).  The bit-field
-is @var{size} bits wide and starts at bit @var{pos}.  The compilation
-option @code{BITS_BIG_ENDIAN} says which end of the memory unit
-@var{pos} counts from.
+これは、@var{loc}(メモリかレジスタの参照)に含まれるか、そこで始まっている
+符号拡張されたビットフィールドへの参照を表す。
+このビットフィールドは幅が @var{size} ビットで、ビット位置 @var{pos} から
+始まっている。コンパイル時の選択により、@code{BITS_BIG_ENDIAN} が、
+メモリ単位のどちらの端から @var{pos} を数えるかを指定する。
 
-If @var{loc} is in memory, its mode must be a single-byte integer mode.
-If @var{loc} is in a register, the mode to use is specified by the
-operand of the @code{insv} or @code{extv} pattern
-(@pxref{Standard Names}) and is usually a full-word integer mode,
-which is the default if none is specified.
+@var{loc} がメモリ中に置かれているなら、そのモードは一バイト整数のモードで
+なければならない。
+@var{loc} がレジスタに置かれているなら、使うべきモードは、
+パターン @code{insv} または @code{extv} (@pxref{Standard Names})
+のオペランドとして指定されたものになり、通常は全語の整数モードである。
+何も指定がないときのデフォルトは全語の整数モードになる。
 
-The mode of @var{pos} is machine-specific and is also specified
-in the @code{insv} or @code{extv} pattern.
+@var{pos} のモードはマシン固有であり、パターン @code{insv} または
+@code{extv} でも指定される。
 
-The mode @var{m} is the same as the mode that would be used for
-@var{loc} if it were a register.
-
-A @code{sign_extract} can not appear as an lvalue, or part thereof,
-in RTL.
+モード @var{m} は、@var{loc} がレジスタなら、それに使われるモードと
+同じである。
 
 @findex zero_extract
 @item (zero_extract:@var{m} @var{loc} @var{size} @var{pos})
-Like @code{sign_extract} but refers to an unsigned or zero-extended
-bit-field.  The same sequence of bits are extracted, but they
-are filled to an entire word with zeros instead of by sign-extension.
 
-Unlike @code{sign_extract}, this type of expressions can be lvalues
-in RTL; they may appear on the left side of an assignment, indicating
-insertion of a value into the specified bit-field.
+@code{sign_extract} と同様だが、符号なし、あるいはゼロ拡張された
+ビットフィールドを参照する。
+同じビット列が抽出されるが、符号拡張ではなくゼロで埋め尽くされる。
 @end table
 
 @node Conversions
