@@ -360,9 +360,9 @@ XINT (@var{x}, 2)
 @section Flags in an RTL Expression
 @cindex flags in RTL expression
 
-RTL expressions contain several flags (one-bit bit-fields)
-that are used in certain types of expression.  Most often they
-are accessed with the following macros, which expand into lvalues.
+RTL 式は、ある種の型の式で使われる色々なフラグ(一ビットのビットフィールド)と
+その他の値を含んでいる。ほとんどの場合、フラグは以下のマクロで
+参照される。
 
 @table @code
 @findex CONSTANT_POOL_ADDRESS_P
@@ -484,9 +484,8 @@ Stored in the @code{jump} field and printed as @samp{/j}.
 @cindex @code{asm_operands} and @samp{/v}
 @cindex @code{volatil}, in @code{mem}, @code{asm_operands}, and @code{asm_input}
 @item MEM_VOLATILE_P (@var{x})
-In @code{mem}, @code{asm_operands}, and @code{asm_input} expressions,
-nonzero for volatile memory references.
-Stored in the @code{volatil} field and printed as @samp{/v}.
+@code{mem} 式において、揮発性のメモリ参照の場合に非 0 となる。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
 @findex MEM_NOTRAP_P
 @cindex @code{mem} and @samp{/c}
@@ -646,14 +645,14 @@ other type of extension was done via the @code{ptr_extend} instruction.
 @cindex @code{subreg} and @samp{/s}
 @cindex @code{in_struct}, in @code{subreg}
 @item SUBREG_PROMOTED_VAR_P (@var{x})
-Nonzero in a @code{subreg} if it was made when accessing an object that
-was promoted to a wider mode in accord with the @code{PROMOTED_MODE} machine
-description macro (@pxref{Storage Layout}).  In this case, the mode of
-the @code{subreg} is the declared mode of the object and the mode of
-@code{SUBREG_REG} is the mode of the register that holds the object.
-Promoted variables are always either sign- or zero-extended to the wider
-mode on every assignment.  Stored in the @code{in_struct} field and
-printed as @samp{/s}.
+それが、マシン記述マクロ @code{PROMOTED_MODE} (@pxref{Storage Layout})に
+従って、より幅の広いモードに拡張されたオブジェクトを参照した際に
+作られたものなら、非ゼロである。この場合、@code{subreg} のモードは
+そのオブジェクトの宣言されたモードであり、@code{SUBREG_REG} のモードは
+そのオブジェクトを保持するレジスタのモードである。
+拡張された変数は、それぞれの代入の際に、常に、より幅の広いモードへ
+符号拡張またゼロ拡張される。
+@code{in_struct} フィールドに格納され、@samp{/s} として出力される。
 
 @findex SYMBOL_REF_USED
 @cindex @code{used}, in @code{symbol_ref}
@@ -673,8 +672,8 @@ Stored in the @code{return_val} field and printed as @samp{/i}.
 @cindex @code{symbol_ref} and @samp{/v}
 @cindex @code{volatil}, in @code{symbol_ref}
 @item SYMBOL_REF_FLAG (@var{x})
-In a @code{symbol_ref}, this is used as a flag for machine-specific purposes.
-Stored in the @code{volatil} field and printed as @samp{/v}.
+@code{symbol_ref} 中で、機種に固有な目的のためのフラグとして使われる。
+@code{volatil} フィールドに格納され、@samp{/v} として出力される。
 
 Most uses of @code{SYMBOL_REF_FLAG} are historic and may be subsumed
 by @code{SYMBOL_REF_FLAGS}.  Certainly use of @code{SYMBOL_REF_FLAGS}
@@ -689,7 +688,7 @@ No other INSNs will be moved over it.
 Stored in the @code{volatil} field and printed as @samp{/v}.
 @end table
 
-These are the fields to which the above macros refer:
+以下に、上述のマクロが参照するフィールドを挙げる。
 
 @table @code
 @findex call
@@ -1100,14 +1099,14 @@ RTX @var{x} のマシンモードを @var{newmode} にする。
 @cindex RTL constants
 @cindex RTL constant expression types
 
-The simplest RTL expressions are those that represent constant values.
+最も簡単な RTL 式は、定数値を表すものである。
 
 @table @code
 @findex const_int
 @item (const_int @var{i})
-This type of expression represents the integer value @var{i}.  @var{i}
-is customarily accessed with the macro @code{INTVAL} as in
-@code{INTVAL (@var{exp})}, which is equivalent to @code{XWINT (@var{exp}, 0)}.
+この型の式は、整数値 @var{i} を表す。@var{i} は、マクロ @code{INTVAL} を
+使って @code{INTVAL (@var{exp})} のように参照するのが良く行われる。
+これは、@code{XWINT (@var{exp}, 0)} と書くのと同じである。
 
 Constants generated for modes with fewer bits than in
 @code{HOST_WIDE_INT} must be sign extended to full width (e.g., with
@@ -1121,54 +1120,51 @@ is determined by the rtl operation instead.
 @findex const1_rtx
 @findex const2_rtx
 @findex constm1_rtx
-There is only one expression object for the integer value zero; it is
-the value of the variable @code{const0_rtx}.  Likewise, the only
-expression for integer value one is found in @code{const1_rtx}, the only
-expression for integer value two is found in @code{const2_rtx}, and the
-only expression for integer value negative one is found in
-@code{constm1_rtx}.  Any attempt to create an expression of code
-@code{const_int} and value zero, one, two or negative one will return
-@code{const0_rtx}, @code{const1_rtx}, @code{const2_rtx} or
-@code{constm1_rtx} as appropriate.
+整数値 0 を表す式オブジェクトは唯一つしかなく、変数 @code{const0_rtx}
+の値だけである。
+同じく、整数値 1 に対する式は、@code{const1_rtx} だけであり、
+整数値 2 に対する式は、@code{const2_rtx} だけである。
+さらに、整数値 -1 に対する式は @code{constm1_rtx} だけである。
+コードが @code{const_int} で、値が 0, 1, 2, -1 のどれかの
+式を作ろうとすると、それぞれ、@code{const0_rtx}、@code{const1_rtx}、
+@code{const2_rtx}、@code{constm1_rtx} が返される。
 
 @findex const_true_rtx
-Similarly, there is only one object for the integer whose value is
-@code{STORE_FLAG_VALUE}.  It is found in @code{const_true_rtx}.  If
-@code{STORE_FLAG_VALUE} is one, @code{const_true_rtx} and
-@code{const1_rtx} will point to the same object.  If
-@code{STORE_FLAG_VALUE} is @minus{}1, @code{const_true_rtx} and
-@code{constm1_rtx} will point to the same object.
+同様に、値が @code{STORE_FLAG_VALUE} である整数に対するオブジェクトは
+唯一つだけで、@code{const_true_rtx} になる。@code{STORE_FLAG_VALUE} が
+1 であれば、@code{const_true_rtx} と @code{const1_rtx} は同じオブジェクトを
+指す。@code{STORE_FLAG_VALUE} が -1 なら、@code{const_true_rtx} と
+@code{constm1_rtx} は同じオブジェクトを指すことになる。
 
 @findex const_double
 @item (const_double:@var{m} @var{i0} @var{i1} @dots{})
-This represents either a floating-point constant of mode @var{m} or
-(on older ports that do not define
-@code{TARGET_SUPPORTS_WIDE_INT}) an integer constant too large to fit
-into @code{HOST_BITS_PER_WIDE_INT} bits but small enough to fit within
-twice that number of bits.  In the latter case, @var{m} will be
-@code{VOIDmode}.  For integral values constants for modes with more
-bits than twice the number in @code{HOST_WIDE_INT} the implied high
-order bits of that constant are copies of the top bit of
-@code{CONST_DOUBLE_HIGH}.  Note however that integral values are
-neither inherently signed nor inherently unsigned; where necessary,
-signedness is determined by the rtl operation instead.
+モード @var{m} の浮動小数点定数か、@code{HOST_BITS_PER_WIDE_INT} ビット
+には収まらないが @code{HOST_BITS_PER_WIDE_INT} の二倍のビット数になら
+収まるような整数定数を表す(GNU CC は、それ以上に大きい定数を表現する
+機能は提供していない)。後者の場合は、@var{m} は @code{VOIDmode} になる。
 
-On more modern ports, @code{CONST_DOUBLE} only represents floating
-point values.  New ports define @code{TARGET_SUPPORTS_WIDE_INT} to
-make this designation.
+@findex CONST_DOUBLE_MEM
+@findex CONST_DOUBLE_CHAIN
+@var{addr} は、定数が置かれているメモリ上の位置に対応する @code{mem} 式を
+保持する。メモリ上の位置は確保されていないが、現在のコンパイル
+(表示されないフィールドを使い維持されている)の全ての @code{const_double}
+式の連鎖上には存在するなら、@var{addr} は @code{const0_rtx} を含む。
+その連鎖に存在しなければ、@var{addr} は @code{cc0_rtx} を含む。
+@var{addr} は、マクロ @code{CONST_DOUBLE_MEM} と
+@code{CONST_DOUBLE_CHAIN} を経由した連鎖フィールドを使って
+アクセスするようになっている。
 
 @findex CONST_DOUBLE_LOW
-If @var{m} is @code{VOIDmode}, the bits of the value are stored in
-@var{i0} and @var{i1}.  @var{i0} is customarily accessed with the macro
-@code{CONST_DOUBLE_LOW} and @var{i1} with @code{CONST_DOUBLE_HIGH}.
+@var{m} が @code{VOIDmode} なら、値を表すビット群は @var{i0} と @var{i1}
+に格納される。@var{i0} はマクロ @code{CONST_DOUBLE_LOW} で、@var{i1} は
+@code{CONST_DOUBLE_HIGH} で参照するのが通例となっている。
 
-If the constant is floating point (regardless of its precision), then
-the number of integers used to store the value depends on the size of
-@code{REAL_VALUE_TYPE} (@pxref{Floating Point}).  The integers
-represent a floating point number, but not precisely in the target
-machine's or host machine's floating point format.  To convert them to
-the precise bit pattern used by the target machine, use the macro
-@code{REAL_VALUE_TO_TARGET_DOUBLE} and friends (@pxref{Data Output}).
+定数が浮動小数点数なら(精度に関わらず)、その値を格納するのに必要な
+整数の個数は、@code{REAL_VALUE_TYPE} に依存する(@pxref{Cross-compilation})。
+その整数群は浮動小数点数を表現するが、厳密にはターゲットマシンまた
+ホストマシンの浮動小数点数形式ではない。ターゲットマシンで使われる
+正確なビットパターンに変換するには、マクロ @code{REAL_VALUE_TO_TARGET_DOUBLE}
+と関連マクロを使用すること(@pxref{Data Output})。
 
 @findex CONST_WIDE_INT
 @item (const_wide_int:@var{m} @var{nunits} @var{elt0} @dots{})
@@ -1225,193 +1221,183 @@ desired.
 
 @findex const_string
 @item (const_string @var{str})
-Represents a constant string with value @var{str}.  Currently this is
-used only for insn attributes (@pxref{Insn Attributes}) since constant
-strings in C are placed in memory.
+値が @var{str} である文字列定数を表す。
+現時点では、この式は insn の属性(@pxref{Insn Attributes})についてのみ
+使われている。というのは、C 言語の文字列定数はメモリ中に置かれるからである。
 
 @findex symbol_ref
 @item (symbol_ref:@var{mode} @var{symbol})
-Represents the value of an assembler label for data.  @var{symbol} is
-a string that describes the name of the assembler label.  If it starts
-with a @samp{*}, the label is the rest of @var{symbol} not including
-the @samp{*}.  Otherwise, the label is @var{symbol}, usually prefixed
-with @samp{_}.
+アセンブラのデータに対するラベルの値を表現する。
+@var{symbol} は、アセンブララベル名を記述する文字列である。
+この文字列が @samp{*} で始まるなら、ラベル名は、@var{symbol} から
+@samp{*} を除いたものになる。それ以外の場合は、@var{symbol} そのものが
+ラベル名となり、通常は @samp{_} というプレフィックスが付く。
 
-The @code{symbol_ref} contains a mode, which is usually @code{Pmode}.
-Usually that is the only mode for which a symbol is directly valid.
+@code{symbol_ref} にはモードがあり、普通は @code{Pmode} になる。
+普通は、このモードがシンボルに対して直接有効になる唯一のモードである。
 
 @findex label_ref
 @item (label_ref:@var{mode} @var{label})
-Represents the value of an assembler label for code.  It contains one
-operand, an expression, which must be a @code{code_label} or a @code{note}
-of type @code{NOTE_INSN_DELETED_LABEL} that appears in the instruction
-sequence to identify the place where the label should go.
+コードに対するアセンブラ・ラベルの値を表現する。
+オペランドは一つであり、それは式となる。この式は、ラベルの置かれるべき
+位置を特定するための命令列に現れる @code{code_label} でなければならない。
 
-The reason for using a distinct expression type for code label
-references is so that jump optimization can distinguish them.
+コードラベルの参照に異なる式のタイプを使用するのは、
+ジャンプ最適化で区別できるようにするためである。
 
-The @code{label_ref} contains a mode, which is usually @code{Pmode}.
-Usually that is the only mode for which a label is directly valid.
 
 @findex const
 @item (const:@var{m} @var{exp})
-Represents a constant that is the result of an assembly-time
-arithmetic computation.  The operand, @var{exp}, is an expression that
-contains only constants (@code{const_int}, @code{symbol_ref} and
-@code{label_ref} expressions) combined with @code{plus} and
-@code{minus}.  However, not all combinations are valid, since the
-assembler cannot do arbitrary arithmetic on relocatable symbols.
+アセンブル時の代数計算の結果として生じる定数を表現する。
+オペランド @var{exp} は、定数(@code{const_int}、@code{symbol_ref}、
+@code{label_ref} 式)に @code{plus} と @code{minus} を組み合わせたもののみ
+からなる式である。ただし、全ての組合せが有効とは限らない。
+アセンブラは、再配置可能なシンボルについては勝手な計算は出来ないからである。
 
-@var{m} should be @code{Pmode}.
+@var{m} は @code{Pmode} でなければならない。
 
 @findex high
 @item (high:@var{m} @var{exp})
-Represents the high-order bits of @var{exp}, usually a
-@code{symbol_ref}.  The number of bits is machine-dependent and is
-normally the number of bits specified in an instruction that initializes
-the high order bits of a register.  It is used with @code{lo_sum} to
-represent the typical two-instruction sequence used in RISC machines to
-reference a global memory location.
+@var{exp}、普通は @code{symbol_ref} の上位ビット群を表現する。
+ビット数は機種依存であり、通常はレジスタの上位ビットを初期化する
+命令で指定されるビット数になる。
+@code{lo_sum} と共に使って、RISC で良く使われる、グローバルなメモリ位置を
+参照する典型的な二命令の列を表現する。
 
-@var{m} should be @code{Pmode}.
+@var{m} は @code{Pmode} でなければならない。
 @end table
 
 @findex CONST0_RTX
 @findex CONST1_RTX
 @findex CONST2_RTX
-The macro @code{CONST0_RTX (@var{mode})} refers to an expression with
-value 0 in mode @var{mode}.  If mode @var{mode} is of mode class
-@code{MODE_INT}, it returns @code{const0_rtx}.  If mode @var{mode} is of
-mode class @code{MODE_FLOAT}, it returns a @code{CONST_DOUBLE}
-expression in mode @var{mode}.  Otherwise, it returns a
-@code{CONST_VECTOR} expression in mode @var{mode}.  Similarly, the macro
-@code{CONST1_RTX (@var{mode})} refers to an expression with value 1 in
-mode @var{mode} and similarly for @code{CONST2_RTX}.  The
-@code{CONST1_RTX} and @code{CONST2_RTX} macros are undefined
-for vector modes.
+マクロ @code{CONST0_RTX (@var{mode})} は、値が 0 でモードが @var{mode} の
+式を参照する。モード @var{mode} が、@code{MODE_INT} のクラスのモードであれば、
+@code{const0_rtx} を返す。そうでなければ、モード @var{mode} の
+@code{CONST_DOUBLE} 式を返す。
+同様に、マクロ @code{CONST1_RTX (@var{mode})} は、値が 1 でモード @var{mode}
+の式を参照する。@code{CONST2_RTX} についても同様である。
 
 @node Regs and Memory
 @section Registers and Memory
 @cindex RTL register expressions
 @cindex RTL memory expressions
 
-Here are the RTL expression types for describing access to machine
-registers and to main memory.
+以下に、レジスタとメモリへのアクセスを記述する、RTL 式のタイプを示す。
 
 @table @code
 @findex reg
 @cindex hard registers
 @cindex pseudo registers
 @item (reg:@var{m} @var{n})
-For small values of the integer @var{n} (those that are less than
-@code{FIRST_PSEUDO_REGISTER}), this stands for a reference to machine
-register number @var{n}: a @dfn{hard register}.  For larger values of
-@var{n}, it stands for a temporary value or @dfn{pseudo register}.
-The compiler's strategy is to generate code assuming an unlimited
-number of such pseudo registers, and later convert them into hard
-registers or into memory references.
+小さな整数 @var{n} (@code{FIRST_PSEUDO_REGISTER} より小さい)に対して、
+マシンのレジスタ番号 @var{n}、すなわち@dfn{ハードレジスタ}の
+参照であることを意味する。@var{n} が大きな値の場合は、
+一時的な値か @dfn{仮想レジスタ}を表す。
+GCC の戦略としては、まず、このような仮想レジスタが無限個あると仮定して
+コード生成を行ない、後で、ハードレジスタかメモリ参照への置き換えを行なう。
 
-@var{m} is the machine mode of the reference.  It is necessary because
-machines can generally refer to each register in more than one mode.
-For example, a register may contain a full word but there may be
-instructions to refer to it as a half word or as a single byte, as
-well as instructions to refer to it as a floating point number of
-various precisions.
+@var{m} は、この参照のマシンモードである。
+モードの指定が必要なのは、一般に複数のモードで各レジスタを参照する
+ことが可能だからである。
+例えば、レジスタを一つ取ってみると、そこには全語を入れることができるが、
+それを半語やバイトとして参照する命令や、色々な精度の浮動小数点数として
+参照する命令もありうるのである。
 
-Even for a register that the machine can access in only one mode,
-the mode must always be specified.
+レジスタをアクセスするモードが一つしかないマシンの場合でも、
+モードは常に指定しなければならない。
 
-The symbol @code{FIRST_PSEUDO_REGISTER} is defined by the machine
-description, since the number of hard registers on the machine is an
-invariant characteristic of the machine.  Note, however, that not
-all of the machine registers must be general registers.  All the
-machine registers that can be used for storage of data are given
-hard register numbers, even those that can be used only in certain
-instructions or can hold only certain types of data.
+@code{FIRST_PSEUDO_REGISTER} というシンボルはマシン記述により
+定義される。というのは、あるマシンのハードレジスタの数は
+そのマシンの不変の特徴だからである。ただ、マシンのレジスタが全て
+汎用レジスタである必要はない。
+データの格納に使える全てのマシンレジスタは、ハードレジスタ番号が
+与えられる。たとえ、それらのレジスタが特定の命令でしか使えなかったり、
+特定の型のデータしか保持できなくても。
 
-A hard register may be accessed in various modes throughout one
-function, but each pseudo register is given a natural mode
-and is accessed only in that mode.  When it is necessary to describe
-an access to a pseudo register using a nonnatural mode, a @code{subreg}
-expression is used.
+ハードレジスタは一つの関数の中でも色々なモードでアクセスされる。
+しかし、疑似レジスタにはそれぞれ自然なモードが与えられており、
+そのモードでしかアクセスされない。
+疑似レジスタを自然なモード以外のモードでアクセスするのを記述する
+必要があるときは、@code{subreg} 式が使われる。
 
-A @code{reg} expression with a machine mode that specifies more than
-one word of data may actually stand for several consecutive registers.
-If in addition the register number specifies a hardware register, then
-it actually represents several consecutive hardware registers starting
-with the specified one.
+1ワードより多くのデータを指定するマシンモードを持つ @code{reg} 式は、
+実際には幾つかの連続するレジスタを表す事がある。
+そのレジスタ番号が、ある一個のハードウェアレジスタを指定するだけでなく、
+実際には、その指定されたレジスタから始まる、幾つかの連続した
+ハードウェアレジスタ群を表している。
 
-Each pseudo register number used in a function's RTL code is
-represented by a unique @code{reg} expression.
+関数 RTL コードで使われている疑似レジスタ番号はそれぞれ、
+一意的な @code{reg} 式で表現される。
 
 @findex FIRST_VIRTUAL_REGISTER
 @findex LAST_VIRTUAL_REGISTER
-Some pseudo register numbers, those within the range of
-@code{FIRST_VIRTUAL_REGISTER} to @code{LAST_VIRTUAL_REGISTER} only
-appear during the RTL generation phase and are eliminated before the
-optimization phases.  These represent locations in the stack frame that
-cannot be determined until RTL generation for the function has been
-completed.  The following virtual register numbers are defined:
+@code{FIRST_VIRTUAL_REGISTER} から @code{LAST_VIRTUAL_REGISTER} までの
+範囲の疑似レジスタ番号のうちいくつかは、
+RTL 生成過程にしか現れず、最適化過程の前に削除される。
+こういう疑似レジスタ番号は、それを含む関数についての RTL 生成が
+完了するまでは決定できないスタックフレーム中の位置を表す。
+以下の仮想レジスタ番号が定義されている。
 
 @table @code
 @findex VIRTUAL_INCOMING_ARGS_REGNUM
 @item VIRTUAL_INCOMING_ARGS_REGNUM
-This points to the first word of the incoming arguments passed on the
-stack.  Normally these arguments are placed there by the caller, but the
-callee may have pushed some arguments that were previously passed in
-registers.
+スタック渡しされた入力引数の先頭のワードを指し示す。
+通常、これらの引数は呼びだし側によって置かれるが、
+呼び出された側が、以前にレジスタで渡された引数の幾つかを
+プッシュすることもありうる。
 
 @cindex @code{FIRST_PARM_OFFSET} and virtual registers
 @cindex @code{ARG_POINTER_REGNUM} and virtual registers
-When RTL generation is complete, this virtual register is replaced
-by the sum of the register given by @code{ARG_POINTER_REGNUM} and the
-value of @code{FIRST_PARM_OFFSET}.
+RTL が完了した時点で、この仮想レジスタは、 @code{ARG_POINTER_REGNUM} で
+指定されるレジスタと @code{FIRST_PARM_OFFSET} の値の和に置き換えられる。
 
 @findex VIRTUAL_STACK_VARS_REGNUM
 @cindex @code{FRAME_GROWS_DOWNWARD} and virtual registers
 @item VIRTUAL_STACK_VARS_REGNUM
-If @code{FRAME_GROWS_DOWNWARD} is defined to a nonzero value, this points
-to immediately above the first variable on the stack.  Otherwise, it points
-to the first variable on the stack.
+@code{FRAME_GROWS_DOWNWARD} が定義されていれば、このマクロは
+スタック上の先頭の変数のすぐ上を指す。
+@code{FRAME_GROWS_DOWNWARD} が定義されていない場合は、
+スタック上の先頭の変数そのものを指す。
 
 @cindex @code{STARTING_FRAME_OFFSET} and virtual registers
 @cindex @code{FRAME_POINTER_REGNUM} and virtual registers
-@code{VIRTUAL_STACK_VARS_REGNUM} is replaced with the sum of the
-register given by @code{FRAME_POINTER_REGNUM} and the value
-@code{STARTING_FRAME_OFFSET}.
+@code{VIRTUAL_STACK_VARS_REGNUM} は、@code{FRAME_POINTER_REGNUM} で
+指定されるレジスタと @code{STARTING_FRAME_OFFSET} の値の和で置き換えられる。
 
 @findex VIRTUAL_STACK_DYNAMIC_REGNUM
 @item VIRTUAL_STACK_DYNAMIC_REGNUM
-This points to the location of dynamically allocated memory on the stack
-immediately after the stack pointer has been adjusted by the amount of
-memory desired.
+これは、必要とするメモリ量の分だけスタックポインタの調整が行なわれた直後の、
+スタック上に動的に確保されたメモリの位置を指す。
 
 @cindex @code{STACK_DYNAMIC_OFFSET} and virtual registers
 @cindex @code{STACK_POINTER_REGNUM} and virtual registers
-This virtual register is replaced by the sum of the register given by
-@code{STACK_POINTER_REGNUM} and the value @code{STACK_DYNAMIC_OFFSET}.
+この仮想レジスタは、@code{STACK_POINTER_REGNUM} で指定されるレジスタと
+@code{STACK_DYNAMIC_OFFSET} の値の和に置き換えられる。
 
 @findex VIRTUAL_OUTGOING_ARGS_REGNUM
 @item VIRTUAL_OUTGOING_ARGS_REGNUM
-This points to the location in the stack at which outgoing arguments
-should be written when the stack is pre-pushed (arguments pushed using
-push insns should always use @code{STACK_POINTER_REGNUM}).
+スタックが前もってプッシュされたときに、出力引数が書き込まれるべき
+スタック上の位置を指す。
+(push insn を使ってプッシュされる引数は常に @code{STACK_POINTER_REGNUM} を
+使うべきである。)
 
 @cindex @code{STACK_POINTER_OFFSET} and virtual registers
-This virtual register is replaced by the sum of the register given by
-@code{STACK_POINTER_REGNUM} and the value @code{STACK_POINTER_OFFSET}.
+この仮想レジスタは、@code{STACK_POINTER_REGNUM} で指定されるレジスタと
+@code{STACK_POINTER_OFFSET} の値の和に置き換えられる。
 @end table
 
 @findex subreg
 @item (subreg:@var{m1} @var{reg:m2} @var{bytenum})
 
-@code{subreg} expressions are used to refer to a register in a machine
-mode other than its natural one, or to refer to one register of
-a multi-part @code{reg} that actually refers to several registers.
+@code{subreg} 式は、マシンに取って自然なモード以外のモードにある
+レジスタ、あるいは実際には複数のレジスタを参照する複数ワードの @code{reg}
+のうちの一つのレジスタを参照するのに使われる。
 
-Each pseudo register has a natural mode.  If it is necessary to
-operate on it in a different mode, the register must be
-enclosed in a @code{subreg}.
+疑似レジスタにはそれぞれ自然なモードがある。
+その自然なモードとは異なるモードでの操作が必要な場合、例えば、
+一個のバイトを保持している疑似レジスタに対してフルワードの移動命令を
+行なう場合は、その疑似レジスタは @code{subreg} の中に収まって
+いなければならない。この例の場合は、@var{wordnum} は 0 である。
 
 There are currently three supported types for the first operand of a
 @code{subreg}:
@@ -1638,95 +1624,93 @@ may be confronted with code rot.
 @findex scratch
 @cindex scratch operands
 @item (scratch:@var{m})
-This represents a scratch register that will be required for the
-execution of a single instruction and not used subsequently.  It is
-converted into a @code{reg} by either the local register allocator or
-the reload pass.
+一個の命令の実行に必要とされ、それ以降は使われないスクラッチレジスタを
+表す。
+局所レジスタ確保か再ロードパスのどちらかにより、@code{reg} に変換される。
 
-@code{scratch} is usually present inside a @code{clobber} operation
+@code{scratch} は、普通は @code{clobber} 演算中に存在する
 (@pxref{Side Effects}).
 
 @findex cc0
 @cindex condition code register
 @item (cc0)
-This refers to the machine's condition code register.  It has no
-operands and may not have a machine mode.  There are two ways to use it:
+条件コードレジスタを参照する。オペランドは無く、マシンモードも持たない。
+使い方は以下の二通りがある。
 
 @itemize @bullet
 @item
-To stand for a complete set of condition code flags.  This is best on
-most machines, where each comparison sets the entire series of flags.
+条件コードフラグの完全なセットを表すために使う。
+ほとんどのマシンでは、それぞれの比較が一連のフラグ全体を設定するので、
+これが最善である。
 
-With this technique, @code{(cc0)} may be validly used in only two
-contexts: as the destination of an assignment (in test and compare
-instructions) and in comparison operators comparing against zero
-(@code{const_int} with value zero; that is to say, @code{const0_rtx}).
+このテクニックを使うと、@code{(cc0)} が正しく使える文脈は
+二つだけである。
+代入における代入先(テストおよび比較命令において)として、
+および 0 (値がゼロの @code{const_int}、すなわち @code{const0_rtx} である)
+との比較を行なう比較演算においてである。
 
 @item
-To stand for a single flag that is the result of a single condition.
-This is useful on machines that have only a single flag bit, and in
-which comparison instructions must specify the condition to test.
+一個の条件の結果である一個のフラグを表すために使う。
+これは、一個のフラグビットしか持たないマシン上で、そして
+比較命令がテストすべき条件を指定しなければならない場合に
+役にたつ。
 
-With this technique, @code{(cc0)} may be validly used in only two
-contexts: as the destination of an assignment (in test and compare
-instructions) where the source is a comparison operator, and as the
-first operand of @code{if_then_else} (in a conditional branch).
+この手法を使う場合、@code{(cc0)} が有効なのは次の二つの文脈だけである。
+ソースオペランドが比較演算子である(テストと比較命令では)
+代入の目的オペランドとして、もう一つは
+(条件分岐の) @code{if_then_else} の最初のオペランドとしてである。
 @end itemize
 
 @findex cc0_rtx
-There is only one expression object of code @code{cc0}; it is the
-value of the variable @code{cc0_rtx}.  Any attempt to create an
-expression of code @code{cc0} will return @code{cc0_rtx}.
+コード @code{cc0} の式オブジェクトはただ一つだけ存在する。
+変数 @code{cc0_rtx} の値である。
+コード @code{cc0} の式を作りだそうとすると必ず @code{cc0_rtx} が
+返ってくる。
 
-Instructions can set the condition code implicitly.  On many machines,
-nearly all instructions set the condition code based on the value that
-they compute or store.  It is not necessary to record these actions
-explicitly in the RTL because the machine description includes a
-prescription for recognizing the instructions that do so (by means of
-the macro @code{NOTICE_UPDATE_CC}).  @xref{Condition Code}.  Only
-instructions whose sole purpose is to set the condition code, and
-instructions that use the condition code, need mention @code{(cc0)}.
+命令が暗黙のうちに条件コードを設定する可能性がある。
+多くのマシンでは、ほぼ全ての命令が計算したり、格納した値に基づいて
+条件コードを設定する。こういう動作を RTL に明示的に記録する必要は
+ない。というのは、マシン記述に、その命令が条件コードを設定することを
+認識するための指示が含まれているからである(マクロ @code{NOTICE_UPDATE_CC}
+を使う)。@xref{Condition Code}。
+条件コードを設定することだけを目的とする命令、そして
+条件コードを使用する命令だけが、@code{(cc0)} を書く必要がある
 
-On some machines, the condition code register is given a register number
-and a @code{reg} is used instead of @code{(cc0)}.  This is usually the
-preferable approach if only a small subset of instructions modify the
-condition code.  Other machines store condition codes in general
-registers; in such cases a pseudo register should be used.
+マシンによっては、条件コードレジスタにレジスタ番号が与えられ、
+@code{reg} が @code{(cc0)} の代わりに使われる。
+条件コードを書き換える命令がほんの一部の命令に限られるなら、
+このアプローチが望ましい。
+また別のマシンでは、条件コードを汎用レジスタに格納する。
+その場合は疑似レジスタを使うべきである。
 
-Some machines, such as the SPARC and RS/6000, have two sets of
-arithmetic instructions, one that sets and one that does not set the
-condition code.  This is best handled by normally generating the
-instruction that does not set the condition code, and making a pattern
-that both performs the arithmetic and sets the condition code register
-(which would not be @code{(cc0)} in this case).  For examples, search
-for @samp{addcc} and @samp{andcc} in @file{sparc.md}.
+Sparc や RS/6000 のようなマシンでは、二種類の算術演算命令のセットがある。
+一つのセットは条件コードを設定し、もう一つは設定しない。
+このような場合を扱う最も良い方法は、通常は、条件コードを設定しない
+命令を生成し、算術演算の実行と条件コードレジスタ(この場合は
+@code{(cc0)} ではない)の設定の両方を行なうパターンを作ることである。
+例としては、@file{sparc.md} で @samp{addcc} や @samp{andcc} を
+探してみて欲しい
 
 @findex pc
 @item (pc)
 @cindex program counter
-This represents the machine's program counter.  It has no operands and
-may not have a machine mode.  @code{(pc)} may be validly used only in
-certain specific contexts in jump instructions.
+プログラムカウンタを表す。
+オペランドは取らず、マシンモードも持たなくて良い。
+@code{(pc)} が使えるのは、分岐命令の特定の文脈においてだけである。
 
 @findex pc_rtx
-There is only one expression object of code @code{pc}; it is the value
-of the variable @code{pc_rtx}.  Any attempt to create an expression of
-code @code{pc} will return @code{pc_rtx}.
+コードが @code{pc} である式オブジェクトはただ一つである。
+変数 @code{pc_rtx} の値である。
+コードが @code{pc} の式を作ろうとすると返ってくるのは
+@code{pc_rtx} になる。
 
-All instructions that do not jump alter the program counter implicitly
-by incrementing it, but there is no need to mention this in the RTL@.
+分岐を行なわない命令は全て、プログラムカウンタをインクリメントすることに
+より暗黙のうちに変更する。しかし、このことを RTL に記述する必要はない。
 
 @findex mem
 @item (mem:@var{m} @var{addr} @var{alias})
-This RTX represents a reference to main memory at an address
-represented by the expression @var{addr}.  @var{m} specifies how large
-a unit of memory is accessed.  @var{alias} specifies an alias set for the
-reference.  In general two items are in different alias sets if they cannot
-reference the same memory address.
-
-The construct @code{(mem:BLK (scratch))} is considered to alias all
-other memories.  Thus it may be used as a memory barrier in epilogue
-stack deallocation patterns.
+この RTX は、式 @var{addr} で表されるアドレスの主記憶への参照を
+表す。@var{m} はメモリの、アクセスされる単位の大きさを表す。
 
 @findex concat
 @item (concat@var{m} @var{rtx} @var{rtx})
@@ -1748,13 +1732,13 @@ declarations, and not in the insn chain.
 @cindex math, in RTL
 @cindex RTL expressions for arithmetic
 
-Unless otherwise specified, all the operands of arithmetic expressions
-must be valid for mode @var{m}.  An operand is valid for mode @var{m}
-if it has mode @var{m}, or if it is a @code{const_int} or
-@code{const_double} and @var{m} is a mode of class @code{MODE_INT}.
+指定されない限り、代数演算式の全てのオペランドはモード @var{m} に対して
+有効でなければならない。あるオペランドがモード @var{m} に対して有効なのは、
+オペランド自身のモードが @var{m} の場合か、オペランドが @code{const_int}
+または @code{const_double} で @var{m} が @code{MODE_INT} クラスのモード
+の時である。
 
-For commutative binary operations, constants should be placed in the
-second operand.
+交換可能な二項演算の場合には、定数は二番目のオペランドに置くべきである。
 
 @table @code
 @findex plus
@@ -1768,28 +1752,20 @@ second operand.
 @itemx (ss_plus:@var{m} @var{x} @var{y})
 @itemx (us_plus:@var{m} @var{x} @var{y})
 
-These three expressions all represent the sum of the values
-represented by @var{x} and @var{y} carried out in machine mode
-@var{m}.  They differ in their behavior on overflow of integer modes.
-@code{plus} wraps round modulo the width of @var{m}; @code{ss_plus}
-saturates at the maximum signed value representable in @var{m};
-@code{us_plus} saturates at the maximum unsigned value.
+マシンモード @var{m} で実行される、@var{x} と @var{y} で表される値の
+加算を表す。
 
 @c ??? What happens on overflow of floating point modes?
 
 @findex lo_sum
 @item (lo_sum:@var{m} @var{x} @var{y})
 
-This expression represents the sum of @var{x} and the low-order bits
-of @var{y}.  It is used with @code{high} (@pxref{Constants}) to
-represent the typical two-instruction sequence used in RISC machines
-to reference a global memory location.
+@code{plus} にほぼ同じだが、@var{x} と、@var{y} の下位ビットの和を
+表す点が異なる。下位ビット数は機種により異なるが、一般には、
+@code{Pmode} のビット数から、コード @code{high} によってセットされる
+ビット数を引いたものになる(@pxref{Constants})。
 
-The number of low order bits is machine-dependent but is
-normally the number of bits in a @code{Pmode} item minus the number of
-bits set by @code{high}.
-
-@var{m} should be @code{Pmode}.
+@var{m} は、@code{Pmode} でなければならない。
 
 @findex minus
 @findex ss_minus
@@ -1802,49 +1778,41 @@ bits set by @code{high}.
 @itemx (ss_minus:@var{m} @var{x} @var{y})
 @itemx (us_minus:@var{m} @var{x} @var{y})
 
-These three expressions represent the result of subtracting @var{y}
-from @var{x}, carried out in mode @var{M}.  Behavior on overflow is
-the same as for the three variants of @code{plus} (see above).
+減算を表す以外は @code{plus} と同じである。
 
 @findex compare
 @cindex RTL comparison
 @item (compare:@var{m} @var{x} @var{y})
-Represents the result of subtracting @var{y} from @var{x} for purposes
-of comparison.  The result is computed without overflow, as if with
-infinite precision.
+比較目的の @var{y} から @var{x} を引く減算の結果を表す。
+無限の精度があるかのように、計算は桁溢れなしで行われる。
 
-Of course, machines can't really subtract with infinite precision.
-However, they can pretend to do so when only the sign of the result will
-be used, which is the case when the result is stored in the condition
-code.  And that is the @emph{only} way this kind of expression may
-validly be used: as a value to be stored in the condition codes, either
-@code{(cc0)} or a register.  @xref{Comparisons}.
+当然のことだが、実際に無限の精度で引き算を行える機械は存在しない。
+だが、引き算の結果の符号だけが使われる場合は、無限の精度で引き算が
+できるような振りをすることができる。その場合、引き算の結果は条件コードに
+格納される。そして、この種類の式が正しく使えるのはこういう場合、
+すなわち、条件コードに格納される値としてだけである。
 
-The mode @var{m} is not related to the modes of @var{x} and @var{y}, but
-instead is the mode of the condition code value.  If @code{(cc0)} is
-used, it is @code{VOIDmode}.  Otherwise it is some mode in class
-@code{MODE_CC}, often @code{CCmode}.  @xref{Condition Code}.  If @var{m}
-is @code{VOIDmode} or @code{CCmode}, the operation returns sufficient
-information (in an unspecified format) so that any comparison operator
-can be applied to the result of the @code{COMPARE} operation.  For other
-modes in class @code{MODE_CC}, the operation only returns a subset of
-this information.
+モード @var{m} は、@var{x} や @var{y} のモードには関係なく、
+条件コードの値のモードになる。@code{(cc0)} が使われるのなら、
+@code{VOIDmode} になる。それ以外の場合は、@code{MODE_CC} クラスの
+中のあるモードになる。良く使われるのは @code{CCmode} である。
+@xref{Condition Code}.
 
-Normally, @var{x} and @var{y} must have the same mode.  Otherwise,
-@code{compare} is valid only if the mode of @var{x} is in class
-@code{MODE_INT} and @var{y} is a @code{const_int} or
-@code{const_double} with mode @code{VOIDmode}.  The mode of @var{x}
-determines what mode the comparison is to be done in; thus it must not
-be @code{VOIDmode}.
+普通は、@var{x} と @var{y} は同じモードでなければならない。
+それ以外で @code{compare} が有効なのは、@var{x} のモードが、
+@code{MODE_INT} のクラスに属し、かつ、@var{y} が @code{VOIDmode} モード
+の @code{const_int} か @code{const_double} の場合のみである。
+@var{x} のモードによって、比較が行われるモードが決まるので、
+@var{x} のモードは @code{VOIDmode} であってはならない。
 
-If one of the operands is a constant, it should be placed in the
-second operand and the comparison code adjusted as appropriate.
+オペランドの一方が定数であるなら、それは第二オペランドに
+置くべきであり、そうすることによって比較のためのコードが
+適切に調整される。
 
-A @code{compare} specifying two @code{VOIDmode} constants is not valid
-since there is no way to know in what mode the comparison is to be
-performed; the comparison must either be folded during the compilation
-or the first operand must be loaded into a register while its mode is
-still known.
+@code{compare} で、@code{VOIDmode} の定数を二つ指定するのは
+無効である。というのは、どのモードで比較を実行すべきか知りようがないから
+である。比較は、コンパイル中に畳み込まれるか、先頭のオペランドが
+そのモードがわかっているレジスタにロードされるかしなければならない。
 
 @findex neg
 @findex ss_neg
@@ -1855,13 +1823,8 @@ still known.
 @item (neg:@var{m} @var{x})
 @itemx (ss_neg:@var{m} @var{x})
 @itemx (us_neg:@var{m} @var{x})
-These two expressions represent the negation (subtraction from zero) of
-the value represented by @var{x}, carried out in mode @var{m}.  They
-differ in the behavior on overflow of integer modes.  In the case of
-@code{neg}, the negation of the operand may be a number not representable
-in mode @var{m}, in which case it is truncated to @var{m}.  @code{ss_neg}
-and @code{us_neg} ensure that an out-of-bounds result saturates to the
-maximum or minimum signed or unsigned value.
+@var{x} で表現される値の符号を反転した(0 から引いた)値を表現する。
+@var{m} のモードで演算が行われる。
 
 @findex mult
 @findex ss_mult
@@ -1873,29 +1836,21 @@ maximum or minimum signed or unsigned value.
 @item (mult:@var{m} @var{x} @var{y})
 @itemx (ss_mult:@var{m} @var{x} @var{y})
 @itemx (us_mult:@var{m} @var{x} @var{y})
-Represents the signed product of the values represented by @var{x} and
-@var{y} carried out in machine mode @var{m}.
-@code{ss_mult} and @code{us_mult} ensure that an out-of-bounds result
-saturates to the maximum or minimum signed or unsigned value.
+@var{x} と @var{y} で表される値の符号付きの積を表現する。
+積は、モード @var{m} で行われる。
 
-Some machines support a multiplication that generates a product wider
-than the operands.  Write the pattern for this as
+機種によっては、オペランドよりも大きな積を生成する乗算をサポート
+している。その場合には、次のようにパターンを書くこと。
 
 @smallexample
 (mult:@var{m} (sign_extend:@var{m} @var{x}) (sign_extend:@var{m} @var{y}))
 @end smallexample
 
-where @var{m} is wider than the modes of @var{x} and @var{y}, which need
-not be the same.
+ここで、@var{m} は、@var{x} と @var{y} のモードよりも大きいモードである。
+@var{x} と @var{y} のモードは同じでなくても良い
 
-For unsigned widening multiplication, use the same idiom, but with
-@code{zero_extend} instead of @code{sign_extend}.
-
-@findex fma
-@item (fma:@var{m} @var{x} @var{y} @var{z})
-Represents the @code{fma}, @code{fmaf}, and @code{fmal} builtin
-functions, which compute @samp{@var{x} * @var{y} + @var{z}}
-without doing an intermediate rounding step.
+符号無しの、大きな積を生じる乗算の場合には、
+@code{zero_extend} を使って同じように書けば良い。
 
 @findex div
 @findex ss_div
@@ -1905,16 +1860,13 @@ without doing an intermediate rounding step.
 @cindex quotient
 @item (div:@var{m} @var{x} @var{y})
 @itemx (ss_div:@var{m} @var{x} @var{y})
-Represents the quotient in signed division of @var{x} by @var{y},
-carried out in machine mode @var{m}.  If @var{m} is a floating point
-mode, it represents the exact quotient; otherwise, the integerized
-quotient.
-@code{ss_div} ensures that an out-of-bounds result saturates to the maximum
-or minimum signed value.
+マシンモード @var{m} で @var{x} を @var{y} で割った、符号付きの商を表す。
+@var{m} が浮動小数点モードなら、厳密な商を表す。そうでなければ、
+整数化した商を表す。
 
-Some machines have division instructions in which the operands and
-quotient widths are not all the same; you should represent
-such instructions using @code{truncate} and @code{sign_extend} as in,
+マシンによっては、オペランドと商の幅が全部同じではない場合の除算命令を
+持っていることがある。そういう命令を表現するには、以下のように、
+@code{truncate} と @code{sign_extend} を使う。
 
 @smallexample
 (truncate:@var{m1} (div:@var{m2} @var{x} (sign_extend:@var{m2} @var{y})))
@@ -1926,9 +1878,7 @@ such instructions using @code{truncate} and @code{sign_extend} as in,
 @cindex division
 @item (udiv:@var{m} @var{x} @var{y})
 @itemx (us_div:@var{m} @var{x} @var{y})
-Like @code{div} but represents unsigned division.
-@code{us_div} ensures that an out-of-bounds result saturates to the maximum
-or minimum unsigned value.
+@code{div} とほぼ同じだが、符号無しの除算を表す。
 
 @findex mod
 @findex umod
@@ -1936,8 +1886,7 @@ or minimum unsigned value.
 @cindex division
 @item (mod:@var{m} @var{x} @var{y})
 @itemx (umod:@var{m} @var{x} @var{y})
-Like @code{div} and @code{udiv} but represent the remainder instead of
-the quotient.
+@code{div} や @code{udiv} と似ているが、商の代わりに剰余を表す。
 
 @findex smin
 @findex smax
@@ -1945,50 +1894,50 @@ the quotient.
 @cindex signed maximum
 @item (smin:@var{m} @var{x} @var{y})
 @itemx (smax:@var{m} @var{x} @var{y})
-Represents the smaller (for @code{smin}) or larger (for @code{smax}) of
-@var{x} and @var{y}, interpreted as signed values in mode @var{m}.
-When used with floating point, if both operands are zeros, or if either
-operand is @code{NaN}, then it is unspecified which of the two operands
-is returned as the result.
+@var{x} と @var{y} の小さいほう(@code{smin}の場合)または大きいほう
+(@code{smax} の場合)を表す。この場合、
+モード @var{m} の符号付き整数として解釈が行なわれる。
 
 @findex umin
 @findex umax
 @cindex unsigned minimum and maximum
 @item (umin:@var{m} @var{x} @var{y})
 @itemx (umax:@var{m} @var{x} @var{y})
-Like @code{smin} and @code{smax}, but the values are interpreted as unsigned
-integers.
+@code{smin} や @code{smax} とほぼ同じだが、符号無しの整数として解釈が
+行なわれる。
+
 
 @findex not
 @cindex complement, bitwise
 @cindex bitwise complement
 @item (not:@var{m} @var{x})
-Represents the bitwise complement of the value represented by @var{x},
-carried out in mode @var{m}, which must be a fixed-point machine mode.
+@var{x} で表される値のビット毎の補数を表現する。
+この演算はモード @var{m} で行なわれる。
+@var{m} は、固定小数点モードでなければならない。
 
 @findex and
 @cindex logical-and, bitwise
 @cindex bitwise logical-and
 @item (and:@var{m} @var{x} @var{y})
-Represents the bitwise logical-and of the values represented by
-@var{x} and @var{y}, carried out in machine mode @var{m}, which must be
-a fixed-point machine mode.
+@var{x} と @var{y} で表される値のビット毎の論理積を表現する。
+ビット毎の論理積はモード @var{m} で実行される。
+このモードは、固定少数点数のモードでなければならない。
 
 @findex ior
 @cindex inclusive-or, bitwise
 @cindex bitwise inclusive-or
 @item (ior:@var{m} @var{x} @var{y})
-Represents the bitwise inclusive-or of the values represented by @var{x}
-and @var{y}, carried out in machine mode @var{m}, which must be a
-fixed-point mode.
+@var{x} と @var{y} で表される値のビット毎の論理和を表現する。
+ビット毎の論理和はモード @var{m} で実行される。
+このモードは、固定少数点数のモードでなければならない。
 
 @findex xor
 @cindex exclusive-or, bitwise
 @cindex bitwise exclusive-or
 @item (xor:@var{m} @var{x} @var{y})
-Represents the bitwise exclusive-or of the values represented by @var{x}
-and @var{y}, carried out in machine mode @var{m}, which must be a
-fixed-point mode.
+@var{x} と @var{y} で表される値のビット毎の排他的論理和を表現する。
+ビット毎の排他的論理和はモード @var{m} で実行される。
+このモードは、固定少数点数のモードでなければならない。
 
 @findex ashift
 @findex ss_ashift
@@ -2001,26 +1950,22 @@ fixed-point mode.
 @item (ashift:@var{m} @var{x} @var{c})
 @itemx (ss_ashift:@var{m} @var{x} @var{c})
 @itemx (us_ashift:@var{m} @var{x} @var{c})
-These three expressions represent the result of arithmetically shifting @var{x}
-left by @var{c} places.  They differ in their behavior on overflow of integer
-modes.  An @code{ashift} operation is a plain shift with no special behavior
-in case of a change in the sign bit; @code{ss_ashift} and @code{us_ashift}
-saturates to the minimum or maximum representable value if any of the bits
-shifted out differs from the final sign bit.
-
-@var{x} have mode @var{m}, a fixed-point machine mode.  @var{c}
-be a fixed-point mode or be a constant with mode @code{VOIDmode}; which
-mode is determined by the mode called for in the machine description
-entry for the left-shift instruction.  For example, on the VAX, the mode
-of @var{c} is @code{QImode} regardless of @var{m}.
+@var{x} を左に @var{c} 回算術シフトした結果を表現する。
+@var{x} のモードは @var{m} であり、固定少数点数のモードである。
+@var{c} は、固定小数点数モードか、モードが @code{VOIDmode} の定数である。
+@var{c} のモードがどちらになるかは、
+マシン記述中の左シフト命令のエントリに対して
+呼び出されるモードにより決定される。
+例えば、Vax では、@var{c} のモードは、@var{m} に関わらず、
+@code{QImode} である。
 
 @findex lshiftrt
 @cindex right shift
 @findex ashiftrt
 @item (lshiftrt:@var{m} @var{x} @var{c})
 @itemx (ashiftrt:@var{m} @var{x} @var{c})
-Like @code{ashift} but for right shift.  Unlike the case for left shift,
-these two operations are distinct.
+右シフトである点を除いて、@code{ashift} と同じである。
+左シフトの場合と違って、この二つの演算は異なる物である。
 
 @findex rotate
 @cindex rotate
@@ -2029,74 +1974,29 @@ these two operations are distinct.
 @cindex right rotate
 @item (rotate:@var{m} @var{x} @var{c})
 @itemx (rotatert:@var{m} @var{x} @var{c})
-Similar but represent left and right rotate.  If @var{c} is a constant,
-use @code{rotate}.
+同様に、左右のローテーションを表す。@var{c} が定数なら、
+@code{rotate} の方を使うこと。
 
 @findex abs
 @findex ss_abs
 @cindex absolute value
 @item (abs:@var{m} @var{x})
 @item (ss_abs:@var{m} @var{x})
-Represents the absolute value of @var{x}, computed in mode @var{m}.
-@code{ss_abs} ensures that an out-of-bounds result saturates to the
-maximum signed value.
-
+モード @var{m} で計算した、@var{x}の絶対値を表現する。
 
 @findex sqrt
 @cindex square root
 @item (sqrt:@var{m} @var{x})
-Represents the square root of @var{x}, computed in mode @var{m}.
-Most often @var{m} will be a floating point mode.
+モード @var{m} で計算した、@var{x} の平方根を表現する。
+ほとんどの場合、@var{m} は浮動小数点モードになる。
 
 @findex ffs
 @item (ffs:@var{m} @var{x})
-Represents one plus the index of the least significant 1-bit in
-@var{x}, represented as an integer of mode @var{m}.  (The value is
-zero if @var{x} is zero.)  The mode of @var{x} must be @var{m}
-or @code{VOIDmode}.
-
-@findex clrsb
-@item (clrsb:@var{m} @var{x})
-Represents the number of redundant leading sign bits in @var{x},
-represented as an integer of mode @var{m}, starting at the most
-significant bit position.  This is one less than the number of leading
-sign bits (either 0 or 1), with no special cases.  The mode of @var{x}
-must be @var{m} or @code{VOIDmode}.
-
-@findex clz
-@item (clz:@var{m} @var{x})
-Represents the number of leading 0-bits in @var{x}, represented as an
-integer of mode @var{m}, starting at the most significant bit position.
-If @var{x} is zero, the value is determined by
-@code{CLZ_DEFINED_VALUE_AT_ZERO} (@pxref{Misc}).  Note that this is one of
-the few expressions that is not invariant under widening.  The mode of
-@var{x} must be @var{m} or @code{VOIDmode}.
-
-@findex ctz
-@item (ctz:@var{m} @var{x})
-Represents the number of trailing 0-bits in @var{x}, represented as an
-integer of mode @var{m}, starting at the least significant bit position.
-If @var{x} is zero, the value is determined by
-@code{CTZ_DEFINED_VALUE_AT_ZERO} (@pxref{Misc}).  Except for this case,
-@code{ctz(x)} is equivalent to @code{ffs(@var{x}) - 1}.  The mode of
-@var{x} must be @var{m} or @code{VOIDmode}.
-
-@findex popcount
-@item (popcount:@var{m} @var{x})
-Represents the number of 1-bits in @var{x}, represented as an integer of
-mode @var{m}.  The mode of @var{x} must be @var{m} or @code{VOIDmode}.
-
-@findex parity
-@item (parity:@var{m} @var{x})
-Represents the number of 1-bits modulo 2 in @var{x}, represented as an
-integer of mode @var{m}.  The mode of @var{x} must be @var{m} or
-@code{VOIDmode}.
-
-@findex bswap
-@item (bswap:@var{m} @var{x})
-Represents the value @var{x} with the order of bytes reversed, carried out
-in mode @var{m}, which must be a fixed-point machine mode.
-The mode of @var{x} must be @var{m} or @code{VOIDmode}.
+@var{x} の、 1 であるビットのうちの最下位のビットの位置に 1 を足したものを、
+モード @var{m} の整数として表現する。(@var{x} がゼロであれば、この値は
+0 になる。)
+@var{x} のモードは @var{m} でなくても良い。
+ターゲットの機種により、色々なモードの組合せが有効である。
 @end table
 
 @node Comparisons
