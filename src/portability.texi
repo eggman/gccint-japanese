@@ -7,33 +7,32 @@
 @cindex portability
 @cindex GCC and portability
 
-GCC itself aims to be portable to any machine where @code{int} is at least
-a 32-bit type.  It aims to target machines with a flat (non-segmented) byte
-addressed data address space (the code address space can be separate).
-Target ABIs may have 8, 16, 32 or 64-bit @code{int} type.  @code{char}
-can be wider than 8 bits.
+GCC の第一の目標は、品質の良い、高速なコンパイラを、 GNU システムが
+動作することをねらいとするクラスのマシン向けに作ることであった。
+そのクラスのマシンとは、32 ビットマシンで、8ビットを一バイトとする
+アドレッシングを持ち、汎用レジスタがたくさん持つものである。
+洗練されているとか、理論的な能力とか簡潔さなどは二の次である。
 
-GCC gets most of the information about the target machine from a machine
-description which gives an algebraic formula for each of the machine's
-instructions.  This is a very clean way to describe the target.  But when
-the compiler needs information that is difficult to express in this
-fashion, ad-hoc parameters have been defined for machine descriptions.
-The purpose of portability is to reduce the total work needed on the
-compiler; it was not of interest for its own sake.
+GCC はターゲット機種についての情報のほとんどを、機種記述から
+得る。機種記述はその機種の命令毎に代数式を与える。これはターゲットを
+記述する方法としては非常に明解な方法である。ただし、コンパイラが、
+この形式で表現するのが困難な情報が必要な時は、筆者は機種記述に
+その場しのぎのパラメータの定義をためらわずに入れる。移植性の目的は
+コンパイラについて必要な全作業を少なくすることにあり、それ自身には
+興味がない。
 
 @cindex endianness
 @cindex autoincrement addressing, availability
 @findex abort
-GCC does not contain machine dependent code, but it does contain code
-that depends on machine parameters such as endianness (whether the most
-significant byte has the highest or lowest address of the bytes in a word)
-and the availability of autoincrement addressing.  In the RTL-generation
-pass, it is often necessary to have multiple strategies for generating code
-for a particular kind of syntax tree, strategies that are usable for different
-combinations of parameters.  Often, not all possible cases have been
-addressed, but only the common ones or only the ones that have been
-encountered.  As a result, a new target may require additional
-strategies.  You will know
-if this happens because the compiler will call @code{abort}.  Fortunately,
-the new strategies can be added in a machine-independent fashion, and will
-affect only the target machines that need them.
+GCC は機種依存コードは含んでいないが、エンディアン(最上位バイトが
+ワードの中のバイトの最上位アドレスを占めるのか、最下位アドレスを占めるのか)
+や自動インクリメント・アドレッシングが利用可能かなどの機種パラメータに
+依存するコードは含んでいる。RTL 生成パスでは、ある特定の種類の構文木に
+対してコード生成の戦略を複数持つ必要があることが多い。これらの戦略は
+パラメータの異なる組合せに対して使用可能である。
+著者は可能な場合全てを取り扱うことせず、共通に現れるものや、
+著者が出会ったものに絞っている。
+取り扱っていない組合せに出会ったら、GCC が @code{abort} を呼び出すので
+読者も気が付くだろう。幸いにも、新たな戦略を機種独立な形で追加する
+ことができ、その新たな戦略を必要とするターゲット機種にしか影響を
+及ぼさない。
