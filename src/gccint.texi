@@ -1,6 +1,8 @@
 \input texinfo  @c -*-texinfo-*-
 @c %**start of header
 @setfilename gccint.info
+@documentlanguage ja
+@documentencoding UTF-8
 @c INTERNALS is used by md.texi to determine whether to include the
 @c whole of that file, in the internals manual, or only the part
 @c dealing with constraints, in the user manual.
@@ -89,7 +91,7 @@ discusses how to contribute to GCC (@pxref{Contributing}), the
 characteristics of the machines supported by GCC as hosts and targets
 (@pxref{Portability}), how GCC relates to the ABIs on such systems
 (@pxref{Interface}), and the characteristics of the languages for
-which GCC front ends are written (@pxref{Languages}).  It then
+which GCC front ends are written Languages.  It then
 describes the GCC source tree structure and build system, some of the
 interfaces to GCC front ends, and how support for a target system is
 implemented in GCC@.

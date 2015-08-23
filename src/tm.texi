@@ -663,7 +663,7 @@ Its default setting is 0.
 @deftypefn {Common Target Hook} bool TARGET_HANDLE_OPTION (struct gcc_options *@var{opts}, struct gcc_options *@var{opts_set}, const struct cl_decoded_option *@var{decoded}, location_t @var{loc})
 This hook is called whenever the user specifies one of the
 target-specific options described by the @file{.opt} definition files
-(@pxref{Options}).  It has the opportunity to do some option-specific
+.  It has the opportunity to do some option-specific
 processing and should return true if the option is valid.  The default
 definition does nothing but return true.
 
@@ -677,7 +677,7 @@ via attributes).
 @deftypefn {C Target Hook} bool TARGET_HANDLE_C_OPTION (size_t @var{code}, const char *@var{arg}, int @var{value})
 This target hook is called whenever the user specifies one of the
 target-specific C language family options described by the @file{.opt}
-definition files(@pxref{Options}).  It has the opportunity to do some
+definition files.  It has the opportunity to do some
 option-specific processing and should return true if the option is
 valid.  The arguments are like for @code{TARGET_HANDLE_OPTION}.  The
 default definition does nothing but return false.
@@ -9928,7 +9928,7 @@ the function declaration to hold a pointer to a target-specific
 This hook is called to save any additional target-specific information
 in the @code{struct cl_target_option} structure for function-specific
 options from the @code{struct gcc_options} structure.
-@xref{Option file format}.
+Option file format.
 @end deftypefn
 
 @deftypefn {Target Hook} void TARGET_OPTION_RESTORE (struct gcc_options *@var{opts}, struct cl_target_option *@var{ptr})

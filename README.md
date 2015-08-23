@@ -20,9 +20,16 @@ gcc 6.0 になってtexinfoをPDFに変換できるように修正されたの�
 ubuntuの場合
 * sudo apt-get install texinfo
 * sudo apt-get install texlive
+* sudo apt-get install texlive-lang-cjk
 * sudo apt-get install dbtoepub
+
+* weget https://github.com/fukusaka/texinfo-ja/raw/master/texinfo.tex
+
+* TEX=ptex  texi2dvi gccint.texi
+* dvipdfmx gccint.dvi
 * texi2pdf gccint.texi
-* makeinfo --docbook gccint.texi
+
+* makeinfo --docbook --enable-encoding gccint.texi
 * dbtoepub gccint.xml
 
 ## License

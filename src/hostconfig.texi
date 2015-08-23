@@ -18,7 +18,7 @@ every fully supported host will need to override some hooks.)
 If you need to define only a few macros, and they have simple
 definitions, consider using the @code{xm_defines} variable in your
 @file{config.gcc} entry instead of creating a host configuration
-header.  @xref{System Config}.
+header.  
 
 @menu
 * Host Common::         Things every host probably needs implemented.
