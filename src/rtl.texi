@@ -3710,96 +3710,94 @@ call insn の本体は以下のようになる。
 @cindex sharing of RTL components
 @cindex RTL structure sharing assumptions
 
-The compiler assumes that certain kinds of RTL expressions are unique;
-there do not exist two distinct objects representing the same value.
-In other cases, it makes an opposite assumption: that no RTL expression
-object of a certain kind appears in more than one place in the
-containing structure.
+GNU CC は、ある種類の RTL 式は一意的であることを仮定している。
+すなわち、同じ値を表す二つの異なるオブジェクトは存在しないと
+仮定しているのである。
+一方、それとは逆の、
+ある種類の RTL 式オブジェクトは、それを含む構造の中では 2 回以上
+現れることはないという仮定をしている場合もある。
 
-These assumptions refer to a single function; except for the RTL
-objects that describe global variables and external functions,
-and a few standard objects such as small integer constants,
-no RTL objects are common to two functions.
+これらの仮定は一個の関数に関するものである。
+グローバル変数や外部関数を記述する RTL オブジェクト、
+それに小さな整数定数のような2,3の基本的なオブジェクトを除いて、
+二つの関数に共通の RTL オブジェクトは存在しない。
 
 @itemize @bullet
 @cindex @code{reg}, RTL sharing
 @item
-Each pseudo-register has only a single @code{reg} object to represent it,
-and therefore only a single machine mode.
+各疑似レジスタは、それを表現する @code{reg} オブジェクトは一個しか
+持たず、そのため、マシンモードも一個しかない。
 
 @cindex symbolic label
 @cindex @code{symbol_ref}, RTL sharing
 @item
-For any symbolic label, there is only one @code{symbol_ref} object
-referring to it.
+記号名ラベルはどれも、それを参照する @code{symbol_ref} オブジェクトは
+一個しかない。
 
 @cindex @code{const_int}, RTL sharing
 @item
-All @code{const_int} expressions with equal values are shared.
+値が 0、1、@minus{}1 の @code{const_int} 式はそれぞれ一個だけである。
+それ以外の幾つかの整数値も一意的に格納される。
 
 @cindex @code{pc}, RTL sharing
 @item
-There is only one @code{pc} expression.
+@code{pc} 式は一個しかない。
 
 @cindex @code{cc0}, RTL sharing
 @item
-There is only one @code{cc0} expression.
+@code{cc0} 式は一個しかない。
 
 @cindex @code{const_double}, RTL sharing
 @item
-There is only one @code{const_double} expression with value 0 for
-each floating point mode.  Likewise for values 1 and 2.
-
-@cindex @code{const_vector}, RTL sharing
-@item
-There is only one @code{const_vector} expression with value 0 for
-each vector mode, be it an integer or a double constant vector.
+それぞれの浮動小数点モードで、値 0 の @code{const_double} 式は
+それぞれ一個しかない。値が 1 と 2 についても同様である。
 
 @cindex @code{label_ref}, RTL sharing
 @cindex @code{scratch}, RTL sharing
 @item
-No @code{label_ref} or @code{scratch} appears in more than one place in
-the RTL structure; in other words, it is safe to do a tree-walk of all
-the insns in the function and assume that each time a @code{label_ref}
-or @code{scratch} is seen it is distinct from all others that are seen.
+@code{label_ref} や @code{scratch} は、RTL 構造体の中で
+二箇所以上は現れない。言い換えると、関数の中の全 insn をツリーウォーク
+したときに、@code{label_ref} や @code{scratch} が見つかるたびに、
+すでに見た他の全てとは違ったものであると仮定しても良い。
 
 @cindex @code{mem}, RTL sharing
 @item
-Only one @code{mem} object is normally created for each static
-variable or stack slot, so these objects are frequently shared in all
-the places they appear.  However, separate but equal objects for these
-variables are occasionally made.
+各静的変数やスタックスロットについては、普通はただ一個の @code{mem}
+オブジェクトが作られる。このため、これらのオブジェクトはそれが現れる
+全ての場所で共用されることが多い。
+しかし、これらの変数に対して、等価であるが別の独立したオブジェクトが
+作られることがたまにある。
 
 @cindex @code{asm_operands}, RTL sharing
 @item
-When a single @code{asm} statement has multiple output operands, a
-distinct @code{asm_operands} expression is made for each output operand.
-However, these all share the vector which contains the sequence of input
-operands.  This sharing is used later on to test whether two
-@code{asm_operands} expressions come from the same statement, so all
-optimizations must carefully preserve the sharing if they copy the
-vector at all.
+一個の @code{asm} 文に複数の出力オペランドがあると、
+出力オペランド毎に別々の @code{asm_operands} 式が作られる。
+しかし、これらの式は全て、入力オペランドの列を含むベクトルを共有する。
+この共有は後で、二つの @code{asm_operands} 式が同じ文に由来するものか
+どうかを調べるのに使われる。このため、全ての最適化で、
+ベクトルを全部コピーした場合には注意深く共有を維持しなくては
+ならない。
 
 @item
-No RTL object appears in more than one place in the RTL structure
-except as described above.  Many passes of the compiler rely on this
-by assuming that they can modify RTL objects in place without unwanted
-side-effects on other insns.
+上で説明したものを除いて、RTL 構造体に RTL オブジェクトが二箇所以上に
+現れることはない。コンパイラのパスの多くが、このことに依存しており、
+他の insn に不要な副作用を与えることなく RTL オブジェクトを直接
+修正可能であるということを仮定している。
 
 @findex unshare_all_rtl
 @item
-During initial RTL generation, shared structure is freely introduced.
-After all the RTL for a function has been generated, all shared
-structure is copied by @code{unshare_all_rtl} in @file{emit-rtl.c},
-after which the above rules are guaranteed to be followed.
+最初の RTL 生成の間は、共有される構造体が自由に導入される。
+ある関数についての 全 RTL 生成が完了した後で、
+全ての共有される構造体が @file{emit-rtl.c} の @code{unshare_all_rtl}
+関数によりコピーされる。その後で上記のルールが成り立つことが保証される。
 
 @findex copy_rtx_if_shared
 @item
-During the combiner pass, shared structure within an insn can exist
-temporarily.  However, the shared structure is copied before the
-combiner is finished with the insn.  This is done by calling
-@code{copy_rtx_if_shared}, which is a subroutine of
-@code{unshare_all_rtl}.
+組合せパスの間、ある insn 中の共有構造体が一時的に存在できる。
+しかし、共有構造体は、組合せパスがその insn についての処理を終了
+する前に、コピーされる。
+これは @code{copy_rtx_if_shared} を呼び出すことにより行なわれる。
+この関数は @code{unshare_all_rtl} のサブルーチンである。
 @end itemize
 
 @node Reading RTL
