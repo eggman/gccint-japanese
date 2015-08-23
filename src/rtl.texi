@@ -3146,23 +3146,21 @@ number, which is 0, 1, @dots{} for successive output operands.
 @section Insns
 @cindex insns
 
-The RTL representation of the code for a function is a doubly-linked
-chain of objects called @dfn{insns}.  Insns are expressions with
-special codes that are used for no other purpose.  Some insns are
-actual instructions; others represent dispatch tables for @code{switch}
-statements; others represent labels to jump to or various sorts of
-declarative information.
+関数のコードの RTL 表現は、@dfn{insn} と呼ばれるオブジェクトの
+二重線形リストである。insn は他に用途のない特別なコードを持つ式である。
+insn の一部は実際の命令である。@code{switch} 文のための分岐テーブル
+を表現するものもある。その他、分岐先ラベルや様々な宣言的な情報を
+表現するものもある。
 
-In addition to its own specific data, each insn must have a unique
-id-number that distinguishes it from all other insns in the current
-function (after delayed branch scheduling, copies of an insn with the
-same id-number may be present in multiple places in a function, but
-these copies will always be identical and will only appear inside a
-@code{sequence}), and chain pointers to the preceding and following
-insns.  These three fields occupy the same position in every insn,
-independent of the expression code of the insn.  They could be accessed
-with @code{XEXP} and @code{XINT}, but instead three special macros are
-always used:
+各 insn は、それ自身固有のデータを持つほか、現在の関数内の他の insn と
+区別するための一意的な識別番号(遅延分岐スケジューリングの後で、
+同じ識別番号を持つ insn のコピーが一つの関数内で複数存在することがあるが、
+これらのコピーは全く同じであり、@code{sequence} の中にしか現れない)、
+それに直前と直後の insn を指すポインタを持っている。
+この三つのフィールドはどの insn においても、insn の式コードによらずに、
+同じ位置にある。
+この三つのフィールドは @code{XEXP} と @code{XINT} を使ってアクセスしても
+良いが、以下のような特別なマクロが三つあり、いつでも使うことができる。
 
 @table @code
 @findex INSN_UID
@@ -3418,41 +3416,7 @@ variable.
 
 @end table
 
-These codes are printed symbolically when they appear in debugging dumps.
-
-@findex debug_insn
-@findex INSN_VAR_LOCATION
-@item debug_insn
-The expression code @code{debug_insn} is used for pseudo-instructions
-that hold debugging information for variable tracking at assignments
-(see @option{-fvar-tracking-assignments} option).  They are the RTL
-representation of @code{GIMPLE_DEBUG} statements
-(@ref{@code{GIMPLE_DEBUG}}), with a @code{VAR_LOCATION} operand that
-binds a user variable tree to an RTL representation of the
-@code{value} in the corresponding statement.  A @code{DEBUG_EXPR} in
-it stands for the value bound to the corresponding
-@code{DEBUG_EXPR_DECL}.
-
-Throughout optimization passes, binding information is kept in
-pseudo-instruction form, so that, unlike notes, it gets the same
-treatment and adjustments that regular instructions would.  It is the
-variable tracking pass that turns these pseudo-instructions into var
-location notes, analyzing control flow, value equivalences and changes
-to registers and memory referenced in value expressions, propagating
-the values of debug temporaries and determining expressions that can
-be used to compute the value of each user variable at as many points
-(ranges, actually) in the program as possible.
-
-Unlike @code{NOTE_INSN_VAR_LOCATION}, the value expression in an
-@code{INSN_VAR_LOCATION} denotes a value at that specific point in the
-program, rather than an expression that can be evaluated at any later
-point before an overriding @code{VAR_LOCATION} is encountered.  E.g.,
-if a user variable is bound to a @code{REG} and then a subsequent insn
-modifies the @code{REG}, the note location would keep mapping the user
-variable to the register across the insn, whereas the insn location
-would keep the variable bound to the value, so that the variable
-tracking pass would emit another location note for the variable at the
-point in which the register is modified.
+これらのコードは、デバッギングダンプにはシンボルで表示される。
 
 @end table
 
@@ -3945,21 +3909,22 @@ combiner is finished with the insn.  This is done by calling
 @node Reading RTL
 @section Reading RTL
 
-To read an RTL object from a file, call @code{read_rtx}.  It takes one
-argument, a stdio stream, and returns a single RTL object.  This routine
-is defined in @file{read-rtl.c}.  It is not available in the compiler
-itself, only the various programs that generate the compiler back end
-from the machine description.
+ファイルから RTL オブジェクトを読み込むには、@code{read_rtx} 関数を
+使う。引数は、標準入力ストリーム一つであり、一個の RTL オブジェクトを
+返す。
 
-People frequently have the idea of using RTL stored as text in a file as
-an interface between a language front end and the bulk of GCC@.  This
-idea is not feasible.
+ファイルから RTL を読む処理は非常に遅い。現時点ではこれは問題ではない。
+RTL の読み込みは、コンパイラを構築するときにのみ行われるからである。
 
-GCC was designed to use RTL internally only.  Correct RTL for a given
-program is very dependent on the particular target machine.  And the RTL
-does not contain all the information about the program.
+RTL をテキストとしてファイルにセーブして、GNU CC の言語フロントエンドと
+その他の部分とのインターフェースとして使おうと考える人が良くいるが、
+これは実現不可能である。
 
-The proper way to interface GCC to a new language front end is with
-the ``tree'' data structure, described in the files @file{tree.h} and
-@file{tree.def}.  The documentation for this structure (@pxref{GENERIC})
-is incomplete.
+GNU CC は、RTL を内部表現として使うようにしか設計されていない。
+ある与えられたプログラムに対する正しい RTL は、特定のターゲットマシンに
+著しく依存する。しかも、RTL は、そのプログラムについての情報を
+全部は含んでいないのである。
+
+GNU CC と新しい言語フロントエンドのインターフェースを取る正しい方法は、
+「tree」データ構造を使う事である。このデータ構造について書いたマニュアルは
+ないが、@file{tree.h} と @file{tree.def} で説明されている
