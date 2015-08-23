@@ -2554,6 +2554,7 @@ for insn attributes.  @xref{Insn Attributes}.
 @item (unsigned_fix:@var{m} @var{x})
 浮動小数点値 @var{x} をモード @var{m} の符号なし整数に変換した結果を表現する。
 丸めをどのように行なうかは規定されない。
+@end table
 
 @node RTL Declarations
 @section Declarations
