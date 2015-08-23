@@ -2583,226 +2583,181 @@ for insn attributes.  @xref{Insn Attributes}.
 @section Side Effect Expressions
 @cindex RTL side effect expressions
 
-The expression codes described so far represent values, not actions.
-But machine instructions never produce values; they are meaningful
-only for their side effects on the state of the machine.  Special
-expression codes are used to represent side effects.
+ここまで説明してきた式コードは値を表すものであり、動作を
+表すものではなかった。
+しかし機械命令というものは決して値を生み出すものではない。
+機械命令は、マシンの状態に副作用を与えるという点でのみ意味を持つ。
+特別な式コードを使って、副作用を表現する。
 
-The body of an instruction is always one of these side effect codes;
-the codes described above, which represent values, appear only as
-the operands of these.
+命令の本体は、必ず以下の副作用を表すコードの一つである。
+これまで説明してきた、値を表現するコードは、これらのオペランドとしてのみ
+現れるのである
 
 @table @code
 @findex set
 @item (set @var{lval} @var{x})
-Represents the action of storing the value of @var{x} into the place
-represented by @var{lval}.  @var{lval} must be an expression
-representing a place that can be stored in: @code{reg} (or @code{subreg},
-@code{strict_low_part} or @code{zero_extract}), @code{mem}, @code{pc},
-@code{parallel}, or @code{cc0}.
+@var{x} の値を @var{lval} で表される場所に格納する動作を表現する。
+@var{lval} は、その中に格納可能であるような場所を表す式である。
+すなわち、@code{reg}(あるいは @code{subreg}、または @code{strict_low_part})、
+@code{mem}、@code{pc}、@code{cc0} のどれかである。
 
-If @var{lval} is a @code{reg}, @code{subreg} or @code{mem}, it has a
-machine mode; then @var{x} must be valid for that mode.
+@var{lval} が、@code{reg}、@code{subreg}、@code{mem} のどれかなら、
+マシンモードを持つ必要がある。その場合、@var{x} は、そのモードで
+有効でなければならない。
 
-If @var{lval} is a @code{reg} whose machine mode is less than the full
-width of the register, then it means that the part of the register
-specified by the machine mode is given the specified value and the
-rest of the register receives an undefined value.  Likewise, if
-@var{lval} is a @code{subreg} whose machine mode is narrower than
-the mode of the register, the rest of the register can be changed in
-an undefined way.
+@var{lval} が、マシンモードがそのレジスタの全幅より小さいような
+@code{reg} であれば、そのマシンモードにより指定されたレジスタの部分には
+指定された値が与えられ、レジスタのその他の部分は未定義値となる。
+同様に、@var{lval} が、レジスタのモードより狭いモードの @code{subreg} なら、
+レジスタのその他の部分がどのように変更されるかは不定である。
 
-If @var{lval} is a @code{strict_low_part} of a subreg, then the part
-of the register specified by the machine mode of the @code{subreg} is
-given the value @var{x} and the rest of the register is not changed.
+@var{lval} が、@code{subreg} の @code{strict_low_part} なら、
+@code{subreg} のマシンモードで指定されたレジスタの部分は、
+値 @var{x} が与えられ、その他の部分は変更されない。
 
-If @var{lval} is a @code{zero_extract}, then the referenced part of
-the bit-field (a memory or register reference) specified by the
-@code{zero_extract} is given the value @var{x} and the rest of the
-bit-field is not changed.  Note that @code{sign_extract} can not
-appear in @var{lval}.
-
-If @var{lval} is @code{(cc0)}, it has no machine mode, and @var{x} may
-be either a @code{compare} expression or a value that may have any mode.
-The latter case represents a ``test'' instruction.  The expression
-@code{(set (cc0) (reg:@var{m} @var{n}))} is equivalent to
-@code{(set (cc0) (compare (reg:@var{m} @var{n}) (const_int 0)))}.
-Use the former expression to save space during the compilation.
-
-If @var{lval} is a @code{parallel}, it is used to represent the case of
-a function returning a structure in multiple registers.  Each element
-of the @code{parallel} is an @code{expr_list} whose first operand is a
-@code{reg} and whose second operand is a @code{const_int} representing the
-offset (in bytes) into the structure at which the data in that register
-corresponds.  The first element may be null to indicate that the structure
-is also passed partly in memory.
+@var{lval} が @code{(cc0)} なら、マシンモードがないので、
+@var{x} は @code{compare} 式か、任意のモードを持つ値で良い。
+後者の場合は、``test'' 命令を表現する。
+@code{(set (cc0) (reg:@var{m} @var{n}))} という式は、
+@code{(set (cc0) (compare (reg:@var{m} @var{n}) (const_int 0)))} という
+式に等価である。
+前者の式を使ったほうが、コンパイル中のメモリを節約できる。
 
 @cindex jump instructions and @code{set}
 @cindex @code{if_then_else} usage
-If @var{lval} is @code{(pc)}, we have a jump instruction, and the
-possibilities for @var{x} are very limited.  It may be a
-@code{label_ref} expression (unconditional jump).  It may be an
-@code{if_then_else} (conditional jump), in which case either the
-second or the third operand must be @code{(pc)} (for the case which
-does not jump) and the other of the two must be a @code{label_ref}
-(for the case which does jump).  @var{x} may also be a @code{mem} or
-@code{(plus:SI (pc) @var{y})}, where @var{y} may be a @code{reg} or a
-@code{mem}; these unusual patterns are used to represent jumps through
-branch tables.
+@var{lval} が @code{(pc)} なら、それはジャンプ命令であり、
+@var{x} の取りうる値は非常に限られてくる。
+@var{x} は、@code{label_ref} 式とすることができる(無条件ジャンプ)。
+@code{if_then_else} (条件ジャンプ)とすることもでき、その場合、
+第二オペランドか第三オペランドのどちらかが @code{(pc)} (ジャンプしない場合に
+使われる)でなければならず、またもう一方は @code{label_ref}
+(ジャンプする場合に使われる)でなければならない。
+また、@var{x} は @code{mem} または @code{(plus:SI (pc) @var{y})} でも
+良い。ここで、@var{y} は @code{reg} か @code{mem} である。
+この最後のパターンは分岐テーブル経由のジャンプを表現するのに使われる。
 
-If @var{lval} is neither @code{(cc0)} nor @code{(pc)}, the mode of
-@var{lval} must not be @code{VOIDmode} and the mode of @var{x} must be
-valid for the mode of @var{lval}.
+@var{lval} が @code{(cc0)} でも @code{(pc)} でもなければ、
+@var{lval} のモードは @code{VOIDmode} としてはならず、@var{x} のモードは
+@var{lval} のモードとして有効でなければならない。
 
 @findex SET_DEST
 @findex SET_SRC
-@var{lval} is customarily accessed with the @code{SET_DEST} macro and
-@var{x} with the @code{SET_SRC} macro.
+@var{lval} は @code{SET_DEST} マクロで、@var{x} は @code{SET_SRC} マクロで
+アクセスするようにするのが良い。
 
 @findex return
 @item (return)
-As the sole expression in a pattern, represents a return from the
-current function, on machines where this can be done with one
-instruction, such as VAXen.  On machines where a multi-instruction
-``epilogue'' must be executed in order to return from the function,
-returning is done by jumping to a label which precedes the epilogue, and
-the @code{return} expression code is never used.
+パターン中に単独の式として書くことで、現在の関数から戻ることを
+表す。ただし、VAX のように一命令で戻ることができるマシンに
+限られる。
+関数から戻るためには、複数の命令からなる「エピローグ」を実行する必要が
+あるマシンでは、関数からの復帰は、エピローグの直前に置かれるラベルへ
+ジャンプすることで行なわれるので、@code{return} 式コードが使われることはない。
 
-Inside an @code{if_then_else} expression, represents the value to be
-placed in @code{pc} to return to the caller.
+@code{if_then_else} 式の中に置いた場合は、呼び出し元に戻るための @code{pc}
+に置かれる値を表す。
 
-Note that an insn pattern of @code{(return)} is logically equivalent to
-@code{(set (pc) (return))}, but the latter form is never used.
-
-@findex simple_return
-@item (simple_return)
-Like @code{(return)}, but truly represents only a function return, while
-@code{(return)} may represent an insn that also performs other functions
-of the function epilogue.  Like @code{(return)}, this may also occur in
-conditional jumps.
+@code{(return)} というパターンは、論理的には @code{(set (pc) (return))}
+と等価であるが、後者の形式が使われることはない。
 
 @findex call
 @item (call @var{function} @var{nargs})
-Represents a function call.  @var{function} is a @code{mem} expression
-whose address is the address of the function to be called.
-@var{nargs} is an expression which can be used for two purposes: on
-some machines it represents the number of bytes of stack argument; on
-others, it represents the number of argument registers.
+関数呼び出しを表現する。@var{function} は @code{mem} 式であり、
+この式のアドレスは、呼び出される関数のアドレスである。
+@var{nargs} は二つの目的で使われる式である。
+あるマシンでは、スタックに積まれた引数のバイト数を表現する。
+あるいは、引数レジスタの数を表現する。
 
-Each machine has a standard machine mode which @var{function} must
-have.  The machine description defines macro @code{FUNCTION_MODE} to
-expand into the requisite mode name.  The purpose of this mode is to
-specify what kind of addressing is allowed, on machines where the
-allowed kinds of addressing depend on the machine mode being
-addressed.
+どのマシンも @var{function} が持たなければならない標準的な
+マシンモードを持っている。マシン記述では、
+@code{FUNCTION_MODE} というマクロを、その不可欠のモード名に
+展開されるように定義している。
+このモードの目的は、どの種類のアドレッシングが許されるかが
+アドレスの対象となるマシンモードに依存するマシンにおいて、
+どの種類のアドレッシングが許されているかを指定することである。
 
 @findex clobber
 @item (clobber @var{x})
-Represents the storing or possible storing of an unpredictable,
-undescribed value into @var{x}, which must be a @code{reg},
-@code{scratch}, @code{parallel} or @code{mem} expression.
+予期できない値を @var{x} に格納すること、または格納する可能性が
+あることを表す。@var{x} は、@code{reg} 式か、@code{scratch} 式か、
+@code{mem} 式のどれかでなければならない。
 
-One place this is used is in string instructions that store standard
-values into particular hard registers.  It may not be worth the
-trouble to describe the values that are stored, but it is essential to
-inform the compiler that the registers will be altered, lest it
-attempt to keep data in them across the string instruction.
+これが使われるのは一つは、標準的な値を特定のハードレジスタに格納する
+文字列命令においてである。
+格納される値を記述する手間をかける必要はないが、
+文字列命令を越えてその値を保持しようとしないように、
+コンパイラにレジスタの値が変更されることを知らせるのが本質的な
+事である。
 
-If @var{x} is @code{(mem:BLK (const_int 0))} or
-@code{(mem:BLK (scratch))}, it means that all memory
-locations must be presumed clobbered.  If @var{x} is a @code{parallel},
-it has the same meaning as a @code{parallel} in a @code{set} expression.
+もし @var{x} が @code{(mem:BLK (const_int 0))} なら、
+全メモリ位置が上書きされると見なされなければならないことを意味する。
 
-Note that the machine description classifies certain hard registers as
-``call-clobbered''.  All function call instructions are assumed by
-default to clobber these registers, so there is no need to use
-@code{clobber} expressions to indicate this fact.  Also, each function
-call is assumed to have the potential to alter any memory location,
-unless the function is declared @code{const}.
+マシン記述では、ある種類のハードレジスタを「呼びだし時破壊」
+(``call-clobbered'') として分類していることに注意。
+全ての関数の呼びだし命令は、デフォルトでこれらのレジスタを破壊すると
+仮定されているので、この事実を示すために @code{clobber} 式を
+使う必要はない。
+また、各関数呼び出しは、その関数が @code{const} と宣言されていない限り、
+任意のメモリ位置を変更する可能性があると仮定されている。
 
-If the last group of expressions in a @code{parallel} are each a
-@code{clobber} expression whose arguments are @code{reg} or
-@code{match_scratch} (@pxref{RTL Template}) expressions, the combiner
-phase can add the appropriate @code{clobber} expressions to an insn it
-has constructed when doing so will cause a pattern to be matched.
+@code{parallel} の最後の組の式が、それぞれ @code{reg} か
+@code{match_scratch} 式 (@pxref{RTL Template})を引数とする
+@code{clobber} 式なら、組合せフェーズは、そうすることでパターンが
+マッチするようになるなら、適切な @code{clobber} 式を、構築されたばかりの
+insn に追加する。
 
-This feature can be used, for example, on a machine that whose multiply
-and add instructions don't use an MQ register but which has an
-add-accumulate instruction that does clobber the MQ register.  Similarly,
-a combined instruction might require a temporary register while the
-constituent instructions might not.
+この機能は、例えば、乗算命令と加算命令は MQ レジスタを使わないが、
+アキュムレータへの加算命令が MQ レジスタを上書きするようなマシンで
+使うことができる。
+一個の組み合わされた命令(? combined instruction)は一時レジスタを
+必要とするが、一方、それを構成する命令は一時レジスタを必要としない
+場合も同様である。
 
-When a @code{clobber} expression for a register appears inside a
-@code{parallel} with other side effects, the register allocator
-guarantees that the register is unoccupied both before and after that
-insn if it is a hard register clobber.  For pseudo-register clobber,
-the register allocator and the reload pass do not assign the same hard
-register to the clobber and the input operands if there is an insn
-alternative containing the @samp{&} constraint (@pxref{Modifiers}) for
-the clobber and the hard register is in register classes of the
-clobber in the alternative.  You can clobber either a specific hard
-register, a pseudo register, or a @code{scratch} expression; in the
-latter two cases, GCC will allocate a hard register that is available
-there for use as a temporary.
+あるレジスタに対する @code{clobber} 式が、他に副作用のある @code{parallel}
+の中に現れた場合は、レジスタ確保部が、そのレジスタがその insn の前後
+どちらにおいても占有されることがないことを保証する。
+しかし、選ばれた選択肢に対して制約 @samp{&} が指定されていない限り、
+再ロードパスが入力の一つとして使われたレジスタを確保する場合がある
+(@pxref{Modifiers})。
+特定のハードレジスタ、または疑似レジスタ、あるいは @code{scratch} 式の
+どれかを上書きすることができる。後の二つの場合には、
+GNU CC は、その時点で一時的に使用可能なハードレジスタを確保する
 
-For instructions that require a temporary register, you should use
-@code{scratch} instead of a pseudo-register because this will allow the
-combiner phase to add the @code{clobber} when required.  You do this by
-coding (@code{clobber} (@code{match_scratch} @dots{})).  If you do
-clobber a pseudo register, use one which appears nowhere else---generate
-a new one each time.  Otherwise, you may confuse CSE@.
+一時レジスタを必要とする命令については、疑似レジスタの代わりに
+@code{scratch} を使うべきである。
+そうしておくと、組合せフェーズが必要なときに @code{clobber} を追加すること
+を許すからである。
+このためには (@code{clobber} (@code{match_scratch} @dots{})) と
+書けば良い。
+疑似レジスタを上書きするなら、他のどこにも現れていないものを
+使うこと。つまり、そのたびに新しいものを生成して使うこと。
+そうしないと、CSE のフェーズが混乱する。
 
-There is one other known use for clobbering a pseudo register in a
-@code{parallel}: when one of the input operands of the insn is also
-clobbered by the insn.  In this case, using the same pseudo register in
-the clobber and elsewhere in the insn produces the expected results.
+@code{parallel} 中で疑似レジスタを上書きすることのもう一つの使い道が
+ある。insn の入力オペランドの一つがやりその insn により上書きされる
+場合である。
+この場合、insn 中の clobber の中と、別のところとに同じ疑似レジスタを
+使うと期待どおりの結果が得られる。
 
 @findex use
 @item (use @var{x})
-Represents the use of the value of @var{x}.  It indicates that the
-value in @var{x} at this point in the program is needed, even though
-it may not be apparent why this is so.  Therefore, the compiler will
-not attempt to delete previous instructions whose only effect is to
-store a value in @var{x}.  @var{x} must be a @code{reg} expression.
+@var{x} の値が使われるということを表す。
+プログラムのこの時点での @var{x} の値が必要であることを示す。
+たとえ、なぜ必要であるかがはっきりしていなくてもである。
+このため、GCC は、@var{x} に値を格納するという
+効果しか持たない命令が直前にあっても、その命令を削除しない。
+@var{x} は、@code{reg} 式でなければならない。
 
-In some situations, it may be tempting to add a @code{use} of a
-register in a @code{parallel} to describe a situation where the value
-of a special register will modify the behavior of the instruction.
-A hypothetical example might be a pattern for an addition that can
-either wrap around or use saturating addition depending on the value
-of a special control register:
+再ロードフェーズの間、パターンとして @code{use} がある insn は、
+@code{reg_equal} ノートを保持することが可能である。
+このような @code{use} insn は、再ロードフェーズが終了する前に
+削除される。
 
-@smallexample
-(parallel [(set (reg:SI 2) (unspec:SI [(reg:SI 3)
-                                       (reg:SI 4)] 0))
-           (use (reg:SI 1))])
-@end smallexample
-
-@noindent
-
-This will not work, several of the optimizers only look at expressions
-locally; it is very likely that if you have multiple insns with
-identical inputs to the @code{unspec}, they will be optimized away even
-if register 1 changes in between.
-
-This means that @code{use} can @emph{only} be used to describe
-that the register is live.  You should think twice before adding
-@code{use} statements, more often you will want to use @code{unspec}
-instead.  The @code{use} RTX is most commonly useful to describe that
-a fixed register is implicitly used in an insn.  It is also safe to use
-in patterns where the compiler knows for other reasons that the result
-of the whole pattern is variable, such as @samp{movmem@var{m}} or
-@samp{call} patterns.
-
-During the reload phase, an insn that has a @code{use} as pattern
-can carry a reg_equal note.  These @code{use} insns will be deleted
-before the reload phase exits.
-
-During the delayed branch scheduling phase, @var{x} may be an insn.
-This indicates that @var{x} previously was located at this place in the
-code and its data dependencies need to be taken into account.  These
-@code{use} insns will be deleted before the delayed branch scheduling
-phase exits.
+遅延分岐スケジューリングのフェーズの間は、@var{x} は insn でも良い。
+これは、@var{x} が以前にコード中のこの場所にあって、そのデータ依存関係
+を考慮する必要があるということを意味する。
+このような @code{use} insn は、遅延分岐スケジューリングのフェーズの
+終了前に削除される。
 
 @findex parallel
 @item (parallel [@var{x0} @var{x1} @dots{}])
