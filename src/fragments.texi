@@ -40,7 +40,6 @@
 クロスコンパイラを作成するときに、@file{libgcc1.a} を構築するのに
 使う規則である。ターゲットが @file{libgcc1.a} にある関数を
 使う必要がない場合は、このマクロは空にする。
-@xref{Cross Runtime}.
 
 @findex LIBGCC2_CFLAGS
 @item LIBGCC2_CFLAGS
