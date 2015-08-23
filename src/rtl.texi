@@ -3004,18 +3004,17 @@ in the machine description.
 @cindex assembler instructions in RTL
 
 @cindex @code{asm_operands}, usage
-The RTX code @code{asm_operands} represents a value produced by a
-user-specified assembler instruction.  It is used to represent
-an @code{asm} statement with arguments.  An @code{asm} statement with
-a single output operand, like this:
+RTX コード @code{asm_operands} は、ユーザが指定したアセンブラ命令に
+より生成される値を表現する。引数付きの @code{asm} 文を表現するのに
+使われる。出力オペランドが一つの @code{asm} 文は以下のようになる。
 
 @smallexample
 asm ("foo %1,%2,%0" : "=a" (outputvar) : "g" (x + y), "di" (*z));
 @end smallexample
 
 @noindent
-is represented using a single @code{asm_operands} RTX which represents
-the value that is stored in @code{outputvar}:
+この @code{asm} 文は、値が @code{outputvar} に格納されることを
+表現する、一個の @code{asm_operands} RTX を使って以下のように表現される。
 
 @smallexample
 (set @var{rtx-for-outputvar}
@@ -3026,19 +3025,17 @@ the value that is stored in @code{outputvar}:
 @end smallexample
 
 @noindent
-Here the operands of the @code{asm_operands} RTX are the assembler
-template string, the output-operand's constraint, the index-number of the
-output operand among the output operands specified, a vector of input
-operand RTX's, and a vector of input-operand modes and constraints.  The
-mode @var{m1} is the mode of the sum @code{x+y}; @var{m2} is that of
-@code{*z}.
+ここで、@code{asm_operands} RTX のオペランドは、アセンブラテンプレート文字列、
+出力オペランドについての制限子、指定されたオペランドの中での出力オペランド
+の番号、入力オペランド RTX のベクトル、それに、入力オペランドのモードと
+制約のベクトルからなる。モード @var{m1} は、和 @code{x+y} のモードであり、
+@var{m2} は、@code{*z} のモードである。
 
-When an @code{asm} statement has multiple output values, its insn has
-several such @code{set} RTX's inside of a @code{parallel}.  Each @code{set}
-contains an @code{asm_operands}; all of these share the same assembler
-template and vectors, but each contains the constraint for the respective
-output operand.  They are also distinguished by the output-operand index
-number, which is 0, 1, @dots{} for successive output operands.
+@code{asm} 文に複数の出力値がある場合は、その insn は @code{parallel} の
+内側に幾つかの @code{set} RTX を持つ。
+@code{set}はそれぞれ @code{asm_operands} を含んでいる。
+これらの @code{set} は全て、同じアセンブラテンプレートとベクトルを
+共有しているが、それぞれ出力オペランドに応じた制約を保持している。
 
 @node Insns
 @section Insns
@@ -3645,32 +3642,32 @@ ordinary way as an expression.
 @cindex RTL function-call insns
 @cindex function-call insns
 
-Insns that call subroutines have the RTL expression code @code{call_insn}.
-These insns must satisfy special rules, and their bodies must use a special
-RTL expression code, @code{call}.
+サブルーチンを呼び出す insn は、RTL 式コードが @code{call_insn} になる。
+サブルーチン呼び出し insn は特別な規則に従う必要があり、
+本体部分で特別な RTL 式コード @code{call} を使わなければならない。
 
 @cindex @code{call} usage
-A @code{call} expression has two operands, as follows:
+@code{call} 式は、以下のようにオペランドを二つ取る。
 
 @smallexample
 (call (mem:@var{fm} @var{addr}) @var{nbytes})
 @end smallexample
 
 @noindent
-Here @var{nbytes} is an operand that represents the number of bytes of
-argument data being passed to the subroutine, @var{fm} is a machine mode
-(which must equal as the definition of the @code{FUNCTION_MODE} macro in
-the machine description) and @var{addr} represents the address of the
-subroutine.
+ここで、@var{nbytes} は、サブルーチンに渡される引数データのバイト数を
+表すオペランドである。@var{fm} はマシンモードであり、
+@var{addr} はサブルーチンのアドレスを表す。
+@var{fm} は、マシン記述の @code{FUNCTION_MODE} マクロの定義と
+同じでなければならない。
 
-For a subroutine that returns no value, the @code{call} expression as
-shown above is the entire body of the insn, except that the insn might
-also contain @code{use} or @code{clobber} expressions.
+値を返さないサブルーチンについては、上に示した @code{call} 式そのものが
+insn の全体になる。ただし、@code{use} 式か @code{clobber} 式を
+その他に含んでいる必要がある。
 
 @cindex @code{BLKmode}, and function return values
-For a subroutine that returns a value whose mode is not @code{BLKmode},
-the value is returned in a hard register.  If this register's number is
-@var{r}, then the body of the call insn looks like this:
+戻り値があり、そのモードが @code{BLKmode} でないサブルーチンについては、
+戻り値はハードレジスタに置かれる。このレジスタの番号が @var{r} なら、
+call insn の本体は以下のようになる。
 
 @smallexample
 (set (reg:@var{m} @var{r})
@@ -3678,34 +3675,35 @@ the value is returned in a hard register.  If this register's number is
 @end smallexample
 
 @noindent
-This RTL expression makes it clear (to the optimizer passes) that the
-appropriate register receives a useful value in this insn.
+この RTL 式は、この insn で、適切なレジスタに有効な値が置かれる
+ことを(最適化パスに対して)はっきりさせる。
 
-When a subroutine returns a @code{BLKmode} value, it is handled by
-passing to the subroutine the address of a place to store the value.
-So the call insn itself does not ``return'' any value, and it has the
-same RTL form as a call that returns nothing.
+サブルーチンが @code{BLKmode} の値を返すなら、
+その値を格納すべき位置のアドレスをサブルーチンに渡すという処理が
+行なわれる。このため、call insn 自身はどんな値も返さないので、
+値を返さない呼び出しと同じ形式の RTL になる。
 
-On some machines, the call instruction itself clobbers some register,
-for example to contain the return address.  @code{call_insn} insns
-on these machines should have a body which is a @code{parallel}
-that contains both the @code{call} expression and @code{clobber}
-expressions that indicate which registers are destroyed.  Similarly,
-if the call instruction requires some register other than the stack
-pointer that is not explicitly mentioned in its RTL, a @code{use}
-subexpression should mention that register.
+マシンによっては、call 命令自身が幾つかのレジスタを、例えば
+戻り先アドレスを保持するために、破壊する。
+そういうマシンでの @code{call_insn} insn の本体は、
+@code{call} 式と @code{clobber} 式の両方を持つ、一個の @code{parallel}
+とすべきである。この @code{clobber} 式は、どのレジスタが破壊されるかを
+示す。
+同様に、call 命令が、スタックポインタ以外に、RTL で明示的に指定
+されていないレジスタを必要とするときは、@code{use} 副式がそのレジスタに
+ついて言及すべきである。
 
-Functions that are called are assumed to modify all registers listed in
-the configuration macro @code{CALL_USED_REGISTERS} (@pxref{Register
-Basics}) and, with the exception of @code{const} functions and library
-calls, to modify all of memory.
+呼び出される関数は、コンフィギュレーションマクロ @code{CALL_USED_REGISTERS}
+(@pxref{Register Basics})に列挙されている全てのレジスタを修正し、
+@code{const} 関数とライブラリ呼びだしを例外として、全メモリを
+修正すると仮定される。
 
-Insns containing just @code{use} expressions directly precede the
-@code{call_insn} insn to indicate which registers contain inputs to the
-function.  Similarly, if registers other than those in
-@code{CALL_USED_REGISTERS} are clobbered by the called function, insns
-containing a single @code{clobber} follow immediately after the call to
-indicate which registers.
+単に @code{use} 式を含む insn は、どのレジスタが関数への入力を
+保持しているかを示す @code{call_insn} の直前に位置する。
+同様に、@code{CALL_USED_REGISTERS} で指定されている以外のレジスタが
+呼び出された関数により上書きされるなら、単独の @code{clobber} を
+含む insn は、それがどのレジスタかを示すために、その呼び出しの直後に
+置かれる。
 
 @node Sharing
 @section Structure Sharing Assumptions
