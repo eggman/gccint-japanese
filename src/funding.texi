@@ -10,45 +10,49 @@ gpl(7), gfdl(7).
 @c man begin DESCRIPTION
 @unnumbered Funding Free Software
 
-If you want to have more free software a few years from now, it makes
-sense for you to help encourage people to contribute funds for its
-development.  The most effective approach known is to encourage
-commercial redistributors to donate.
+読者が今から数年のうちにもっとたくさんのフリーソフトウェアが欲しいと
+思うなら、その開発資金を提供するよう人々に奨励することは読者に
+とって意味のあることである。知られているうち、最も有効な方法は、
+商用再配布業者に寄付を行うよう要請することである。
 
-Users of free software systems can boost the pace of development by
-encouraging for-a-fee distributors to donate part of their selling price
-to free software developers---the Free Software Foundation, and others.
+フリーソフトウェアシステムのユーザは、有料の配布業者に、売価の一部を
+フリーソフトウェアの開発者---Free Software Foundation やその他の人々---
+に寄付するように奨励することで、開発のペースを速めることができる。
 
-The way to convince distributors to do this is to demand it and expect
-it from them.  So when you compare distributors, judge them partly by
-how much they give to free software development.  Show distributors
-they must compete to be the one who gives the most.
+配布業者にこれらのことを行うよう納得させるには、要求し、かつ
+期待することである。そういうわけで、配布業者を比較するときは、
+フリーソフトウェアの開発にどれだけ寄付を行っているかで
+判断の一部にして欲しい。配布業者に、最も寄付を行う業者になるためには
+競争しなければならないことを示すのである。
 
-To make this approach work, you must insist on numbers that you can
-compare, such as, ``We will donate ten dollars to the Frobnitz project
-for each disk sold.''  Don't be satisfied with a vague promise, such as
-``A portion of the profits are donated,'' since it doesn't give a basis
-for comparison.
 
-Even a precise fraction ``of the profits from this disk'' is not very
-meaningful, since creative accounting and unrelated business decisions
-can greatly alter what fraction of the sales price counts as profit.
-If the price you pay is $50, ten percent of the profit is probably
-less than a dollar; it might be a few cents, or nothing at all.
+この方法をうまく機能させるためには、比較の出来る数字を要求しなければ
+ならない。例えば、「我々は、ディスクが一枚売れる毎に Frobnitz プロジェクトに
+10 ドル寄付します。」という具合にである。曖昧な約束で満足しては
+いけない。例えば、「利益の一部は寄付されます。」では、比較に規準に
+ならない。
 
-Some redistributors do development work themselves.  This is useful too;
-but to keep everyone honest, you need to inquire how much they do, and
-what kind.  Some kinds of development make much more long-term
-difference than others.  For example, maintaining a separate version of
-a program contributes very little; maintaining the standard version of a
-program for the whole community contributes much.  Easy new ports
-contribute little, since someone else would surely do them; difficult
-ports such as adding a new CPU to the GNU Compiler Collection contribute more;
-major new features or packages contribute the most.
+「このディスクの利益の」ある正確な比率としてもあまり意味がない。
+独創的な経理や無関係なビジネス上の決定により、販売価格のどれぐらい
+の割合を利益として計上するかが大きく変わりうるからである。
+読者が支払った価格が 50 ドルだと、利益の 10 パーセントはおそらく
+一ドルに満たない。数セントかもしれないし、全然ないかもしれないのである。
 
-By establishing the idea that supporting further development is ``the
-proper thing to do'' when distributing free software for a fee, we can
-assure a steady flow of resources into making more free software.
+再配布業者の中には、自分達で開発を行っているところもある。
+これもまた有益なことである。ただし、誰もが正直で居続けるためには、
+彼らがどんな種類の開発を、どれぐらいやっているのかを問い合わせる必要がある。
+開発の種類によっては、それ以外のものとくらべて、長期に渡る差が出てくる。
+例えば、あるプログラムの独立したバージョンを保守するのはほとんど貢献
+しない。コミュニティ全体向けの標準バージョンのプログラムを保守するのは、
+非常に貢献する。簡単な新規の移植はあまり貢献しない。誰か他の人が
+間違いなくやるはずだからである。難しい移植、例えば GNU コンパイラ集に
+新しい CPU を追加するようなものは、もっと貢献する。重要な新しい機能や
+新しいパッケージを開発するのが最も貢献度が大きいと言える
+
+さらなる開発をサポートするのは、フリーソフトウェアを有料で配布するときに
+「適切なことを行う」ことであるという考え方を確立することによって、
+さらにフリーソフトウェアを作るのに安定したリソースの提供しつづけることが
+保証できる。
 @c man end
 
 @display
