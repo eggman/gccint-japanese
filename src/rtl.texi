@@ -186,30 +186,27 @@ chain, such as @code{NOTE}, @code{BARRIER}, and @code{CODE_LABEL}.
 
 @cindex RTL format
 @file{rtl.def} には、式のタイプ毎に、その式が含むオブジェクトの数と
-その種類が記述されている。オブジェクトの種類の書き方としては
-次の四つ(五つのtypo?)がある。式(実際には式へのポインタ)の場合は @samp{e}、
-整数は @samp{i}、幅広整数は @samp{w}、文字列は @samp{s}、式のベクトルは
-@samp{E} と書く。式コードを表す文字の連なりを @dfn{フォーマット}と呼ぶ。
+その性質が@dfn{フォーマット}と呼ぶ式 コードを表す文字の連なりで記述されている。
 例えば、@code{subreg} のフォーマットは @samp{ei} となる。
 
 @cindex RTL format characters
-These are the most commonly used format characters:
+以下のフォーマット指定文字列がよく使われる。
 
 @table @code
 @item e
-An expression (actually a pointer to an expression).
+式(実際には式へのポインタ)
 
 @item i
-An integer.
+整数
 
 @item w
-A wide integer.
+幅広整数
 
 @item s
-A string.
+文字列
 
 @item E
-A vector of expressions.
+式のベクトル
 @end table
 
 その他に以下のフォーマット指定文字が使われる。
