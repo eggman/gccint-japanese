@@ -2560,22 +2560,23 @@ for insn attributes.  @xref{Insn Attributes}.
 @cindex RTL declarations
 @cindex declarations, RTL
 
-Declaration expression codes do not represent arithmetic operations
-but rather state assertions about their operands.
+宣言式コードは、算術演算を表すのではなく、オペランドの状態に関する
+表明を表す。
 
 @table @code
 @findex strict_low_part
 @cindex @code{subreg}, in @code{strict_low_part}
 @item (strict_low_part (subreg:@var{m} (reg:@var{n} @var{r}) 0))
-This expression code is used in only one context: as the destination operand of a
-@code{set} expression.  In addition, the operand of this expression
-must be a non-paradoxical @code{subreg} expression.
+この式コードはただ一つの文脈でのみ使われる。
+@code{set} 式の目的オペランドとしてだけ使われる。
+さらに、この式のオペランドは矛盾のない @code{subreg} 式でなければ
+ならない。
 
-The presence of @code{strict_low_part} says that the part of the
-register which is meaningful in mode @var{n}, but is not part of
-mode @var{m}, is not to be altered.  Normally, an assignment to such
-a subreg is allowed to have undefined effects on the rest of the
-register when @var{m} is less than a word.
+@code{strict_low_part} があると、モード @var{n} では意味があるが、
+モード @var{m} の一部ではないようなレジスタの一部が、変更すべきで
+ないことを示す。
+通常、@var{m} の幅がワードより狭いときは、このようなサブレジスタに
+代入を行なうと、そのレジスタの他の部分に予期しない影響を与える。
 @end table
 
 @node Side Effects
