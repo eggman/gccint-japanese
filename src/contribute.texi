@@ -5,20 +5,15 @@
 @node Contributing
 @chapter Contributing to GCC Development
 
-If you would like to help pretest GCC releases to assure they work well,
-current development sources are available by SVN (see
-@uref{http://gcc.gnu.org/svn.html}).  Source and binary snapshots are
-also available for FTP; see @uref{http://gcc.gnu.org/snapshots.html}.
+GCC のリリースがうまく動作することを保証する事前テストのお手伝いを
+しても良いという方、あるいは GCC の改良作業をしてみたいという方は、
+是非とも保守担当者 @code{gcc@@gcc.gnu.org} に連絡していただきたい。
+事前テスターの方にはバグを報告するだけでなく、調査することも
+やっていただきたい。
 
-If you would like to work on improvements to GCC, please read the
-advice at these URLs:
-
-@smallexample
-@uref{http://gcc.gnu.org/contribute.html}
-@uref{http://gcc.gnu.org/contributewhy.html}
-@end smallexample
-
-@noindent
-for information on how to make useful contributions and avoid
-duplication of effort.  Suggested projects are listed at
-@uref{http://gcc.gnu.org/projects/}.
+改良作業をしてみたい方は、提案されているプロジェクトについて尋ねてみて
+欲しい。あるいは、自分自身のアイデアを提案して欲しい。
+まだ作業を始めていないなら、始める前に @code{gcc@@gcc.gnu.org} に
+連絡するのが良いだろう。
+保守担当者は、読者の拡張を、GCC の他の部分や他の開発計画に
+よりうまく適合させる方法を示唆することができるかもしれない。
