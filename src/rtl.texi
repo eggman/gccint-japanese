@@ -2482,133 +2482,78 @@ for insn attributes.  @xref{Insn Attributes}.
 @cindex conversions
 @cindex machine mode conversions
 
-All conversions between machine modes must be represented by
-explicit conversion operations.  For example, an expression
-which is the sum of a byte and a full word cannot be written as
-@code{(plus:SI (reg:QI 34) (reg:SI 80))} because the @code{plus}
-operation requires two operands of the same machine mode.
-Therefore, the byte-sized operand is enclosed in a conversion
-operation, as in
+マシンモード間の変換は全て、明示的な変換演算で表す必要がある。
+例えば、あるバイトとある全語の和を表す式を、
+@code{(plus:SI (reg:QI 34) (reg:SI 80))} と書くことはできない。
+なぜなら、@code{plus} という演算では、二つのオペランドは同じマシンモード
+を持つ必要があるからである。
+このため、バイトの大きさのオペランドを変換演算で以下のように包む必要がある。
 
 @smallexample
 (plus:SI (sign_extend:SI (reg:QI 34)) (reg:SI 80))
 @end smallexample
 
-The conversion operation is not a mere placeholder, because there
-may be more than one way of converting from a given starting mode
-to the desired final mode.  The conversion operation code says how
-to do it.
+変換演算は単なるプレースホルダーではない。というのは、指定された
+変換前のモードから変換後のモードへ変換する方法はひとつだけでは
+ないからである。変換演算のコードで、変換方法を指定するのである。
 
-For all conversion operations, @var{x} must not be @code{VOIDmode}
-because the mode in which to do the conversion would not be known.
-The conversion must either be done at compile-time or @var{x}
-must be placed into a register.
+以下のどの変換演算でも、@var{x} は @code{VOIDmode} であってはならない。
+変換を行なうべきがモードが判らないからである。
+変換は、コンパイル時に行なうか、@var{x} をレジスタに保持するかのどちらかで
+なければならない。
 
 @table @code
 @findex sign_extend
 @item (sign_extend:@var{m} @var{x})
-Represents the result of sign-extending the value @var{x}
-to machine mode @var{m}.  @var{m} must be a fixed-point mode
-and @var{x} a fixed-point value of a mode narrower than @var{m}.
+値 @var{x} をマシンモード @var{m} へ符号拡張した結果を
+表現する。@var{m} は固定小数点モードでなければならず、
+@var{x} は、@var{m} より幅の狭いモードの固定小数点値でなければならない。
 
 @findex zero_extend
 @item (zero_extend:@var{m} @var{x})
-Represents the result of zero-extending the value @var{x}
-to machine mode @var{m}.  @var{m} must be a fixed-point mode
-and @var{x} a fixed-point value of a mode narrower than @var{m}.
+値 @var{x} をマシンモード @var{m} へゼロ拡張した結果を
+表現する。@var{m} は固定小数点モードでなければならず、
+@var{x} は、@var{m} より幅の狭いモードの固定小数点値でなければならない。
 
 @findex float_extend
 @item (float_extend:@var{m} @var{x})
-Represents the result of extending the value @var{x}
-to machine mode @var{m}.  @var{m} must be a floating point mode
-and @var{x} a floating point value of a mode narrower than @var{m}.
+値 @var{x} をマシンモード @var{m} に拡張した結果を表現する。
+@var{m} は浮動小数点モードでなければならず、@var{x} は、@var{m} より
+幅の狭いモードの浮動小数点数値でなければならない。
 
 @findex truncate
 @item (truncate:@var{m} @var{x})
-Represents the result of truncating the value @var{x}
-to machine mode @var{m}.  @var{m} must be a fixed-point mode
-and @var{x} a fixed-point value of a mode wider than @var{m}.
-
-@findex ss_truncate
-@item (ss_truncate:@var{m} @var{x})
-Represents the result of truncating the value @var{x}
-to machine mode @var{m}, using signed saturation in the case of
-overflow.  Both @var{m} and the mode of @var{x} must be fixed-point
-modes.
-
-@findex us_truncate
-@item (us_truncate:@var{m} @var{x})
-Represents the result of truncating the value @var{x}
-to machine mode @var{m}, using unsigned saturation in the case of
-overflow.  Both @var{m} and the mode of @var{x} must be fixed-point
-modes.
+値 @var{x} をマシンモード @var{m} に打切った結果を表現する。
+@var{m} は固定小数点モードでなければならず、@var{x} は
+@var{m} より幅の広いモードの固定少数点値でなければならない。
 
 @findex float_truncate
 @item (float_truncate:@var{m} @var{x})
-Represents the result of truncating the value @var{x}
-to machine mode @var{m}.  @var{m} must be a floating point mode
-and @var{x} a floating point value of a mode wider than @var{m}.
+値 @var{x} をマシンモード @var{m} に打切った結果を表現する。
+@var{m} は浮動小数点モードでなければならず、@var{x} は
+@var{m} より幅の広いモードの浮動少数点値でなければならない。
 
 @findex float
 @item (float:@var{m} @var{x})
-Represents the result of converting fixed point value @var{x},
-regarded as signed, to floating point mode @var{m}.
+固定小数点値 @var{x} を符号付きとみなし、浮動小数点モード @var{m} に
+変換した結果を表す。
 
 @findex unsigned_float
 @item (unsigned_float:@var{m} @var{x})
-Represents the result of converting fixed point value @var{x},
-regarded as unsigned, to floating point mode @var{m}.
+固定小数点値 @var{x} を符号無しとみなし、浮動小数点モード @var{m} に
+変換した結果を表す。
 
 @findex fix
 @item (fix:@var{m} @var{x})
-When @var{m} is a floating-point mode, represents the result of
-converting floating point value @var{x} (valid for mode @var{m}) to an
-integer, still represented in floating point mode @var{m}, by rounding
-towards zero.
-
-When @var{m} is a fixed-point mode, represents the result of
-converting floating point value @var{x} to mode @var{m}, regarded as
-signed.  How rounding is done is not specified, so this operation may
-be used validly in compiling C code only for integer-valued operands.
+@var{m} が固定小数点モードの場合、浮動小数点値 @var{x} をモード @var{m} の
+符号付き整数に変換した結果を表現する。
+丸めをどのように行なうかは規定されないので、C プログラムをコンパイルする
+ときにこの演算が正しく使えるのは、オペランドが整数値を持つ時だけである。
 
 @findex unsigned_fix
 @item (unsigned_fix:@var{m} @var{x})
-Represents the result of converting floating point value @var{x} to
-fixed point mode @var{m}, regarded as unsigned.  How rounding is done
-is not specified.
-
-@findex fract_convert
-@item (fract_convert:@var{m} @var{x})
-Represents the result of converting fixed-point value @var{x} to
-fixed-point mode @var{m}, signed integer value @var{x} to
-fixed-point mode @var{m}, floating-point value @var{x} to
-fixed-point mode @var{m}, fixed-point value @var{x} to integer mode @var{m}
-regarded as signed, or fixed-point value @var{x} to floating-point mode @var{m}.
-When overflows or underflows happen, the results are undefined.
-
-@findex sat_fract
-@item (sat_fract:@var{m} @var{x})
-Represents the result of converting fixed-point value @var{x} to
-fixed-point mode @var{m}, signed integer value @var{x} to
-fixed-point mode @var{m}, or floating-point value @var{x} to
-fixed-point mode @var{m}.
-When overflows or underflows happen, the results are saturated to the
-maximum or the minimum.
-
-@findex unsigned_fract_convert
-@item (unsigned_fract_convert:@var{m} @var{x})
-Represents the result of converting fixed-point value @var{x} to
-integer mode @var{m} regarded as unsigned, or unsigned integer value @var{x} to
-fixed-point mode @var{m}.
-When overflows or underflows happen, the results are undefined.
-
-@findex unsigned_sat_fract
-@item (unsigned_sat_fract:@var{m} @var{x})
-Represents the result of converting unsigned integer value @var{x} to
-fixed-point mode @var{m}.
-When overflows or underflows happen, the results are saturated to the
-maximum or the minimum.
-@end table
+浮動小数点値 @var{x} をモード @var{m} の符号なし整数に変換した結果を表現する。
+丸めをどのように行なうかは規定されない。
 
 @node RTL Declarations
 @section Declarations
