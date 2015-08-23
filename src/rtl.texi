@@ -845,249 +845,108 @@ In an RTL dump, this flag is represented as @samp{/v}.
 @cindex machine modes
 
 @findex machine_mode
-A machine mode describes a size of data object and the representation used
-for it.  In the C code, machine modes are represented by an enumeration
-type, @code{machine_mode}, defined in @file{machmode.def}.  Each RTL
-expression has room for a machine mode and so do certain kinds of tree
-expressions (declarations and types, to be precise).
+マシンモードは、データオブジェクトの大きさ、その表現方法を記述する。
+C のコード中では、マシンモードは列挙型 @code{enum machine_mode} で
+表現される。この列挙型は、@file{machmode.def} で定義されている。
+各 RTL 式にはマシンモードを格納する場所があり、そのため、ある種のツリー式
+(正確には、宣言と型である)を格納する場所も持っている。
 
-In debugging dumps and machine descriptions, the machine mode of an RTL
-expression is written after the expression code with a colon to separate
-them.  The letters @samp{mode} which appear at the end of each machine mode
-name are omitted.  For example, @code{(reg:SI 38)} is a @code{reg}
-expression with machine mode @code{SImode}.  If the mode is
-@code{VOIDmode}, it is not written at all.
+デバッグダンプとマシン記述のなかでは、RTL 式のマシンモードは、式コードの
+後ろにコロンで区切って書く。各マシンモード名に付く@samp{mode}は、
+省略される。例えば、@code{(reg:SI 38)} は、@code{reg} 式で、マシンモードは
+@code{SImode} である。モードが @code{VOIDmode} の場合は、モードとしては
+何も出力されない。
 
-Here is a table of machine modes.  The term ``byte'' below refers to an
-object of @code{BITS_PER_UNIT} bits (@pxref{Storage Layout}).
+以下にマシンモードの表を示す。以下では、「バイト」とは、@code{BITS_PER_UNIT}
+ビットのオブジェクトを指す(@pxref{Storage Layout})。
 
 @table @code
-@findex BImode
-@item BImode
-``Bit'' mode represents a single bit, for predicate registers.
-
 @findex QImode
 @item QImode
-``Quarter-Integer'' mode represents a single byte treated as an integer.
+「1/4 精度整数」(Quarter-Integer)モードは、整数として扱われる1バイトを
+表現する。
 
 @findex HImode
 @item HImode
-``Half-Integer'' mode represents a two-byte integer.
+「1/2 精度整数」(Half-Integer)モードは、2バイト整数を表す。
 
 @findex PSImode
 @item PSImode
-``Partial Single Integer'' mode represents an integer which occupies
-four bytes but which doesn't really use all four.  On some machines,
-this is the right mode to use for pointers.
+「部分単精度整数」(Partial Single Integer)モードは、4バイトを占有するが、
+実際に4バイト全てを使うことはないような整数を表す。
+マシンによっては、これがポインタ用の正しいモードになる。
 
 @findex SImode
 @item SImode
-``Single Integer'' mode represents a four-byte integer.
+「単精度整数」(Single Integer)モードは、四バイト整数を表す。
 
 @findex PDImode
 @item PDImode
-``Partial Double Integer'' mode represents an integer which occupies
-eight bytes but which doesn't really use all eight.  On some machines,
-this is the right mode to use for certain pointers.
+「部分倍精度整数」(Partial Double Integer)モードは、8バイトを占有するが、
+実際に8バイト全てを使うことはないような整数を表す。
+マシンによっては、これがある種のポインタ用の正しいモードになる。
 
 @findex DImode
 @item DImode
-``Double Integer'' mode represents an eight-byte integer.
+「倍精度整数」モードは八バイト整数を表す。
 
 @findex TImode
 @item TImode
-``Tetra Integer'' (?) mode represents a sixteen-byte integer.
-
-@findex OImode
-@item OImode
-``Octa Integer'' (?) mode represents a thirty-two-byte integer.
-
-@findex XImode
-@item XImode
-``Hexadeca Integer'' (?) mode represents a sixty-four-byte integer.
-
-@findex QFmode
-@item QFmode
-``Quarter-Floating'' mode represents a quarter-precision (single byte)
-floating point number.
-
-@findex HFmode
-@item HFmode
-``Half-Floating'' mode represents a half-precision (two byte) floating
-point number.
-
-@findex TQFmode
-@item TQFmode
-``Three-Quarter-Floating'' (?) mode represents a three-quarter-precision
-(three byte) floating point number.
+「4倍精度整数」(Tetra Integer)モードは、16バイト整数を表す。
 
 @findex SFmode
 @item SFmode
-``Single Floating'' mode represents a four byte floating point number.
-In the common case, of a processor with IEEE arithmetic and 8-bit bytes,
-this is a single-precision IEEE floating point number; it can also be
-used for double-precision (on processors with 16-bit bytes) and
-single-precision VAX and IBM types.
+「単精度浮動小数点数」(Single Floating)モードは、単精度(四バイト)浮動小数点数
+を表す。
 
 @findex DFmode
 @item DFmode
-``Double Floating'' mode represents an eight byte floating point number.
-In the common case, of a processor with IEEE arithmetic and 8-bit bytes,
-this is a double-precision IEEE floating point number.
+「倍精度浮動小数点数」(Double Floating)モードは、倍精度(八バイト)浮動小数点数
+を表す。
 
 @findex XFmode
 @item XFmode
-``Extended Floating'' mode represents an IEEE extended floating point
-number.  This mode only has 80 meaningful bits (ten bytes).  Some
-processors require such numbers to be padded to twelve bytes, others
-to sixteen; this mode is used for either.
-
-@findex SDmode
-@item SDmode
-``Single Decimal Floating'' mode represents a four byte decimal
-floating point number (as distinct from conventional binary floating
-point).
-
-@findex DDmode
-@item DDmode
-``Double Decimal Floating'' mode represents an eight byte decimal
-floating point number.
-
-@findex TDmode
-@item TDmode
-``Tetra Decimal Floating'' mode represents a sixteen byte decimal
-floating point number all 128 of whose bits are meaningful.
+「拡張精度浮動小数点数」(Extended Floating)モードは、3倍精度(12バイト)
+浮動小数点数を表す。このモードは、IEEE 拡張浮動小数点数に使う。
+システムによっては、12バイトの中には実際に使われないビットがある。
 
 @findex TFmode
 @item TFmode
-``Tetra Floating'' mode represents a sixteen byte floating point number
-all 128 of whose bits are meaningful.  One common use is the
-IEEE quad-precision format.
-
-@findex QQmode
-@item QQmode
-``Quarter-Fractional'' mode represents a single byte treated as a signed
-fractional number.  The default format is ``s.7''.
-
-@findex HQmode
-@item HQmode
-``Half-Fractional'' mode represents a two-byte signed fractional number.
-The default format is ``s.15''.
-
-@findex SQmode
-@item SQmode
-``Single Fractional'' mode represents a four-byte signed fractional number.
-The default format is ``s.31''.
-
-@findex DQmode
-@item DQmode
-``Double Fractional'' mode represents an eight-byte signed fractional number.
-The default format is ``s.63''.
-
-@findex TQmode
-@item TQmode
-``Tetra Fractional'' mode represents a sixteen-byte signed fractional number.
-The default format is ``s.127''.
-
-@findex UQQmode
-@item UQQmode
-``Unsigned Quarter-Fractional'' mode represents a single byte treated as an
-unsigned fractional number.  The default format is ``.8''.
-
-@findex UHQmode
-@item UHQmode
-``Unsigned Half-Fractional'' mode represents a two-byte unsigned fractional
-number.  The default format is ``.16''.
-
-@findex USQmode
-@item USQmode
-``Unsigned Single Fractional'' mode represents a four-byte unsigned fractional
-number.  The default format is ``.32''.
-
-@findex UDQmode
-@item UDQmode
-``Unsigned Double Fractional'' mode represents an eight-byte unsigned
-fractional number.  The default format is ``.64''.
-
-@findex UTQmode
-@item UTQmode
-``Unsigned Tetra Fractional'' mode represents a sixteen-byte unsigned
-fractional number.  The default format is ``.128''.
-
-@findex HAmode
-@item HAmode
-``Half-Accumulator'' mode represents a two-byte signed accumulator.
-The default format is ``s8.7''.
-
-@findex SAmode
-@item SAmode
-``Single Accumulator'' mode represents a four-byte signed accumulator.
-The default format is ``s16.15''.
-
-@findex DAmode
-@item DAmode
-``Double Accumulator'' mode represents an eight-byte signed accumulator.
-The default format is ``s32.31''.
-
-@findex TAmode
-@item TAmode
-``Tetra Accumulator'' mode represents a sixteen-byte signed accumulator.
-The default format is ``s64.63''.
-
-@findex UHAmode
-@item UHAmode
-``Unsigned Half-Accumulator'' mode represents a two-byte unsigned accumulator.
-The default format is ``8.8''.
-
-@findex USAmode
-@item USAmode
-``Unsigned Single Accumulator'' mode represents a four-byte unsigned
-accumulator.  The default format is ``16.16''.
-
-@findex UDAmode
-@item UDAmode
-``Unsigned Double Accumulator'' mode represents an eight-byte unsigned
-accumulator.  The default format is ``32.32''.
-
-@findex UTAmode
-@item UTAmode
-``Unsigned Tetra Accumulator'' mode represents a sixteen-byte unsigned
-accumulator.  The default format is ``64.64''.
+「4倍精度浮動小数点数」(Tetra Floating)モードは、4倍精度(16バイト)
+浮動小数点数を表す。
 
 @findex CCmode
 @item CCmode
-``Condition Code'' mode represents the value of a condition code, which
-is a machine-specific set of bits used to represent the result of a
-comparison operation.  Other machine-specific modes may also be used for
-the condition code.  These modes are not used on machines that use
-@code{cc0} (@pxref{Condition Code}).
+「条件コード」(Condition Code)モードは、条件コードの値を表す。
+条件コードは、機種に固有のビットの一群で、比較演算の結果を表す。
+これ以外の機種固有のモードが条件コードに対して使われることもある。
+これらのモードは、@code{cc0} を使う機種では使われない。
+(@pxref{Condition Code}。)
 
 @findex BLKmode
 @item BLKmode
-``Block'' mode represents values that are aggregates to which none of
-the other modes apply.  In RTL, only memory references can have this mode,
-and only if they appear in string-move or vector instructions.  On machines
-which have no such instructions, @code{BLKmode} will not appear in RTL@.
+「ブロック」(Block)モードは、他のどのモードも適用できないような集合体の
+値を表す。RTL では、メモリへの参照のみがこのモードを取りうる。
+しかも、それが文字列移動またはベクトル命令中に現れたときだけに限られる。
+このような命令を持たない機種では、@code{BLKmode} が RTL に現れることは
+ない。
 
 @findex VOIDmode
 @item VOIDmode
-Void mode means the absence of a mode or an unspecified mode.
-For example, RTL expressions of code @code{const_int} have mode
-@code{VOIDmode} because they can be taken to have whatever mode the context
-requires.  In debugging dumps of RTL, @code{VOIDmode} is expressed by
-the absence of any mode.
+「ボイド」(Void)モードは、モードがないこと、あるいはモードを指定しないこと
+を意味する。例えば、コードが @code{const_int} である RTL 式は
+@code{VOIDmode} になる。何故なら、文脈が要求するどんなモードとしても
+取ることが出来るからである。RTL のデバッグダンプ中では、@code{VOIDmode} は、
+モードが一切無いことにより表現される。
 
-@findex QCmode
-@findex HCmode
 @findex SCmode
 @findex DCmode
 @findex XCmode
 @findex TCmode
-@item QCmode, HCmode, SCmode, DCmode, XCmode, TCmode
-These modes stand for a complex number represented as a pair of floating
-point values.  The floating point values are in @code{QFmode},
-@code{HFmode}, @code{SFmode}, @code{DFmode}, @code{XFmode}, and
-@code{TFmode}, respectively.
+@item SCmode, DCmode, XCmode, TCmode
+これらのモードは、浮動小数点数値の対として表現された複素数を表す。
+浮動小数点数値は、それぞれ、@code{SFmode}, @code{DFmode}, @code{XFmode},
+@code{TFmode} になる。
 
 @findex CQImode
 @findex CHImode
@@ -1096,220 +955,149 @@ point values.  The floating point values are in @code{QFmode},
 @findex CTImode
 @findex COImode
 @item CQImode, CHImode, CSImode, CDImode, CTImode, COImode
-These modes stand for a complex number represented as a pair of integer
-values.  The integer values are in @code{QImode}, @code{HImode},
-@code{SImode}, @code{DImode}, @code{TImode}, and @code{OImode},
-respectively.
+これらのモードは、整数値の対として表現された複素数を表す。
+整数値は、それぞれ、@code{QImode}, @code{HImode}, @code{SImode},
+@code{DImode}, @code{TImode}, @code{OImode} である。
 
-@findex BND32mode
-@findex BND64mode
-@item BND32mode BND64mode
-These modes stand for bounds for pointer of 32 and 64 bit size respectively.
-Mode size is double pointer mode size.
 @end table
 
-The machine description defines @code{Pmode} as a C macro which expands
-into the machine mode used for addresses.  Normally this is the mode
-whose size is @code{BITS_PER_WORD}, @code{SImode} on 32-bit machines.
+マシン記述では、@code{Pmode} を C のマクロとして定義し、このマクロは
+アドレス向けのマシンモードに展開される。普通は、これは @code{BITS_PER_WORD}
+の大きさのモードであり、32ビットのマシンでは @code{SImode} になる。
 
-The only modes which a machine description @i{must} support are
-@code{QImode}, and the modes corresponding to @code{BITS_PER_WORD},
-@code{FLOAT_TYPE_SIZE} and @code{DOUBLE_TYPE_SIZE}.
-The compiler will attempt to use @code{DImode} for 8-byte structures and
-unions, but this can be prevented by overriding the definition of
-@code{MAX_FIXED_MODE_SIZE}.  Alternatively, you can have the compiler
-use @code{TImode} for 16-byte structures and unions.  Likewise, you can
-arrange for the C type @code{short int} to avoid using @code{HImode}.
+マシン記述に必ず記述が必要なのは、@code{QImode} と、それぞれ
+@code{BITS_PER_WORD}、@code{FLOAT_TYPE_SIZE}、@code{DOUBLE_TYPE_SIZE}
+に対応するモードである。
+GCC は、8バイトの構造体と共用体に対して @code{DImode} を使うことを
+試みるが、@code{MAX_FIXED_MODE_SIZE} の定義を書き換えることにより、
+抑止することができる。
+また、16バイトの構造体と共用体向けに @code{TImode} を使わせることも
+可能である。同様に、C の @code{short int} 型に、@code{HImode} を
+使うのを避けるように設定することも可能である。
 
 @cindex mode classes
-Very few explicit references to machine modes remain in the compiler and
-these few references will soon be removed.  Instead, the machine modes
-are divided into mode classes.  These are represented by the enumeration
-type @code{enum mode_class} defined in @file{machmode.h}.  The possible
-mode classes are:
+現在では、GCC の中でマシンモードを明示的に参照しているコードはほとんどなく、
+あっても早々に削除してしまう予定である。その代わり、マシンモードを
+モードのクラスに分割している。マシンモードのクラスは、列挙型
+@code{enum mode_class} で表される。この列挙型は @file{machmode.h} で
+定義されている。取りうるモードクラスは以下の通りである。
 
 @table @code
 @findex MODE_INT
 @item MODE_INT
-Integer modes.  By default these are @code{BImode}, @code{QImode},
-@code{HImode}, @code{SImode}, @code{DImode}, @code{TImode}, and
-@code{OImode}.
+整数モード。デフォルトでは、@code{QImode}, @code{HImode}, @code{SImode},
+@code{DImode}, @code{TImode} が該当する。
 
 @findex MODE_PARTIAL_INT
 @item MODE_PARTIAL_INT
-The ``partial integer'' modes, @code{PQImode}, @code{PHImode},
-@code{PSImode} and @code{PDImode}.
+「部分整数モード」を表す。@code{PSImode} と @code{PDImode} が
+該当する。
 
 @findex MODE_FLOAT
 @item MODE_FLOAT
-Floating point modes.  By default these are @code{QFmode},
-@code{HFmode}, @code{TQFmode}, @code{SFmode}, @code{DFmode},
-@code{XFmode} and @code{TFmode}.
-
-@findex MODE_DECIMAL_FLOAT
-@item MODE_DECIMAL_FLOAT
-Decimal floating point modes.  By default these are @code{SDmode},
-@code{DDmode} and @code{TDmode}.
-
-@findex MODE_FRACT
-@item MODE_FRACT
-Signed fractional modes.  By default these are @code{QQmode}, @code{HQmode},
-@code{SQmode}, @code{DQmode} and @code{TQmode}.
-
-@findex MODE_UFRACT
-@item MODE_UFRACT
-Unsigned fractional modes.  By default these are @code{UQQmode}, @code{UHQmode},
-@code{USQmode}, @code{UDQmode} and @code{UTQmode}.
-
-@findex MODE_ACCUM
-@item MODE_ACCUM
-Signed accumulator modes.  By default these are @code{HAmode},
-@code{SAmode}, @code{DAmode} and @code{TAmode}.
-
-@findex MODE_UACCUM
-@item MODE_UACCUM
-Unsigned accumulator modes.  By default these are @code{UHAmode},
-@code{USAmode}, @code{UDAmode} and @code{UTAmode}.
+浮動小数点モード。デフォルトでは、@code{SFmode}, @code{DFmode}, @code{XFmode},
+@code{TFmode} である。
 
 @findex MODE_COMPLEX_INT
 @item MODE_COMPLEX_INT
-Complex integer modes.  (These are not currently implemented).
+整数複素数モード。(現時点では実装されていない。)
 
 @findex MODE_COMPLEX_FLOAT
 @item MODE_COMPLEX_FLOAT
-Complex floating point modes.  By default these are @code{QCmode},
-@code{HCmode}, @code{SCmode}, @code{DCmode}, @code{XCmode}, and
-@code{TCmode}.
+浮動小数点複素数モード。デフォルトでは、@code{SCmode}、
+@code{DCmode}, @code{XCmode}, and @code{TCmode} である。
 
 @findex MODE_FUNCTION
 @item MODE_FUNCTION
-Algol or Pascal function variables including a static chain.
-(These are not currently implemented).
+静的チェーンを含む、Algol や Pascal の関数変数である。
+(現時点では実装されていない。)
 
 @findex MODE_CC
 @item MODE_CC
-Modes representing condition code values.  These are @code{CCmode} plus
-any @code{CC_MODE} modes listed in the @file{@var{machine}-modes.def}.
-@xref{Jump Patterns},
-also see @ref{Condition Code}.
-
-@findex MODE_POINTER_BOUNDS
-@item MODE_POINTER_BOUNDS
-Pointer bounds modes.  Used to represent values of pointer bounds type.
-Operations in these modes may be executed as NOPs depending on hardware
-features and environment setup.
+条件コード値を表すモード。これには、@code{CCmode} と、
+@code{EXTRA_CC_MODES} マクロに示された全てのモードが含まれる。
+@xref{Jump Patterns}、@ref{Condition Code} を参照のこと。
 
 @findex MODE_RANDOM
 @item MODE_RANDOM
-This is a catchall mode class for modes which don't fit into the above
-classes.  Currently @code{VOIDmode} and @code{BLKmode} are in
-@code{MODE_RANDOM}.
+これは、上記のどのクラスにも当てはまらないモードのための受皿モードである。
+現時点では、@code{VOIDmode} と @code{BLKmode} が @code{MODE_RANDOM} に
+該当する。
 @end table
 
-Here are some C macros that relate to machine modes:
+以下にマシンモード関連の C マクロを示す。
 
 @table @code
 @findex GET_MODE
 @item GET_MODE (@var{x})
-Returns the machine mode of the RTX @var{x}.
+RTX @var{x} のマシンモードを返す。
 
 @findex PUT_MODE
 @item PUT_MODE (@var{x}, @var{newmode})
-Alters the machine mode of the RTX @var{x} to be @var{newmode}.
+RTX @var{x} のマシンモードを @var{newmode} にする。
 
 @findex NUM_MACHINE_MODES
 @item NUM_MACHINE_MODES
-Stands for the number of machine modes available on the target
-machine.  This is one greater than the largest numeric value of any
-machine mode.
+ターゲット機種で利用可能なマシンモードの数を表す。
+これは、マシンモード値のうち最大のものに 1 を足したものになる。
 
 @findex GET_MODE_NAME
 @item GET_MODE_NAME (@var{m})
-Returns the name of mode @var{m} as a string.
+モード @var{m} の名前を文字列で返す。
 
 @findex GET_MODE_CLASS
 @item GET_MODE_CLASS (@var{m})
-Returns the mode class of mode @var{m}.
+モード @var{m} のモードクラスを返す。
 
 @findex GET_MODE_WIDER_MODE
 @item GET_MODE_WIDER_MODE (@var{m})
-Returns the next wider natural mode.  For example, the expression
-@code{GET_MODE_WIDER_MODE (QImode)} returns @code{HImode}.
+指定したモードの次に広い自然なモードを返す。
+例えば、@code{GET_MODE_WIDER_MODE (QImode)} という式は、
+@code{HImode} を返す。
 
 @findex GET_MODE_SIZE
 @item GET_MODE_SIZE (@var{m})
-Returns the size in bytes of a datum of mode @var{m}.
+モード @var{m} のデータの大きさをバイト数で返す。
 
 @findex GET_MODE_BITSIZE
 @item GET_MODE_BITSIZE (@var{m})
-Returns the size in bits of a datum of mode @var{m}.
-
-@findex GET_MODE_IBIT
-@item GET_MODE_IBIT (@var{m})
-Returns the number of integral bits of a datum of fixed-point mode @var{m}.
-
-@findex GET_MODE_FBIT
-@item GET_MODE_FBIT (@var{m})
-Returns the number of fractional bits of a datum of fixed-point mode @var{m}.
+モード @var{m} のデータの大きさをビット数で返す。
 
 @findex GET_MODE_MASK
 @item GET_MODE_MASK (@var{m})
-Returns a bitmask containing 1 for all bits in a word that fit within
-mode @var{m}.  This macro can only be used for modes whose bitsize is
-less than or equal to @code{HOST_BITS_PER_INT}.
+一語中のビットのうち、モード @var{m} の範囲内に収まる全てのビットを
+表すビットマスクを返す。
+このマクロは、ビット数が @code{HOST_BITS_PER_INT} 以下であるモードに
+対してのみ使うことができる。
 
 @findex GET_MODE_ALIGNMENT
 @item GET_MODE_ALIGNMENT (@var{m})
-Return the required alignment, in bits, for an object of mode @var{m}.
+モード @var{m} のオブジェクトに必要なアラインメントをビット数で
+返す。
 
 @findex GET_MODE_UNIT_SIZE
 @item GET_MODE_UNIT_SIZE (@var{m})
-Returns the size in bytes of the subunits of a datum of mode @var{m}.
-This is the same as @code{GET_MODE_SIZE} except in the case of complex
-modes.  For them, the unit size is the size of the real or imaginary
-part.
+モード @var{m} のデータの部分単位の大きさをバイト数で返す。
+これは、複素数のモードの場合以外は、@code{GET_MODE_SIZE} と同じである。
+複素数のモードの場合は、部分単位の大きさは、実数部また虚数部の大きさである。
 
 @findex GET_MODE_NUNITS
 @item GET_MODE_NUNITS (@var{m})
-Returns the number of units contained in a mode, i.e.,
-@code{GET_MODE_SIZE} divided by @code{GET_MODE_UNIT_SIZE}.
+あるモードに含まれる単位の数を返す。
+すなわち、@code{GET_MODE_SIZE} を @code{GET_MODE_UNIT_SIZE} で
+割ったものを返す。
 
 @findex GET_CLASS_NARROWEST_MODE
 @item GET_CLASS_NARROWEST_MODE (@var{c})
-Returns the narrowest mode in mode class @var{c}.
-@end table
-
-The following 3 variables are defined on every target.   They can be
-used to allocate buffers that are guaranteed to be large enough to
-hold any value that can be represented on the target.   The first two
-can be overridden by defining them in the target's mode.def file,
-however, the value must be a constant that can determined very early
-in the compilation process.   The third symbol cannot be overridden.
-
-@table @code
-@findex BITS_PER_UNIT
-@item BITS_PER_UNIT
-The number of bits in an addressable storage unit (byte).  If you do
-not define this, the default is 8.
-
-@findex MAX_BITSIZE_MODE_ANY_INT
-@item MAX_BITSIZE_MODE_ANY_INT
-The maximum bitsize of any mode that is used in integer math.  This
-should be overridden by the target if it uses large integers as
-containers for larger vectors but otherwise never uses the contents to
-compute integer values.
-
-@findex MAX_BITSIZE_MODE_ANY_MODE
-@item MAX_BITSIZE_MODE_ANY_MODE
-The bitsize of the largest mode on the target.   
+モードクラス @var{c} の中で最も幅の狭いモードを返す。
 @end table
 
 @findex byte_mode
 @findex word_mode
-The global variables @code{byte_mode} and @code{word_mode} contain modes
-whose classes are @code{MODE_INT} and whose bitsizes are either
-@code{BITS_PER_UNIT} or @code{BITS_PER_WORD}, respectively.  On 32-bit
-machines, these are @code{QImode} and @code{SImode}, respectively.
+グローバル変数 @code{byte_mode} と @code{word_mode} は、
+モードクラスが @code{MODE_INT} であり、ビット数が
+それぞれ @code{BITS_PER_UNIT} と @code{BITS_PER_WORD} のモードを保持している。
+32ビットマシンでは、それぞれ @code{QImode} と @code{SImode} になる。
 
 @node Constants
 @section Constant Expression Types
