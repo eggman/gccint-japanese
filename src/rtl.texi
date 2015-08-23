@@ -2380,7 +2380,7 @@ for insn attributes.  @xref{Insn Attributes}.
 
 命令の本体は、必ず以下の副作用を表すコードの一つである。
 これまで説明してきた、値を表現するコードは、これらのオペランドとしてのみ
-現れるのである
+現れるのである。
 
 @table @code
 @findex set
