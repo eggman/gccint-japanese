@@ -2912,92 +2912,99 @@ instructions.
 @cindex RTL predecrement
 @cindex RTL postdecrement
 
-Six special side-effect expression codes appear as memory addresses.
+メモリアドレスとして現れる、特別な副作用式コードが 6 つある。
 
 @table @code
 @findex pre_dec
 @item (pre_dec:@var{m} @var{x})
-Represents the side effect of decrementing @var{x} by a standard
-amount and represents also the value that @var{x} has after being
-decremented.  @var{x} must be a @code{reg} or @code{mem}, but most
-machines allow only a @code{reg}.  @var{m} must be the machine mode
-for pointers on the machine in use.  The amount @var{x} is decremented
-by is the length in bytes of the machine mode of the containing memory
-reference of which this expression serves as the address.  Here is an
-example of its use:
+@var{x} を標準量だけデクリメントする副作用を表す。
+また、@var{x} がデクリンメントされた後の値も表す。
+@var{x} は @code{reg} か @code{mem} でなければならず、
+ほとんどのマシンでは @code{reg} しか許していない。
+@var{m} はそのマシンのポインタ用のマシンモードでなければならない。
+@var{x} のデクリメントされる量は、アドレスとして振る舞う式の
+メモリ参照を含むマシンモードの長さをバイト数で表したものである。
+以下に使い方の例を示す。
 
 @smallexample
 (mem:DF (pre_dec:SI (reg:SI 39)))
 @end smallexample
 
 @noindent
-This says to decrement pseudo register 39 by the length of a @code{DFmode}
-value and use the result to address a @code{DFmode} value.
+これは、疑似レジスタ 39 を @code{DFmode} の値の長さだけデクリメントし、
+その結果を @code{DFmode} の値のアドレスとして使う事を示している。
 
 @findex pre_inc
 @item (pre_inc:@var{m} @var{x})
-Similar, but specifies incrementing @var{x} instead of decrementing it.
+同様だが、デクリンメントではなく @var{x} のインクリメントを指定する。
 
 @findex post_dec
 @item (post_dec:@var{m} @var{x})
-Represents the same side effect as @code{pre_dec} but a different
-value.  The value represented here is the value @var{x} has @i{before}
-being decremented.
+@code{pre_dec} と同じ副作用を表すが、異なる値になる。
+これにより表される値は、デクリメントされる前の @var{x} の値である。
 
 @findex post_inc
 @item (post_inc:@var{m} @var{x})
-Similar, but specifies incrementing @var{x} instead of decrementing it.
+同様だが、デクリンメントではなく @var{x} のインクリメントを指定する。
 
 @findex post_modify
 @item (post_modify:@var{m} @var{x} @var{y})
 
-Represents the side effect of setting @var{x} to @var{y} and
-represents @var{x} before @var{x} is modified.  @var{x} must be a
-@code{reg} or @code{mem}, but most machines allow only a @code{reg}.
-@var{m} must be the machine mode for pointers on the machine in use.
+@var{x} を @var{y} に設定する副作用を表現し、かつ @var{x} が修正を受ける前の
+@var{x} を表現する。@var{x} は @code{reg} か @code{mem} でなければならない。
+だが、多くの機種では @code{reg} しか許していない。
+@var{m} は使われている機種でのポインタのマシンモードでなければならない。
+@var{x} がデクリメントされる量は、この式がアドレスの役割をする
+メモリ参照のマシンモードの長さをバイトで表したものである。
+これは、現在実装されていないことに注意。
 
-The expression @var{y} must be one of three forms:
-@code{(plus:@var{m} @var{x} @var{z})},
-@code{(minus:@var{m} @var{x} @var{z})}, or
-@code{(plus:@var{m} @var{x} @var{i})},
-where @var{z} is an index register and @var{i} is a constant.
+式 @var{y} は次の三つの形式のうちの一つでなければならない。
+@table @code
+@code{(plus:@var{m} @var{x} @var{z})}
+@code{(minus:@var{m} @var{x} @var{z})}
+@code{(plus:@var{m} @var{x} @var{i})}
+@end table
+ここで @var{z} はインデックス・レジスタで、@var{i} は定数である。
 
-Here is an example of its use:
+使い方の例を示す。
 
 @smallexample
 (mem:SF (post_modify:SI (reg:SI 42) (plus (reg:SI 42)
                                           (reg:SI 48))))
 @end smallexample
 
-This says to modify pseudo register 42 by adding the contents of pseudo
-register 48 to it, after the use of what ever 42 points to.
+これは、疑似レジスタ 42 を、疑似レジスタ 48 の内容をそれに加算する形で
+変更することを示している。ただし、42 が指し示していた内容が使われた後で
+行われる。
 
 @findex pre_modify
 @item (pre_modify:@var{m} @var{x} @var{expr})
-Similar except side effects happen before the use.
+同様に、@var{x} の内容を使う前に副作用が発生する。
 @end table
 
-These embedded side effect expressions must be used with care.  Instruction
-patterns may not use them.  Until the @samp{flow} pass of the compiler,
-they may occur only to represent pushes onto the stack.  The @samp{flow}
-pass finds cases where registers are incremented or decremented in one
-instruction and used as an address shortly before or after; these cases are
-then transformed to use pre- or post-increment or -decrement.
+これらの組み込み副作用式は注意して使わなければならない。
+命令パターンでは使わない。コンパイラの @samp{flow} パスに至るまでは、
+スタックへのプッシュを表現するのに使われるだけである。
+@samp{flow} パスは、レジスタが一個の命令でインクリメントまたはデクリメント
+され、かつ、その直前または直後でアドレスとして使われている場合を
+探す。そのような場合は、プリ／ポスト・インクリメント／デクリメントを
+使うように変換する。
 
-If a register used as the operand of these expressions is used in
-another address in an insn, the original value of the register is used.
-Uses of the register outside of an address are not permitted within the
-same insn as a use in an embedded side effect expression because such
-insns behave differently on different machines and hence must be treated
-as ambiguous and disallowed.
+これらの式のオペランドとして使われているレジスタが、
+ある insn の別のアドレス中で使われていると、そのレジスタの元の値が使われる。
+レジスタをアドレス以外に使うことは、同一 insn 内で埋め込み副作用式として
+使うのは許されない。なぜなら、そういう式は、
+異なる機種では異なる振る舞いをし、そのため、取扱いが曖昧になるので
+許されない。
 
-An instruction that can be represented with an embedded side effect
-could also be represented using @code{parallel} containing an additional
-@code{set} to describe how the address register is altered.  This is not
-done because machines that allow these operations at all typically
-allow them wherever a memory address is called for.  Describing them as
-additional parallel stores would require doubling the number of entries
-in the machine description.
+組み込み副作用式で表現可能な命令は、また、
+アドレスレジスタがどのように変更されるかを記述する追加の @code{set}
+を含む @code{parallel} を使って表現することもできる。
+だが、これは行なわれない。何故ならこのような操作をともかく許す機種では、
+典型的には、メモリアドレスが要求される場所ならどこでもそういう操作を
+許すからである。
+これらの操作を付加的な並列格納として記述すると、
+マシン記述のエントリ数が二倍必要になる。
 
 @node Assembler
 @section Assembler Instructions as Expressions
