@@ -8,39 +8,35 @@
 @cindex representation of RTL
 @cindex Register Transfer Language (RTL)
 
-The last part of the compiler work is done on a low-level intermediate
-representation called Register Transfer Language.  In this language, the
-instructions to be output are described, pretty much one by one, in an
-algebraic form that describes what the instruction does.
+GCC の仕事の大半は、レジスタ転送言語(RTL)と呼ばれる中間表現に対して
+なされる。このレジスタ転送言語では、出力すべき命令を一つづつ、
+その命令が行う操作を代数的な形式で記述する。
 
-RTL is inspired by Lisp lists.  It has both an internal form, made up of
-structures that point at other structures, and a textual form that is used
-in the machine description and in printed debugging dumps.  The textual
-form uses nested parentheses to indicate the pointers in the internal form.
+RTL は、Lisp 言語のリストにヒントを得たものである。RTL は、
+他の構造体を指す構造体からなる内部形式と、マシン記述とデバッグ用ダンプ出力
+で用いられるテキスト形式の二種類の形式を持つ。テキスト形式では、
+内部形式でのポインタを示すのに多重の括弧を使う。
 
 @menu
-* RTL Objects::       Expressions vs vectors vs strings vs integers.
-* RTL Classes::       Categories of RTL expression objects, and their structure.
-* Accessors::         Macros to access expression operands or vector elts.
-* Special Accessors:: Macros to access specific annotations on RTL.
-* Flags::             Other flags in an RTL expression.
-* Machine Modes::     Describing the size and format of a datum.
-* Constants::         Expressions with constant values.
-* Regs and Memory::   Expressions representing register contents or memory.
-* Arithmetic::        Expressions representing arithmetic on other expressions.
-* Comparisons::       Expressions representing comparison of expressions.
-* Bit-Fields::        Expressions representing bit-fields in memory or reg.
-* Vector Operations:: Expressions involving vector datatypes.
-* Conversions::       Extending, truncating, floating or fixing.
-* RTL Declarations::  Declaring volatility, constancy, etc.
-* Side Effects::      Expressions for storing in registers, etc.
-* Incdec::            Embedded side-effects for autoincrement addressing.
-* Assembler::         Representing @code{asm} with operands.
-* Debug Information:: Expressions representing debugging information.
-* Insns::             Expression types for entire insns.
-* Calls::             RTL representation of function call insns.
-* Sharing::           Some expressions are unique; others *must* be copied.
-* Reading RTL::       Reading textual RTL from a file.
+* RTL Objects::       式、ベクトル、文字列、整数
+* RTL Classes::       RTL 式オブジェクトのカテゴリとその構造
+* Accessors::         式オペランドやベクトルの要素へのアクセスマクロ群
+* Flags::             RTL 式中のフラグ
+* Machine Modes::     データの大きさと形式の記述
+* Constants::         定数値を持つ式
+* Regs and Memory::   レジスタの内容やメモリを表現する式
+* Arithmetic::        算術演算を表す式
+* Comparisons::       比較演算式を表す式
+* Bit Fields::        メモリまたはレジスタ中のビットフィールドを表す式
+* Conversions::       拡張、打切、浮動小数点／固定小数点への変換
+* RTL Declarations::  RTL 宣言
+* Side Effects::      副作用のある式
+* Incdec::            自動インクリメントアドレッシングに含まれる副作用
+* Assembler::         オペランドを伴う @code{asm} の表現
+* Insns::             insn 全体の式タイプ
+* Calls::             関数呼び出し insn の RTL 表現
+* Sharing::           式の共有
+* Reading RTL::       ファイルからのRTLテキスト形式の読み込み
 @end menu
 
 @node RTL Objects
