@@ -185,10 +185,12 @@ chain, such as @code{NOTE}, @code{BARRIER}, and @code{CODE_LABEL}.
 @end table
 
 @cindex RTL format
-For each expression code, @file{rtl.def} specifies the number of
-contained objects and their kinds using a sequence of characters
-called the @dfn{format} of the expression code.  For example,
-the format of @code{subreg} is @samp{ei}.
+@file{rtl.def} には、式のタイプ毎に、その式が含むオブジェクトの数と
+その種類が記述されている。オブジェクトの種類の書き方としては
+次の四つ(五つのtypo?)がある。式(実際には式へのポインタ)の場合は @samp{e}、
+整数は @samp{i}、幅広整数は @samp{w}、文字列は @samp{s}、式のベクトルは
+@samp{E} と書く。式コードを表す文字の連なりを @dfn{フォーマット}と呼ぶ。
+例えば、@code{subreg} のフォーマットは @samp{ei} となる。
 
 @cindex RTL format characters
 These are the most commonly used format characters:
@@ -210,77 +212,74 @@ A string.
 A vector of expressions.
 @end table
 
-A few other format characters are used occasionally:
+その他に以下のフォーマット指定文字が使われる。
 
 @table @code
 @item u
-@samp{u} is equivalent to @samp{e} except that it is printed differently
-in debugging dumps.  It is used for pointers to insns.
+@samp{u} は、デバッグ用ダンプで異なった表示がなされる以外は
+@samp{e} に同じである。insn へのポインタで使われる。
 
 @item n
-@samp{n} is equivalent to @samp{i} except that it is printed differently
-in debugging dumps.  It is used for the line number or code number of a
-@code{note} insn.
+@samp{n} は、デバッグ用ダンプで異なった表示がなされる以外は @samp{i} に
+同じである。@code{note} insn で行番号やコード番号のために使われる。
 
 @item S
-@samp{S} indicates a string which is optional.  In the RTL objects in
-core, @samp{S} is equivalent to @samp{s}, but when the object is read,
-from an @samp{md} file, the string value of this operand may be omitted.
-An omitted string is taken to be the null string.
+@samp{S} は省略可能な文字列を示す。メモリ中での RTL オブジェクトでは、
+@samp{S} は @samp{s} に同じであるが、@samp{md} ファイルからオブジェクトを
+読み込む場合には、このオペランドの文字列値は省かれる。省かれた文字列は
+ヌル文字列であるとして扱われる。
 
 @item V
-@samp{V} indicates a vector which is optional.  In the RTL objects in
-core, @samp{V} is equivalent to @samp{E}, but when the object is read
-from an @samp{md} file, the vector value of this operand may be omitted.
-An omitted vector is effectively the same as a vector of no elements.
-
-@item B
-@samp{B} indicates a pointer to basic block structure.
+@samp{V} は省略可能なベクトルを示す。メモリ中での RTL オブジェクトでは、
+@samp{V} は @samp{E} に同じであるが、@samp{md} ファイルからオブジェクトを
+読み込む場合には、このオペランドのベクトル値は省かれる。省かれたベクトルは、
+実質的には要素が一つもないベクトルと同じである。
 
 @item 0
-@samp{0} means a slot whose contents do not fit any normal category.
-@samp{0} slots are not printed at all in dumps, and are often used in
-special ways by small parts of the compiler.
+@samp{0} は、通常のカテゴリには収まらないものを入れるためのスロット
+であることを意味する。@samp{0} のスロットは、どのダンプにも表示されず、
+gcc の極く一部で特別な使われ方をする。
 @end table
 
-There are macros to get the number of operands and the format
-of an expression code:
+以下は、オペランド数、式コードのフォーマットを得るためのマクロである。
 
 @table @code
 @findex GET_RTX_LENGTH
 @item GET_RTX_LENGTH (@var{code})
-Number of operands of an RTX of code @var{code}.
+コードが @var{code} である RTX のオペランド数。
 
 @findex GET_RTX_FORMAT
 @item GET_RTX_FORMAT (@var{code})
-The format of an RTX of code @var{code}, as a C string.
+コードが @var{code} である RTX のフォーマットを C の文字列で
+表したもの。
 @end table
 
-Some classes of RTX codes always have the same format.  For example, it
-is safe to assume that all comparison operations have format @code{ee}.
+RTX コードの幾つかのクラスは常に同じフォーマットである。
+例えば、全ての比較演算のフォーマットは @code{ee} であると想定しても
+安全である。
 
 @table @code
 @item 1
-All codes of this class have format @code{e}.
+このクラスのコードのフォーマットは全て @code{e} である。
 
 @item <
 @itemx c
 @itemx 2
-All codes of these classes have format @code{ee}.
+このクラスのコードのフォーマットは全て @code{ee} である。
 
 @item b
 @itemx 3
-All codes of these classes have format @code{eee}.
+このクラスのコードのフォーマットは全て @code{eee} である。
 
 @item i
-All codes of this class have formats that begin with @code{iuueiee}.
-@xref{Insns}.  Note that not all RTL objects linked onto an insn chain
-are of class @code{i}.
+このクラスのコードのフォーマットは全て @code{iuueiee} で始まる。
+ある insn の連鎖にリンクされた RTL オブジェクトのクラスが全て
+@code{i} ではないことに注意。
 
 @item o
 @itemx m
 @itemx x
-You can make no assumptions about the format of these codes.
+これらのコードのフォーマットについては何ら想定を置くことはできない。
 @end table
 
 @node Accessors
