@@ -1338,227 +1338,66 @@ RTL が完了した時点で、この仮想レジスタは、 @code{ARG_POINTER_
 行なう場合は、その疑似レジスタは @code{subreg} の中に収まって
 いなければならない。この例の場合は、@var{wordnum} は 0 である。
 
-There are currently three supported types for the first operand of a
-@code{subreg}:
-@itemize
-@item pseudo registers
-This is the most common case.  Most @code{subreg}s have pseudo
-@code{reg}s as their first operand.
+@var{m} は普通は少なくとも @var{reg} のモードの幅しかなく、
+その場合、@var{reg} のビットのうち @var{m} に入っているものだけを
+考えれば良い。
 
-@item mem
-@code{subreg}s of @code{mem} were common in earlier versions of GCC and
-are still supported.  During the reload pass these are replaced by plain
-@code{mem}s.  On machines that do not do instruction scheduling, use of
-@code{subreg}s of @code{mem} are still used, but this is no longer
-recommended.  Such @code{subreg}s are considered to be
-@code{register_operand}s rather than @code{memory_operand}s before and
-during reload.  Because of this, the scheduling passes cannot properly
-schedule instructions with @code{subreg}s of @code{mem}, so for machines
-that do scheduling, @code{subreg}s of @code{mem} should never be used.
-To support this, the combine and recog passes have explicit code to
-inhibit the creation of @code{subreg}s of @code{mem} when
-@code{INSN_SCHEDULING} is defined.
+場合によっては、@var{m} は @var{reg} のモードよりも広い。
+そういう @code{subreg} 式は、@dfn{病的}と呼ばれることがある。
+このような式は、より広いモードのオブジェクトを参照したいが、
+付加的なビットがどういう値を持っているかは気にしないという場合に
+使われる。
+再ロードパスは、病的な参照はハードレジスタに対してのみ作られることを
+保証する。
 
-The use of @code{subreg}s of @code{mem} after the reload pass is an area
-that is not well understood and should be avoided.  There is still some
-code in the compiler to support this, but this code has possibly rotted.
-This use of @code{subreg}s is discouraged and will most likely not be
-supported in the future.
+@code{subreg} の別の使い方は、複数のレジスタからなる値から個々のレジスタを
+取り出すことである。@code{DImode} や @code{TImode} の様なマシンモードは、
+一語より長い値、つまり通常二つ以上のレジスタを必要とする値である可能性が
+ある。こういうレジスタの一つを参照するには、@code{subreg} をモード
+@code{SImode} で使い、@var{wordnum} でどのレジスタかを指定する。
 
-@item hard registers
-It is seldom necessary to wrap hard registers in @code{subreg}s; such
-registers would normally reduce to a single @code{reg} rtx.  This use of
-@code{subreg}s is discouraged and may not be supported in the future.
+病的でない @code{subreg} に格納すると、@code{subreg} と同じワードに
+属するビットに予期できない結果を生ずる。
+この手抜きにより、そういう命令に対して効率の良いコードを生成するのが
+用意になる。
+@code{subreg} の外側の全ビットを保存する命令を表現するには、
+@code{subreg} を @code{strict_low_part} で囲めば良い。
 
-@end itemize
+コンパイル時のパラメータである @code{WORDS_BIG_ENDIAN} が 1 に設定
+されていれば、ワード番号 0 が最上位部であることを指示する。
+1 でなければ、ワード番号 0 は最下位部を指示する。
 
-@code{subreg}s of @code{subreg}s are not supported.  Using
-@code{simplify_gen_subreg} is the recommended way to avoid this problem.
+ターゲットによっては、@code{FLOAT_WORDS_BIG_ENDIAN} と
+@code{WORDS_BIG_ENDIAN} が一致しないものが 2、3ある。
+だが、GCC のほとんどの部分は、浮動小数点値を、整数値と同じエンディアン
+であるとして取り扱っている。これがうまく働くのは、単に、それらを
+整数値の集まりとして扱っているからである。@file{real.c} と
+実行時ライブラリだけが、@code{FLOAT_WORDS_BIG_ENDIAN} に注意している。
 
-@code{subreg}s come in two distinct flavors, each having its own
-usage and rules:
+結合パスと再ロードパスの間で、第一引数が @code{reg} ではなく
+@code{mem} になっている、病的な @code{subreg} が発生する可能性がある。
+また、再ロードパスの後では、@code{mem} を含む病的な @code{subreg} が
+発生する可能性があり、通常、@code{mem} が疑似レジスタを置き換えたスタック
+スロットである場合に起きる。
 
-@table @asis
-@item Paradoxical subregs
-When @var{m1} is strictly wider than @var{m2}, the @code{subreg}
-expression is called @dfn{paradoxical}.  The canonical test for this
-class of @code{subreg} is:
+@code{DFmode} の値を @code{subreg} を使って @code{SFmode} で参照するのは
+正しくないことに注意。
+マシンによっては、@code{DFmode} の値の上位部分が
+単精度浮動小数点数値と同じフォーマットでない場合がある。
 
-@smallexample
-GET_MODE_SIZE (@var{m1}) > GET_MODE_SIZE (@var{m2})
-@end smallexample
-
-Paradoxical @code{subreg}s can be used as both lvalues and rvalues.
-When used as an lvalue, the low-order bits of the source value
-are stored in @var{reg} and the high-order bits are discarded.
-When used as an rvalue, the low-order bits of the @code{subreg} are
-taken from @var{reg} while the high-order bits may or may not be
-defined.
-
-The high-order bits of rvalues are in the following circumstances:
-
-@itemize
-@item @code{subreg}s of @code{mem}
-When @var{m2} is smaller than a word, the macro @code{LOAD_EXTEND_OP},
-can control how the high-order bits are defined.
-
-@item @code{subreg} of @code{reg}s
-The upper bits are defined when @code{SUBREG_PROMOTED_VAR_P} is true.
-@code{SUBREG_PROMOTED_UNSIGNED_P} describes what the upper bits hold.
-Such subregs usually represent local variables, register variables
-and parameter pseudo variables that have been promoted to a wider mode.
-
-@end itemize
-
-@var{bytenum} is always zero for a paradoxical @code{subreg}, even on
-big-endian targets.
-
-For example, the paradoxical @code{subreg}:
-
-@smallexample
-(set (subreg:SI (reg:HI @var{x}) 0) @var{y})
-@end smallexample
-
-stores the lower 2 bytes of @var{y} in @var{x} and discards the upper
-2 bytes.  A subsequent:
-
-@smallexample
-(set @var{z} (subreg:SI (reg:HI @var{x}) 0))
-@end smallexample
-
-would set the lower two bytes of @var{z} to @var{y} and set the upper
-two bytes to an unknown value assuming @code{SUBREG_PROMOTED_VAR_P} is
-false.
-
-@item Normal subregs
-When @var{m1} is at least as narrow as @var{m2} the @code{subreg}
-expression is called @dfn{normal}.
-
-Normal @code{subreg}s restrict consideration to certain bits of
-@var{reg}.  There are two cases.  If @var{m1} is smaller than a word,
-the @code{subreg} refers to the least-significant part (or
-@dfn{lowpart}) of one word of @var{reg}.  If @var{m1} is word-sized or
-greater, the @code{subreg} refers to one or more complete words.
-
-When used as an lvalue, @code{subreg} is a word-based accessor.
-Storing to a @code{subreg} modifies all the words of @var{reg} that
-overlap the @code{subreg}, but it leaves the other words of @var{reg}
-alone.
-
-When storing to a normal @code{subreg} that is smaller than a word,
-the other bits of the referenced word are usually left in an undefined
-state.  This laxity makes it easier to generate efficient code for
-such instructions.  To represent an instruction that preserves all the
-bits outside of those in the @code{subreg}, use @code{strict_low_part}
-or @code{zero_extract} around the @code{subreg}.
-
-@var{bytenum} must identify the offset of the first byte of the
-@code{subreg} from the start of @var{reg}, assuming that @var{reg} is
-laid out in memory order.  The memory order of bytes is defined by
-two target macros, @code{WORDS_BIG_ENDIAN} and @code{BYTES_BIG_ENDIAN}:
-
-@itemize
-@item
-@cindex @code{WORDS_BIG_ENDIAN}, effect on @code{subreg}
-@code{WORDS_BIG_ENDIAN}, if set to 1, says that byte number zero is
-part of the most significant word; otherwise, it is part of the least
-significant word.
-
-@item
-@cindex @code{BYTES_BIG_ENDIAN}, effect on @code{subreg}
-@code{BYTES_BIG_ENDIAN}, if set to 1, says that byte number zero is
-the most significant byte within a word; otherwise, it is the least
-significant byte within a word.
-@end itemize
-
-@cindex @code{FLOAT_WORDS_BIG_ENDIAN}, (lack of) effect on @code{subreg}
-On a few targets, @code{FLOAT_WORDS_BIG_ENDIAN} disagrees with
-@code{WORDS_BIG_ENDIAN}.  However, most parts of the compiler treat
-floating point values as if they had the same endianness as integer
-values.  This works because they handle them solely as a collection of
-integer values, with no particular numerical value.  Only real.c and
-the runtime libraries care about @code{FLOAT_WORDS_BIG_ENDIAN}.
-
-Thus,
-
-@smallexample
-(subreg:HI (reg:SI @var{x}) 2)
-@end smallexample
-
-on a @code{BYTES_BIG_ENDIAN}, @samp{UNITS_PER_WORD == 4} target is the same as
-
-@smallexample
-(subreg:HI (reg:SI @var{x}) 0)
-@end smallexample
-
-on a little-endian, @samp{UNITS_PER_WORD == 4} target.  Both
-@code{subreg}s access the lower two bytes of register @var{x}.
-
-@end table
-
-A @code{MODE_PARTIAL_INT} mode behaves as if it were as wide as the
-corresponding @code{MODE_INT} mode, except that it has an unknown
-number of undefined bits.  For example:
-
-@smallexample
-(subreg:PSI (reg:SI 0) 0)
-@end smallexample
-
-accesses the whole of @samp{(reg:SI 0)}, but the exact relationship
-between the @code{PSImode} value and the @code{SImode} value is not
-defined.  If we assume @samp{UNITS_PER_WORD <= 4}, then the following
-two @code{subreg}s:
-
-@smallexample
-(subreg:PSI (reg:DI 0) 0)
-(subreg:PSI (reg:DI 0) 4)
-@end smallexample
-
-represent independent 4-byte accesses to the two halves of
-@samp{(reg:DI 0)}.  Both @code{subreg}s have an unknown number
-of undefined bits.
-
-If @samp{UNITS_PER_WORD <= 2} then these two @code{subreg}s:
-
-@smallexample
-(subreg:HI (reg:PSI 0) 0)
-(subreg:HI (reg:PSI 0) 2)
-@end smallexample
-
-represent independent 2-byte accesses that together span the whole
-of @samp{(reg:PSI 0)}.  Storing to the first @code{subreg} does not
-affect the value of the second, and vice versa.  @samp{(reg:PSI 0)}
-has an unknown number of undefined bits, so the assignment:
-
-@smallexample
-(set (subreg:HI (reg:PSI 0) 0) (reg:HI 4))
-@end smallexample
-
-does not guarantee that @samp{(subreg:HI (reg:PSI 0) 0)} has the
-value @samp{(reg:HI 4)}.
-
-@cindex @code{CANNOT_CHANGE_MODE_CLASS} and subreg semantics
-The rules above apply to both pseudo @var{reg}s and hard @var{reg}s.
-If the semantics are not correct for particular combinations of
-@var{m1}, @var{m2} and hard @var{reg}, the target-specific code
-must ensure that those combinations are never used.  For example:
-
-@smallexample
-CANNOT_CHANGE_MODE_CLASS (@var{m2}, @var{m1}, @var{class})
-@end smallexample
-
-must be true for every class @var{class} that includes @var{reg}.
+また、一個のハードレジスタにある複数ワードの値のうちの一ワードを
+アクセスすることは、その値が大きさから期待されるよりも少ないレジスタで
+保持できるときは、正しくない。
+例えば、32ビットマシンでは、浮動小数点レジスタは一個の @code{DFmode} の
+値全体を保持できる。レジスタ 10 がそのようなレジスタなら、
+@code{(subreg:SI (reg:DF 10) 1)} は正しくない。なぜなら、
+そのような参照を一個のマシンレジスタに変換する方法がないからである。
+再ロードパスは、@code{subreg} 式がこのような形式になるのを抑止する。
 
 @findex SUBREG_REG
-@findex SUBREG_BYTE
-The first operand of a @code{subreg} expression is customarily accessed
-with the @code{SUBREG_REG} macro and the second operand is customarily
-accessed with the @code{SUBREG_BYTE} macro.
-
-It has been several years since a platform in which
-@code{BYTES_BIG_ENDIAN} not equal to @code{WORDS_BIG_ENDIAN} has
-been tested.  Anyone wishing to support such a platform in the future
-may be confronted with code rot.
+@findex SUBREG_WORD
+@code{subreg} 式の先頭のオペランドは @code{SUBREG_REG} マクロで、
+第二オペランドは @code{SUBREG_WORD} マクロで参照する。
 
 @findex scratch
 @cindex scratch operands
@@ -1651,18 +1490,13 @@ Sparc や RS/6000 のようなマシンでは、二種類の算術演算命令�
 この RTX は、式 @var{addr} で表されるアドレスの主記憶への参照を
 表す。@var{m} はメモリの、アクセスされる単位の大きさを表す。
 
-@findex concat
-@item (concat@var{m} @var{rtx} @var{rtx})
-This RTX represents the concatenation of two other RTXs.  This is used
-for complex values.  It should only appear in the RTL attached to
-declarations and during RTL generation.  It should not appear in the
-ordinary insn chain.
-
-@findex concatn
-@item (concatn@var{m} [@var{rtx} @dots{}])
-This RTX represents the concatenation of all the @var{rtx} to make a
-single value.  Like @code{concat}, this should only appear in
-declarations, and not in the insn chain.
+@findex addressof
+@item (addressof:@var{m} @var{reg})
+この RTX はレジスタ @var{reg} のアドレスを要求することを表す。
+モードは常に @code{Pmode} である。
+CSE のフェーズの後で関数内に @code{addressof} 式がどんなものであれ
+残っていれば、@var{reg} は強制的にスタックに置かれ、@code{addressof} 式は、
+そのスタックスロットのアドレスを表す @code{plus} 式で置き換えられる。
 @end table
 
 @node Arithmetic
@@ -1942,78 +1776,77 @@ declarations, and not in the insn chain.
 @section Comparison Operations
 @cindex RTL comparison operations
 
-Comparison operators test a relation on two operands and are considered
-to represent a machine-dependent nonzero value described by, but not
-necessarily equal to, @code{STORE_FLAG_VALUE} (@pxref{Misc})
-if the relation holds, or zero if it does not, for comparison operators
-whose results have a `MODE_INT' mode,
-@code{FLOAT_STORE_FLAG_VALUE} (@pxref{Misc}) if the relation holds, or
-zero if it does not, for comparison operators that return floating-point
-values, and a vector of either @code{VECTOR_STORE_FLAG_VALUE} (@pxref{Misc})
-if the relation holds, or of zeros if it does not, for comparison operators
-that return vector results.
-The mode of the comparison operation is independent of the mode
-of the data being compared.  If the comparison operation is being tested
-(e.g., the first operand of an @code{if_then_else}), the mode must be
-@code{VOIDmode}.
+比較演算子は、二つのオペランドについてある関係が成り立つかどうかを調べ、
+その関係が成り立つなら 0 でない値、成り立たないなら 0 を表す。
+0 でない値の方は、機種依存であり、 @code{STORE_FLAG_VALUE}
+(@pxref{Misc})で記述されるが、この値に等しくなる必要はない。
+比較演算のモードは、比較対象のデータのモードには関係ない。
+比較演算が、条件判定に使われる(例えば、@code{if_then_else} の
+第一オペランドとして使われる)場合は、モードは @code{VOIDmode} で
+なければならない。あるいは、比較演算の結果、変数に格納すべきなんらかのデータを
+生じるなら、モードは @code{MODE_INT} のクラスに入っていなければならない。
+データを生成する全ての比較演算は同じモードを使わなければならない。
+どのモードになるかは機種依存である。
 
 @cindex condition codes
-There are two ways that comparison operations may be used.  The
-comparison operators may be used to compare the condition codes
-@code{(cc0)} against zero, as in @code{(eq (cc0) (const_int 0))}.  Such
-a construct actually refers to the result of the preceding instruction
-in which the condition codes were set.  The instruction setting the
-condition code must be adjacent to the instruction using the condition
-code; only @code{note} insns may separate them.
+比較演算の使われ方には二通りある。
+比較演算子を使って、条件コード @code{(cc0)} をゼロと比較することが
+できる。例えば、@code{(eq (cc0) (const_int 0))} のようにである。
+こういう構文では、条件コードを設定する先行命令の結果を
+実際に参照している。
+条件コードを設定する命令は、条件コードを使用する命令の直前に
+なければならない。これらの命令の間に置いて良いのは、
+@code{note} insn だけである。
 
-Alternatively, a comparison operation may directly compare two data
-objects.  The mode of the comparison is determined by the operands; they
-must both be valid for a common machine mode.  A comparison with both
-operands constant would be invalid as the machine mode could not be
-deduced from it, but such a comparison should never exist in RTL due to
-constant folding.
+あるいは、比較演算は二つのデータオブジェクトを直接比較しても良い。
+比較のモードはオペランドにより決定される。どちらのオペランドも
+ある共通のマシンモードに対して有効でなければならない。
+両方のオペランドが定数である比較は、モードを決めることができないので
+無効である。しかし、そのような比較は、定数畳み込みにより、RTL 中には
+決して存在しないはずである。
 
-In the example above, if @code{(cc0)} were last set to
-@code{(compare @var{x} @var{y})}, the comparison operation is
-identical to @code{(eq @var{x} @var{y})}.  Usually only one style
-of comparisons is supported on a particular machine, but the combine
-pass will try to merge the operations to produce the @code{eq} shown
-in case it exists in the context of the particular insn involved.
+上の例だと、@code{(cc0)} が直前で @code{(compare @var{x} @var{y})} に
+設定されているなら、比較演算は @code{(eq @var{x} @var{y})} に
+等価である。普通は、ある特定のマシンでは、どちらか一方の形式のだけの
+比較がサポートされている。しかし、組合せパスは演算をマージして、
+特定の insn が含まれている文脈に存在するなら、
+このような @code{eq} 式を生成することを試みる。
 
-Inequality comparisons come in two flavors, signed and unsigned.  Thus,
-there are distinct expression codes @code{gt} and @code{gtu} for signed and
-unsigned greater-than.  These can produce different results for the same
-pair of integer values: for example, 1 is signed greater-than @minus{}1 but not
-unsigned greater-than, because @minus{}1 when regarded as unsigned is actually
-@code{0xffffffff} which is greater than 1.
+不等比較は、符号付きと符号なしの二種類がある。
+このため、符号付きと符号なしの「大なり」に対応して、
+@code{gt} と @code{gtu} の異なる式コードがある。
+これらは、同じ整数値の組合せに対して異なる結果を生じることもある。
+例えば、1 は符号付きでは -1 より「大なり」であるが、
+符号なしでは「大なり」ではない。-1 は符号なしとして扱われると、
+実際には @code{0xffffffff} となり、 1 より大きいからである。
 
-The signed comparisons are also used for floating point values.  Floating
-point comparisons are distinguished by the machine modes of the operands.
+符号付き比較はまた浮動小数点値にも使われる。
+浮動小数点比較は、オペランドのマシンモードにより区別される。
 
 @table @code
 @findex eq
 @cindex equal
 @item (eq:@var{m} @var{x} @var{y})
-@code{STORE_FLAG_VALUE} if the values represented by @var{x} and @var{y}
-are equal, otherwise 0.
+@var{x} と @var{y} で表現される値が等しければ 1 で、
+等しくなければ 0 である。
 
 @findex ne
 @cindex not equal
 @item (ne:@var{m} @var{x} @var{y})
-@code{STORE_FLAG_VALUE} if the values represented by @var{x} and @var{y}
-are not equal, otherwise 0.
+@var{x} と @var{y} で表現される値が等しくなければ 1 で、
+等しければ 0 である。
 
 @findex gt
 @cindex greater than
 @item (gt:@var{m} @var{x} @var{y})
-@code{STORE_FLAG_VALUE} if the @var{x} is greater than @var{y}.  If they
-are fixed-point, the comparison is done in a signed sense.
+@var{x} が @var{y} より大きければ 1 である。
+両者とも固定小数点であれば、符号付きで比較が行なわれる。
 
 @findex gtu
 @cindex greater than
 @cindex unsigned greater than
-@item (gtu:@var{m} @var{x} @var{y})
-Like @code{gt} but does unsigned comparison, on fixed-point numbers only.
+符号無しで比較が行なわれ、そのため固定小数点数についてのみ使われるという
+点を除いて、@code{gt} と同じである。
 
 @findex lt
 @cindex less than
@@ -2021,7 +1854,7 @@ Like @code{gt} but does unsigned comparison, on fixed-point numbers only.
 @cindex unsigned less than
 @item (lt:@var{m} @var{x} @var{y})
 @itemx (ltu:@var{m} @var{x} @var{y})
-Like @code{gt} and @code{gtu} but test for ``less than''.
+@code{gt} や @code{gtu} と同様だが、「より小さい」かどうかを判定する。
 
 @findex ge
 @cindex greater than
@@ -2029,7 +1862,7 @@ Like @code{gt} and @code{gtu} but test for ``less than''.
 @cindex unsigned greater than
 @item (ge:@var{m} @var{x} @var{y})
 @itemx (geu:@var{m} @var{x} @var{y})
-Like @code{gt} and @code{gtu} but test for ``greater than or equal''.
+@code{gt} や @code{gtu} と同様だが、「以上」かどうかを判定する。
 
 @findex le
 @cindex less than or equal
@@ -2037,28 +1870,29 @@ Like @code{gt} and @code{gtu} but test for ``greater than or equal''.
 @cindex unsigned less than
 @item (le:@var{m} @var{x} @var{y})
 @itemx (leu:@var{m} @var{x} @var{y})
-Like @code{gt} and @code{gtu} but test for ``less than or equal''.
+@code{gt} や @code{gtu} と同様だが、「以下」かどうかを判定する。
 
 @findex if_then_else
 @item (if_then_else @var{cond} @var{then} @var{else})
-This is not a comparison operation but is listed here because it is
-always used in conjunction with a comparison operation.  To be
-precise, @var{cond} is a comparison expression.  This expression
-represents a choice, according to @var{cond}, between the value
-represented by @var{then} and the one represented by @var{else}.
+これは、比較演算ではないが、ここで挙げておく。というのは、
+必ず比較演算と関連して使われるからである。
+正確に言うと、@var{cond} は比較式である。
+@code{if_then_else} 式は、@var{cond} により、@var{then} で表される値と
+@var{else} で表される値のどちらかの選択肢を表す。
 
-On most machines, @code{if_then_else} expressions are valid only
-to express conditional jumps.
+ほとんどの機種では、@code{if_then_else} 式は条件ジャンプを表す場合にのみ
+有効である。
 
 @findex cond
 @item (cond [@var{test1} @var{value1} @var{test2} @var{value2} @dots{}] @var{default})
-Similar to @code{if_then_else}, but more general.  Each of @var{test1},
-@var{test2}, @dots{} is performed in turn.  The result of this expression is
-the @var{value} corresponding to the first nonzero test, or @var{default} if
-none of the tests are nonzero expressions.
+@code{if_then_else} と同様だが、もっと一般的である。
+@var{test1}、@var{test2}、@dots{} がそれぞれ順番に実行される。
+@code{cond} 式の結果は、最初に非 0 となったテストに対応する @var{value} と
+なる。あるいは、非 0 となったテストがなければ、@var{default} になる。
 
-This is currently not valid for instruction patterns and is supported only
-for insn attributes.  @xref{Insn Attributes}.
+
+この式は、現時点では命令パターンに対しては使用できない。
+insn の属性にたいしてのみ使用できる。@xref{Insn Attributes}.
 @end table
 
 @node Bit-Fields
