@@ -9,62 +9,100 @@
 @cindex function call conventions
 @cindex conventions, run-time
 
-GCC is normally configured to use the same function calling convention
-normally in use on the target system.  This is done with the
-machine-description macros described (@pxref{Target Macros}).
+GCC は、ターゲットシステム上で通常使われるのと同じ関数呼び出し規約を
+使うように、通常は構成される。
+これは、マシン記述マクロの記述によりなされる(@pxref{Target Macros})。
 
 @cindex unions, returning
 @cindex structures, returning
 @cindex returning structures and unions
-However, returning of structure and union values is done differently on
-some target machines.  As a result, functions compiled with PCC
-returning such types cannot be called from code compiled with GCC,
-and vice versa.  This does not cause trouble often because few Unix
-library routines return structures or unions.
+しかし、構造体と共用体の返し方は機種によって異なることがある。
+その結果、PCC でコンパイルしたそのような型を返す関数を
+GCC でコンパイルした関数から呼び出せないことがあるし、その逆もある。
+これはあまり問題にはならない。Unix のライブラリルーチンで構造体や
+共用体を返すものは滅多にないからである。
 
-GCC code returns structures and unions that are 1, 2, 4 or 8 bytes
-long in the same registers used for @code{int} or @code{double} return
-values.  (GCC typically allocates variables of such types in
-registers also.)  Structures and unions of other sizes are returned by
-storing them into an address passed by the caller (usually in a
-register).  The target hook @code{TARGET_STRUCT_VALUE_RTX}
-tells GCC where to pass this address.
+GCC は、1、2、4、8 バイト長の構造体と共用体は、
+@code{int} や @code{double} の戻り値に使うのと同じレジスタに入れて
+返す。(GCC は普通はそのような型の変数もレジスタに割り当てる。)
+それ以外の大きさの構造体と共用体は、呼び出し側によって渡されるアドレス
+(通常、レジスタで渡される)に格納することで返される。
+マシン記述マクロの @code{STRUCT_VALUE} と @code{STRUCT_INCOMING_VALUE} に
+より、GCC に、このアドレスをどこに渡すかを指定する。
 
-By contrast, PCC on most target machines returns structures and unions
-of any size by copying the data into an area of static storage, and then
-returning the address of that storage as if it were a pointer value.
-The caller must copy the data from that memory area to the place where
-the value is wanted.  This is slower than the method used by GCC, and
-fails to be reentrant.
+対照的に、多くのターゲット機種上の PCC は、どの大きさの構造体と
+共用体でも静的な領域にデータをコピーし、その領域のアドレスをポインタ値
+であるかのように返すことで、返す。
+呼び出し側は、そのメモリ領域からその値が必要とされる場所にデータをコピー
+しなければならない。この方法は、GCC の方法よりも遅く、また
+再入可能でない。
 
-On some target machines, such as RISC machines and the 80386, the
-standard system convention is to pass to the subroutine the address of
-where to return the value.  On these machines, GCC has been
-configured to be compatible with the standard compiler, when this method
-is used.  It may not be compatible for structures of 1, 2, 4 or 8 bytes.
+ターゲット機種によっては、RISC マシンや 80386 のように、システム標準の
+規約が、サブルーチンに、戻り値を置くアドレスを渡すようになっている。
+こういう機種では、この方法が使われている場合は、GCC は標準のコンパイラ
+と互換になるようにコンフィギュレーションされる。
+1,2,4,8バイトの構造体については互換でない可能性がある。
 
 @cindex argument passing
 @cindex passing arguments
-GCC uses the system's standard convention for passing arguments.  On
-some machines, the first few arguments are passed in registers; in
-others, all are passed on the stack.  It would be possible to use
-registers for argument passing on any machine, and this would probably
-result in a significant speedup.  But the result would be complete
-incompatibility with code that follows the standard convention.  So this
-change is practical only if you are switching to GCC as the sole C
-compiler for the system.  We may implement register argument passing on
-certain machines once we have a complete GNU system so that we can
-compile the libraries with GCC@.
+GCC は、引数渡しについてはシステム標準の規約を使う。
+機種によっては、最初の幾つかの引数はレジスタで渡し、その他は
+全てスタックで渡される。どの機種でも引数を渡すのにレジスタを
+使うようにすることができる。それにより、おそらく、非常に速度が速く
+なるだろう。だが、その結果、標準の規約に従っているコードとの
+互換性が全く無くなってしまう。このため、この変更は GCC を
+システムに取っての唯一の C コンパイラとして切り替えた場合にのみ
+意味がある。完全な GNU システムができた暁には、ある種の機種では
+レジスタによる引数渡しを実装し、ライブラリを GCC でコンパイル
+できるようにする予定である。
 
-On some machines (particularly the SPARC), certain types of arguments
-are passed ``by invisible reference''.  This means that the value is
-stored in memory, and the address of the memory location is passed to
-the subroutine.
+機種によっては(特に SPARC)、特定の型の引数は「不可視の参照」により
+渡される。これは、渡すべき値がメモリに置かれ、そのメモリ位置のアドレスが
+サブルーチンに渡されることを意味する。
 
 @cindex @code{longjmp} and automatic variables
-If you use @code{longjmp}, beware of automatic variables.  ISO C says that
-automatic variables that are not declared @code{volatile} have undefined
-values after a @code{longjmp}.  And this is all GCC promises to do,
-because it is very difficult to restore register variables correctly, and
-one of GCC's features is that it can put variables in registers without
-your asking it to.
+@code{longjmp} を使う場合には、自動変数に注意しなければならない。
+ANSI C によれば、@code{volatile} 宣言されていない自動変数の値は、
+@code{longjmp} 呼び出しの後、未定義になる。そしてこれは GCC が
+行なうと約束する全てでもある。なぜなら、レジスタ変数を正しく
+リストアするのは非常に困難であり、GCC の目玉の一つが、
+特に指定しなくても、変数をレジスタに置くことができる点にあるからである。
+
+変数の値を @code{longjmp} によって変えられたくないが、古い C コンパイラが
+受け付けないので @code{volatile} も使いたくないという場合は、
+単にその変数のアドレスを取れば良い。変数のアドレスが一度でも取られると、
+それがアドレスの値を単に計算するだけでその値を使わなくても、
+その変数はレジスタに置かれなくなる。
+
+@example
+@{
+  int careful;
+  &careful;
+  @dots{}
+@}
+@end example
+
+@cindex arithmetic libraries
+@cindex math libraries
+
+C でコンパイルしたコードは、特定のライブラリルーチンを呼び出す
+可能性がある。その大部分は、算術演算を行なう命令がない場合に、
+代わりに算術演算を取り扱う。これは、ある機種では乗算と除算が含まれ、
+また、任意の機種で浮動小数点サポートが @samp{-msoft-float} により無効
+になっている場合の浮動小数点演算が含まれる。
+C 標準ライブラリの一部、例えば @code{bcopy} や @code{memcpy} 等もまた、
+自動的に呼び出される。通常の関数呼びだし方法が、これらのライブラリ
+ルーチン呼び出しに使われる。
+
+これらのライブラリルーチンはライブラリ @file{libgcc.a} で定義されるべきで
+あり、GCC はプログラムをリンクするときに自動的にこれを探す。
+乗算命令と除算命令のある機種では、ハードウェア浮動小数点が
+使われていれば、普通は @file{libgcc.a} は必要ないが、
+その場合でも検索される。
+
+各算術演算関数は @file{libgcc1.c} で定義されており、対応する
+C の算術演算子を使っている。このファイルが何か別の C コンパイラで
+コンパイルする限り、そのコンパイラは全ての C の算術演算子を
+サポートしているので、このファイルは正しく動作するはずである。
+だが、GCC でコンパイルすると @file{libgcc1.c} は動作しない。
+なぜなら、各算術関数がそれ自身への呼び出しにコンパイルされてしまうからである。
