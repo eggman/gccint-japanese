@@ -120,68 +120,56 @@ C のコードとしては大文字となって現れる。このマニュアル
 
 @table @code
 @item RTX_OBJ
-An RTX code that represents an actual object, such as a register
-(@code{REG}) or a memory location (@code{MEM}, @code{SYMBOL_REF}).
-@code{LO_SUM}) is also included; instead, @code{SUBREG} and
-@code{STRICT_LOW_PART} are not in this class, but in class @code{x}.
-
-@item RTX_CONST_OBJ
-An RTX code that represents a constant object.  @code{HIGH} is also
-included in this class.
+実際のオブジェクト、例えば、レジスタ(@code{REG})やメモリ位置
+(@code{MEM}、@code{SYMBOL_REF})等の実際のオブジェクトを表す
+RTX コードである。定数やオブジェクトに基本的な変換を施したもの
+(@code{ADDRESSOF}、@code{HIGH}、@code{LO_SUM})も含まれる。
+@code{SUBREG} や @code{STRICT_LOW_PART} はこのクラスには
+含まれず、クラス @code{x} に含まれることに注意
 
 @item RTX_COMPARE
-An RTX code for a non-symmetric comparison, such as @code{GEU} or
-@code{LT}.
+@code{NE} や @code{LT} 等の比較用の RTX コードである。
 
 @item RTX_COMM_COMPARE
 An RTX code for a symmetric (commutative) comparison, such as @code{EQ}
 or @code{ORDERED}.
 
 @item RTX_UNARY
-An RTX code for a unary arithmetic operation, such as @code{NEG},
-@code{NOT}, or @code{ABS}.  This category also includes value extension
-(sign or zero) and conversions between integer and floating point.
+@code{NEG} や @code{NOT}、@code{ABS} 等の単項算術演算用の
+RTX コードである。このカテゴリには、値の拡張(符号付きも符号無しも)や
+整数と浮動小数点の間の変換も含まれる。
 
 @item RTX_COMM_ARITH
-An RTX code for a commutative binary operation, such as @code{PLUS} or
-@code{AND}.  @code{NE} and @code{EQ} are comparisons, so they have class
-@code{<}.
+@code{PLUS} や @code{AND} 等の交換可能な二項演算の RTX コードである。
+@code{NE} と @code{EQ} は比較なので、@code{<} クラスになる。
 
 @item RTX_BIN_ARITH
-An RTX code for a non-commutative binary operation, such as @code{MINUS},
-@code{DIV}, or @code{ASHIFTRT}.
+@code{MINUS} や @code{DIV}、@code{ASHIFTRT} 等の交換可能でない
+二項演算の RTX コードである
 
 @item RTX_BITFIELD_OPS
-An RTX code for a bit-field operation.  Currently only
-@code{ZERO_EXTRACT} and @code{SIGN_EXTRACT}.  These have three inputs
-and are lvalues (so they can be used for insertion as well).
-@xref{Bit-Fields}.
+ビットフィールド演算の RTX コードである。現時点では、
+@code{ZERO_EXTRACT} と @code{SIGN_EXTRACT} だけである。
+これらは入力が三つあり、左辺値である(そのため、挿入にも同じように
+使える)。@xref{Bit-Fields}。
 
-@item RTX_TERNARY
-An RTX code for other three input operations.  Currently only
-@code{IF_THEN_ELSE},  @code{VEC_MERGE}, @code{SIGN_EXTRACT},
-@code{ZERO_EXTRACT}, and @code{FMA}.
+@item 3
+その他の3入力演算の RTX コードである。現時点では、
+@code{IF_THEN_ELSE} のみでる。
 
 @item RTX_INSN
-An RTX code for an entire instruction:  @code{INSN}, @code{JUMP_INSN}, and
-@code{CALL_INSN}.  @xref{Insns}.
+命令全体を表す RTX コードである。@code{INSN}、@code{JUMP_INSN}、
+@code{CALL_INSN} がある。@xref{Insns}。
 
 @item RTX_MATCH
-An RTX code for something that matches in insns, such as
-@code{MATCH_DUP}.  These only occur in machine descriptions.
-
-@item RTX_AUTOINC
-An RTX code for an auto-increment addressing mode, such as
-@code{POST_INC}.  @samp{XEXP (@var{x}, 0)} gives the auto-modified
-register.
+@code{MATCH_DUP} 等の、insn にマッチする何かを表す RTX コードである。
+マシン記述にのみ現れる。
 
 @item RTX_EXTRA
-All other RTX codes.  This category includes the remaining codes used
-only in machine descriptions (@code{DEFINE_*}, etc.).  It also includes
-all the codes describing side effects (@code{SET}, @code{USE},
-@code{CLOBBER}, etc.) and the non-insns that may appear on an insn
-chain, such as @code{NOTE}, @code{BARRIER}, and @code{CODE_LABEL}.
-@code{SUBREG} is also part of this class.
+その他の全ての RTX コードである。このカテゴリには、マシン記述でしか
+使われない(@code{DEFINE_*} 等)残りのコードが含まれる。
+副作用を記述する全てのコードと insn の連鎖に現れる、@code{NOTE}、
+@code{BARRIER}、@code{CODE_LABEL} 等の非 insn が含まれる。
 @end table
 
 @cindex RTL format
@@ -1152,7 +1140,7 @@ RTX @var{x} のマシンモードを @var{newmode} にする。
 @code{CONST_DOUBLE_HIGH} で参照するのが通例となっている。
 
 定数が浮動小数点数なら(精度に関わらず)、その値を格納するのに必要な
-整数の個数は、@code{REAL_VALUE_TYPE} に依存する(@pxref{Cross-compilation})。
+整数の個数は、@code{REAL_VALUE_TYPE} に依存する。
 その整数群は浮動小数点数を表現するが、厳密にはターゲットマシンまた
 ホストマシンの浮動小数点数形式ではない。ターゲットマシンで使われる
 正確なビットパターンに変換するには、マクロ @code{REAL_VALUE_TO_TARGET_DOUBLE}
