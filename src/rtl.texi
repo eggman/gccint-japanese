@@ -357,44 +357,19 @@ RTL 式は、ある種の型の式で使われる色々なフラグ(一ビット
 @cindex @code{symbol_ref} and @samp{/u}
 @cindex @code{unchanging}, in @code{symbol_ref}
 @item CONSTANT_POOL_ADDRESS_P (@var{x})
-Nonzero in a @code{symbol_ref} if it refers to part of the current
-function's constant pool.  For most targets these addresses are in a
-@code{.rodata} section entirely separate from the function, but for
-some targets the addresses are close to the beginning of the function.
-In either case GCC assumes these addresses can be addressed directly,
-perhaps with the help of base registers.
-Stored in the @code{unchanging} field and printed as @samp{/u}.
+@code{symbol_ref} の中で、現在の関数の「定数プール」の一部を参照
+しているなら、非ゼロとなる。これらは、関数の先頭に近いアドレスであり、
+GNU CC は、直接的にアクセスが可能であると仮定する(恐らく、ベースレジスタ
+の助けを借りて)。
+@code{unchanging} フィールドに格納され、@samp{/u} と出力される。
 
 @findex RTL_CONST_CALL_P
 @cindex @code{call_insn} and @samp{/u}
 @cindex @code{unchanging}, in @code{call_insn}
 @item RTL_CONST_CALL_P (@var{x})
-In a @code{call_insn} indicates that the insn represents a call to a
-const function.  Stored in the @code{unchanging} field and printed as
-@samp{/u}.
-
-@findex RTL_PURE_CALL_P
-@cindex @code{call_insn} and @samp{/i}
-@cindex @code{return_val}, in @code{call_insn}
-@item RTL_PURE_CALL_P (@var{x})
-In a @code{call_insn} indicates that the insn represents a call to a
-pure function.  Stored in the @code{return_val} field and printed as
-@samp{/i}.
-
-@findex RTL_CONST_OR_PURE_CALL_P
-@cindex @code{call_insn} and @samp{/u} or @samp{/i}
-@item RTL_CONST_OR_PURE_CALL_P (@var{x})
-In a @code{call_insn}, true if @code{RTL_CONST_CALL_P} or
-@code{RTL_PURE_CALL_P} is true.
-
-@findex RTL_LOOPING_CONST_OR_PURE_CALL_P
-@cindex @code{call_insn} and @samp{/c}
-@cindex @code{call}, in @code{call_insn}
-@item RTL_LOOPING_CONST_OR_PURE_CALL_P (@var{x})
-In a @code{call_insn} indicates that the insn represents a possibly
-infinite looping call to a const or pure function.  Stored in the
-@code{call} field and printed as @samp{/c}.  Only true if one of
-@code{RTL_CONST_CALL_P} or @code{RTL_PURE_CALL_P} is true.
+@code{call_insn} の中で、insn が定数関数への呼び出しを表しているか
+どうかを示す。@code{unchanging} フィールドに格納され、@samp{/u} と
+出力される。
 
 @findex INSN_ANNULLED_BRANCH_P
 @cindex @code{jump_insn} and @samp{/u}
@@ -402,10 +377,13 @@ infinite looping call to a const or pure function.  Stored in the
 @cindex @code{insn} and @samp{/u}
 @cindex @code{unchanging}, in @code{jump_insn}, @code{call_insn} and @code{insn}
 @item INSN_ANNULLED_BRANCH_P (@var{x})
-In a @code{jump_insn}, @code{call_insn}, or @code{insn} indicates
-that the branch is an annulling one.  See the discussion under
-@code{sequence} below.  Stored in the @code{unchanging} field and
-printed as @samp{/u}.
+遅延スロット中の insn には @code{INSN_ANNULLED_BRANCH_P} が設定され、
+遅延スロット中の insn の効果を条件により無効化するような
+分岐 insn を使うべきであることを指示する。
+@code{INSN_FROM_TARGET_P} indicates that the insn is from the target of
+the branch and should be executed only if the branch is taken; otherwise
+the insn should be executed only if the branch is not taken.
+@xref{Delay Slots}.
 
 @findex INSN_DELETED_P
 @cindex @code{insn} and @samp{/v}
@@ -417,10 +395,8 @@ printed as @samp{/u}.
 @cindex @code{note} and @samp{/v}
 @cindex @code{volatil}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{code_label}, @code{jump_table_data}, @code{barrier}, and @code{note}
 @item INSN_DELETED_P (@var{x})
-In an @code{insn}, @code{call_insn}, @code{jump_insn}, @code{code_label},
-@code{jump_table_data}, @code{barrier}, or @code{note},
-nonzero if the insn has been deleted.  Stored in the
-@code{volatil} field and printed as @samp{/v}.
+insn の中で、その insn が削除済であれば非 0 である。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
 @findex INSN_FROM_TARGET_P
 @cindex @code{insn} and @samp{/s}
@@ -428,43 +404,36 @@ nonzero if the insn has been deleted.  Stored in the
 @cindex @code{call_insn} and @samp{/s}
 @cindex @code{in_struct}, in @code{insn} and @code{jump_insn} and @code{call_insn}
 @item INSN_FROM_TARGET_P (@var{x})
-In an @code{insn} or @code{jump_insn} or @code{call_insn} in a delay
-slot of a branch, indicates that the insn
-is from the target of the branch.  If the branch insn has
-@code{INSN_ANNULLED_BRANCH_P} set, this insn will only be executed if
-the branch is taken.  For annulled branches with
-@code{INSN_FROM_TARGET_P} clear, the insn will be executed only if the
-branch is not taken.  When @code{INSN_ANNULLED_BRANCH_P} is not set,
-this insn will always be executed.  Stored in the @code{in_struct}
-field and printed as @samp{/s}.
+分岐命令の遅延スロット中の @code{insn} の中で、その insn が
+分岐命令のターゲットから来たものであることを示す。
+分岐 insn の @code{INSN_ANNULLED_BRANCH_P} ビットが立っていれば、
+この insn は、分岐が成立したときにのみ実行される。
+@code{INSN_FROM_TARGET_P}ビットが立っていない無効化された分岐命令の場合は、
+insn は、分岐が成立しなかったときにのみ実行される。
+@code{INSN_ANNULLED_BRANCH_P} が設定されていない場合は、
+この insn は常に実行される。
+@code{in_struct} フィールドに格納され、@samp{/s} と出力される。
 
 @findex LABEL_PRESERVE_P
 @cindex @code{code_label} and @samp{/i}
 @cindex @code{note} and @samp{/i}
 @cindex @code{in_struct}, in @code{code_label} and @code{note}
 @item LABEL_PRESERVE_P (@var{x})
-In a @code{code_label} or @code{note}, indicates that the label is referenced by
-code or data not visible to the RTL of a given function.
-Labels referenced by a non-local goto will have this bit set.  Stored
-in the @code{in_struct} field and printed as @samp{/s}.
+@code{code_label} の中で、そのラベルが削除不可であることを示す。
+非局所的 goto によるラベルの参照でこのビットがセットされる。
+@code{in_struct} フィールドに格納され、@samp{/s} と出力される。
 
-@findex LABEL_REF_NONLOCAL_P
-@cindex @code{label_ref} and @samp{/v}
-@cindex @code{reg_label} and @samp{/v}
-@cindex @code{volatil}, in @code{label_ref} and @code{reg_label}
-@item LABEL_REF_NONLOCAL_P (@var{x})
-In @code{label_ref} and @code{reg_label} expressions, nonzero if this is
-a reference to a non-local label.
-Stored in the @code{volatil} field and printed as @samp{/v}.
-
-@findex MEM_KEEP_ALIAS_SET_P
+@findex MEM_ALIAS_SET
 @cindex @code{mem} and @samp{/j}
 @cindex @code{jump}, in @code{mem}
-@item MEM_KEEP_ALIAS_SET_P (@var{x})
-In @code{mem} expressions, 1 if we should keep the alias set for this
-mem unchanged when we access a component.  Set to 1, for example, when we
-are already in a non-addressable component of an aggregate.
-Stored in the @code{jump} field and printed as @samp{/j}.
+@item MEM_ALIAS_SET (@var{x})
+@code{mem} 式において、@var{x} が属する別名のセットを表す。
+これがゼロであれば、@var{x} どの別名のセットにも入っておらず、
+任意のものの別名になりうる。ゼロでない場合は、@var{x} は、同じ
+別名セットに入っているオブジェとの別名にしかならない。
+この値は、言語フロントエンドにより(言語固有の方法で)設定される。
+このフィールドはビットフィールドではない。整数であり、@code{mem} の
+第二引数に現れるものである。
 
 @findex MEM_VOLATILE_P
 @cindex @code{mem} and @samp{/v}
@@ -475,48 +444,26 @@ Stored in the @code{jump} field and printed as @samp{/j}.
 @code{mem} 式において、揮発性のメモリ参照の場合に非 0 となる。
 @code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
-@findex MEM_NOTRAP_P
-@cindex @code{mem} and @samp{/c}
-@cindex @code{call}, in @code{mem}
-@item MEM_NOTRAP_P (@var{x})
-In @code{mem}, nonzero for memory references that will not trap.
-Stored in the @code{call} field and printed as @samp{/c}.
-
-@findex MEM_POINTER
-@cindex @code{mem} and @samp{/f}
-@cindex @code{frame_related}, in @code{mem}
-@item MEM_POINTER (@var{x})
-Nonzero in a @code{mem} if the memory reference holds a pointer.
-Stored in the @code{frame_related} field and printed as @samp{/f}.
-
 @findex REG_FUNCTION_VALUE_P
 @cindex @code{reg} and @samp{/i}
 @cindex @code{return_val}, in @code{reg}
 @item REG_FUNCTION_VALUE_P (@var{x})
-Nonzero in a @code{reg} if it is the place in which this function's
-value is going to be returned.  (This happens only in a hard
-register.)  Stored in the @code{return_val} field and printed as
-@samp{/i}.
+@code{reg} 式において、このレジスタに現在の関数の戻り値が置かれるなら
+非 0 である。(これは物理レジスタの場合にのみ発生する。)
+@code{integrated} フィールドに格納され、@samp{/i} と出力される。
 
-@findex REG_POINTER
-@cindex @code{reg} and @samp{/f}
-@cindex @code{frame_related}, in @code{reg}
-@item REG_POINTER (@var{x})
-Nonzero in a @code{reg} if the register holds a pointer.  Stored in the
-@code{frame_related} field and printed as @samp{/f}.
+同じ物理レジスタが現在の関数が呼び出した関数の戻り値を置くのに
+使われても良いが、そういう使い方の場合には @code{REG_FUNCTION_VALUE_P} は
+ 0 である。
 
 @findex REG_USERVAR_P
 @cindex @code{reg} and @samp{/v}
 @cindex @code{volatil}, in @code{reg}
 @item REG_USERVAR_P (@var{x})
-In a @code{reg}, nonzero if it corresponds to a variable present in
-the user's source code.  Zero for temporaries generated internally by
-the compiler.  Stored in the @code{volatil} field and printed as
-@samp{/v}.
-
-The same hard register may be used also for collecting the values of
-functions called by this one, but @code{REG_FUNCTION_VALUE_P} is zero
-in this kind of use.
+@code{reg} 式において、ユーザのソースコード中に存在する変数に
+対応するなら非0となる。コンパイラ内部で一時的に生成されたものなら
+0となる。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
 @findex RTX_FRAME_RELATED_P
 @cindex @code{insn} and @samp{/f}
@@ -526,46 +473,12 @@ in this kind of use.
 @cindex @code{set} and @samp{/f}
 @cindex @code{frame_related}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{barrier}, and @code{set}
 @item RTX_FRAME_RELATED_P (@var{x})
-Nonzero in an @code{insn}, @code{call_insn}, @code{jump_insn},
-@code{barrier}, or @code{set} which is part of a function prologue
-and sets the stack pointer, sets the frame pointer, or saves a register.
-This flag should also be set on an instruction that sets up a temporary
-register to use in place of the frame pointer.
-Stored in the @code{frame_related} field and printed as @samp{/f}.
+一個の insn また式で、関数プロローグの一部であり、かつ、スタックポインタを
+設定しているか、フレームポインタを設定しているか、レジスタをセーブしている
+ものの中であれば、ゼロでない値となる。
 
-In particular, on RISC targets where there are limits on the sizes of
-immediate constants, it is sometimes impossible to reach the register
-save area directly from the stack pointer.  In that case, a temporary
-register is used that is near enough to the register save area, and the
-Canonical Frame Address, i.e., DWARF2's logical frame pointer, register
-must (temporarily) be changed to be this temporary register.  So, the
-instruction that sets this temporary register must be marked as
-@code{RTX_FRAME_RELATED_P}.
-
-If the marked instruction is overly complex (defined in terms of what
-@code{dwarf2out_frame_debug_expr} can handle), you will also have to
-create a @code{REG_FRAME_RELATED_EXPR} note and attach it to the
-instruction.  This note should contain a simple expression of the
-computation performed by this instruction, i.e., one that
-@code{dwarf2out_frame_debug_expr} can handle.
-
-This flag is required for exception handling support on targets with RTL
-prologues.
-
-@findex MEM_READONLY_P
-@cindex @code{mem} and @samp{/u}
-@cindex @code{unchanging}, in @code{mem}
-@item MEM_READONLY_P (@var{x})
-Nonzero in a @code{mem}, if the memory is statically allocated and read-only.
-
-Read-only in this context means never modified during the lifetime of the
-program, not necessarily in ROM or in write-disabled pages.  A common
-example of the later is a shared library's global offset table.  This
-table is initialized by the runtime loader, so the memory is technically
-writable, but after control is transferred from the runtime loader to the
-application, this memory will never be subsequently modified.
-
-Stored in the @code{unchanging} field and printed as @samp{/u}.
+このフラグは、RTL プロローグを
+持つターゲットで例外処理をサポートするのに必要となる。
 
 @findex SCHED_GROUP_P
 @cindex @code{insn} and @samp{/s}
@@ -574,60 +487,22 @@ Stored in the @code{unchanging} field and printed as @samp{/u}.
 @cindex @code{jump_table_data} and @samp{/s}
 @cindex @code{in_struct}, in @code{insn}, @code{call_insn}, @code{jump_insn} and @code{jump_table_data}
 @item SCHED_GROUP_P (@var{x})
-During instruction scheduling, in an @code{insn}, @code{call_insn},
-@code{jump_insn} or @code{jump_table_data}, indicates that the
-previous insn must be scheduled together with this insn.  This is used to
-ensure that certain groups of instructions will not be split up by the
-instruction scheduling pass, for example, @code{use} insns before
-a @code{call_insn} may not be separated from the @code{call_insn}.
-Stored in the @code{in_struct} field and printed as @samp{/s}.
-
-@findex SET_IS_RETURN_P
-@cindex @code{insn} and @samp{/j}
-@cindex @code{jump}, in @code{insn}
-@item SET_IS_RETURN_P (@var{x})
-For a @code{set}, nonzero if it is for a return.
-Stored in the @code{jump} field and printed as @samp{/j}.
-
-@findex SIBLING_CALL_P
-@cindex @code{call_insn} and @samp{/j}
-@cindex @code{jump}, in @code{call_insn}
-@item SIBLING_CALL_P (@var{x})
-For a @code{call_insn}, nonzero if the insn is a sibling call.
-Stored in the @code{jump} field and printed as @samp{/j}.
-
-@findex STRING_POOL_ADDRESS_P
-@cindex @code{symbol_ref} and @samp{/f}
-@cindex @code{frame_related}, in @code{symbol_ref}
-@item STRING_POOL_ADDRESS_P (@var{x})
-For a @code{symbol_ref} expression, nonzero if it addresses this function's
-string constant pool.
-Stored in the @code{frame_related} field and printed as @samp{/f}.
+命令スケジューリング中、ある insn において、直前の insn はこの insn と
+同時にスケジューリングされなければならないことを示す。
+これを使って、ある命令のグループが命令スケジューリングのパスによって、
+分割されないことを保証する。例えば、@code{call_insn} の直前の
+@code{use} insn は、@code{call_insn} から分離されることはない。
+@code{in_struct} フィールドに格納され、@samp{/s} として出力される。
 
 @findex SUBREG_PROMOTED_UNSIGNED_P
 @cindex @code{subreg} and @samp{/u} and @samp{/v}
 @cindex @code{unchanging}, in @code{subreg}
 @cindex @code{volatil}, in @code{subreg}
 @item SUBREG_PROMOTED_UNSIGNED_P (@var{x})
-Returns a value greater then zero for a @code{subreg} that has
-@code{SUBREG_PROMOTED_VAR_P} nonzero if the object being referenced is kept
-zero-extended, zero if it is kept sign-extended, and less then zero if it is
-extended some other way via the @code{ptr_extend} instruction.
-Stored in the @code{unchanging}
-field and @code{volatil} field, printed as @samp{/u} and @samp{/v}.
-This macro may only be used to get the value it may not be used to change
-the value.  Use @code{SUBREG_PROMOTED_UNSIGNED_SET} to change the value.
-
-@findex SUBREG_PROMOTED_UNSIGNED_SET
-@cindex @code{subreg} and @samp{/u}
-@cindex @code{unchanging}, in @code{subreg}
-@cindex @code{volatil}, in @code{subreg}
-@item SUBREG_PROMOTED_UNSIGNED_SET (@var{x})
-Set the @code{unchanging} and @code{volatil} fields in a @code{subreg}
-to reflect zero, sign, or other extension.  If @code{volatil} is
-zero, then @code{unchanging} as nonzero means zero extension and as
-zero means sign extension.  If @code{volatil} is nonzero then some
-other type of extension was done via the @code{ptr_extend} instruction.
+@code{SUBREG_PROMOTED_VAR_P} が、参照されているオブジェクトがゼロ拡張
+され続ける場合はゼロでなく、符号拡張され続ける場合はゼロとなるような、
+@code{subreg} の中では、非ゼロである。
+@code{unchanging} フィールドに格納され、@samp{/u} と出力される。
 
 @findex SUBREG_PROMOTED_VAR_P
 @cindex @code{subreg} and @samp{/s}
@@ -645,16 +520,9 @@ other type of extension was done via the @code{ptr_extend} instruction.
 @findex SYMBOL_REF_USED
 @cindex @code{used}, in @code{symbol_ref}
 @item SYMBOL_REF_USED (@var{x})
-In a @code{symbol_ref}, indicates that @var{x} has been used.  This is
-normally only used to ensure that @var{x} is only declared external
-once.  Stored in the @code{used} field.
-
-@findex SYMBOL_REF_WEAK
-@cindex @code{symbol_ref} and @samp{/i}
-@cindex @code{return_val}, in @code{symbol_ref}
-@item SYMBOL_REF_WEAK (@var{x})
-In a @code{symbol_ref}, indicates that @var{x} has been declared weak.
-Stored in the @code{return_val} field and printed as @samp{/i}.
+@code{symbol_ref} 中で、@var{x} が使われていることを指示する。
+通常は、@var{x} が external として一度だけ宣言されていることを保証する
+のに使われるだけである。@code{used} フィールドに格納される。
 
 @findex SYMBOL_REF_FLAG
 @cindex @code{symbol_ref} and @samp{/v}
@@ -662,165 +530,104 @@ Stored in the @code{return_val} field and printed as @samp{/i}.
 @item SYMBOL_REF_FLAG (@var{x})
 @code{symbol_ref} 中で、機種に固有な目的のためのフラグとして使われる。
 @code{volatil} フィールドに格納され、@samp{/v} として出力される。
-
-Most uses of @code{SYMBOL_REF_FLAG} are historic and may be subsumed
-by @code{SYMBOL_REF_FLAGS}.  Certainly use of @code{SYMBOL_REF_FLAGS}
-is mandatory if the target requires more than one bit of storage.
-
-@findex PREFETCH_SCHEDULE_BARRIER_P
-@cindex @code{prefetch} and @samp{/v}
-@cindex @code{volatile}, in @code{prefetch}
-@item PREFETCH_SCHEDULE_BARRIER_P (@var{x})
-In a @code{prefetch}, indicates that the prefetch is a scheduling barrier.
-No other INSNs will be moved over it.
-Stored in the @code{volatil} field and printed as @samp{/v}.
 @end table
 
 以下に、上述のマクロが参照するフィールドを挙げる。
 
 @table @code
-@findex call
-@cindex @samp{/c} in RTL dump
-@item call
-In a @code{mem}, 1 means that the memory reference will not trap.
-
-In a @code{call}, 1 means that this pure or const call may possibly
-infinite loop.
-
-In an RTL dump, this flag is represented as @samp{/c}.
-
-@findex frame_related
-@cindex @samp{/f} in RTL dump
-@item frame_related
-In an @code{insn} or @code{set} expression, 1 means that it is part of
-a function prologue and sets the stack pointer, sets the frame pointer,
-saves a register, or sets up a temporary register to use in place of the
-frame pointer.
-
-In @code{reg} expressions, 1 means that the register holds a pointer.
-
-In @code{mem} expressions, 1 means that the memory reference holds a pointer.
-
-In @code{symbol_ref} expressions, 1 means that the reference addresses
-this function's string constant pool.
-
-In an RTL dump, this flag is represented as @samp{/f}.
-
 @findex in_struct
 @cindex @samp{/s} in RTL dump
 @item in_struct
-In @code{reg} expressions, it is 1 if the register has its entire life
-contained within the test expression of some loop.
+@code{mem}式の中では、その式が参照するメモリデータが、
+構造体または配列の全体あるいは一部であれば、1 となる。
+スカラ変数であれば、0 になる。
+C 言語のポインタを通しての参照は 0 となる。ポインタはスカラ変数を
+指すからである。この情報により、GCC が、エイリアシングが起こる場合に
+ついて何らかの決定を下すことができるようになる。
 
-In @code{subreg} expressions, 1 means that the @code{subreg} is accessing
-an object that has had its mode promoted from a wider mode.
+分岐命令の遅延スロットの insn の中では、1 であれば、この insn が
+分岐先から来たものであることを意味する。
 
-In @code{label_ref} expressions, 1 means that the referenced label is
-outside the innermost loop containing the insn in which the @code{label_ref}
-was found.
+命令のスケジューリングの間では、insn の中では、1 であれば、
+この insn は、直前の insn と共に構成するグループの一部として
+スケジュールされなければならないことを意味する。
 
-In @code{code_label} expressions, it is 1 if the label may never be deleted.
-This is used for labels which are the target of non-local gotos.  Such a
-label that would have been deleted is replaced with a @code{note} of type
-@code{NOTE_INSN_DELETED_LABEL}.
+@code{reg} 式の中では、その式が示すレジスタの生存範囲が、
+あるループの条件式の中に完全に収まるのであれば、1 である。
 
-In an @code{insn} during dead-code elimination, 1 means that the insn is
-dead code.
+@code{subreg} 式の中では、1 であれば、その @code{subreg} が、
+より広いモードから格上げされたモードを持っていたオブジェクトを
+参照していることを示す。
 
-In an @code{insn} or @code{jump_insn} during reorg for an insn in the
-delay slot of a branch,
-1 means that this insn is from the target of the branch.
+@code{label_ref} 式の中では、1 であれば、参照しているラベルが、
+その @code{label_ref} 式のある insn を含む最も内側のループの
+外にあることを示す。
 
-In an @code{insn} during instruction scheduling, 1 means that this insn
-must be scheduled as part of a group together with the previous insn.
+@code{code_label} 式の中では、そのラベルが削除されることが決してありえない
+のなら、1 である。これは、非局所的な goto の目的先であるラベルで
+使われる。
 
-In an RTL dump, this flag is represented as @samp{/s}.
-
-@findex return_val
-@cindex @samp{/i} in RTL dump
-@item return_val
-In @code{reg} expressions, 1 means the register contains
-the value to be returned by the current function.  On
-machines that pass parameters in registers, the same register number
-may be used for parameters as well, but this flag is not set on such
-uses.
-
-In @code{symbol_ref} expressions, 1 means the referenced symbol is weak.
-
-In @code{call} expressions, 1 means the call is pure.
-
-In an RTL dump, this flag is represented as @samp{/i}.
-
-@findex jump
-@cindex @samp{/j} in RTL dump
-@item jump
-In a @code{mem} expression, 1 means we should keep the alias set for this
-mem unchanged when we access a component.
-
-In a @code{set}, 1 means it is for a return.
-
-In a @code{call_insn}, 1 means it is a sibling call.
-
-In an RTL dump, this flag is represented as @samp{/j}.
+RTL ダンプの中では、このフラグは @samp{/s} と表記される
 
 @findex unchanging
 @cindex @samp{/u} in RTL dump
 @item unchanging
-In @code{reg} and @code{mem} expressions, 1 means
-that the value of the expression never changes.
+@code{reg} 式と @code{mem} 式の中では、1 であれば、その式の値が
+決して変化しないことを意味する。
 
-In @code{subreg} expressions, it is 1 if the @code{subreg} references an
-unsigned object whose mode has been promoted to a wider mode.
+@code{subreg} 式の中では、その @code{subreg} 式が、より広いモードへ
+格上げされたモードを持つ符号無しのオブジェクトを参照しているのであれば、
+1 である。
 
-In an @code{insn} or @code{jump_insn} in the delay slot of a branch
-instruction, 1 means an annulling branch should be used.
+insn の中では、1 であれば、無効化付きの分岐であることを意味する。
 
-In a @code{symbol_ref} expression, 1 means that this symbol addresses
-something in the per-function constant pool.
+@code{symbol_ref} 式の中では、1 であれば、このシンボルが、関数毎の
+定数プール中の何かを参照していることを示す。
 
-In a @code{call_insn} 1 means that this instruction is a call to a const
-function.
+@code{call_insn} の中では、1 であれば、この命令が定数関数への呼び出しで
+あることを意味する。
 
-In an RTL dump, this flag is represented as @samp{/u}.
+RTL ダンプ中では、このフラグは @samp{/u} と表示される。
 
 @findex used
 @item used
-This flag is used directly (without an access macro) at the end of RTL
-generation for a function, to count the number of times an expression
-appears in insns.  Expressions that appear more than once are copied,
-according to the rules for shared structure (@pxref{Sharing}).
+通常は、このフラグは、関数の RTL 生成の最後で、ある式が insn の中に何回
+現れたかを数えるために、一時的に使われるだけである。
+二回以上現れた式は、共有構造の規則に従ってコピーされる(@pxref{Sharing})。
 
-For a @code{reg}, it is used directly (without an access macro) by the
-leaf register renumbering code to ensure that each register is only
-renumbered once.
+@code{reg} では、リーフレジスタの番号付け替えのコード部分で、
+各レジスタの番号付け替えが一回だけ行われることを保証するのに
+使われる。
 
-In a @code{symbol_ref}, it indicates that an external declaration for
-the symbol has already been written.
+@code{symbol_ref} では、そのシンボルに対する外部宣言が既に書き込み済で
+あることを意味する。
 
 @findex volatil
 @cindex @samp{/v} in RTL dump
 @item volatil
 @cindex volatile memory references
-In a @code{mem}, @code{asm_operands}, or @code{asm_input}
-expression, it is 1 if the memory
-reference is volatile.  Volatile memory references may not be deleted,
-reordered or combined.
+このフラグは、@code{mem}式、@code{symbol_ref}式、@code{reg}式および
+insn の中で使われる。RTL ダンプファイルでは、@samp{/v} と表記される。
 
-In a @code{symbol_ref} expression, it is used for machine-specific
-purposes.
+@code{mem} 式の中では、メモリ参照が揮発性(volatile)であれば 1 である。
+揮発性メモリ参照は、削除や並べかえや結合は出来ない。
 
-In a @code{reg} expression, it is 1 if the value is a user-level variable.
-0 indicates an internal compiler temporary.
+@code{symbol_ref} 式の中では、機種固有の目的で使われる。
 
-In an @code{insn}, 1 means the insn has been deleted.
+@code{reg} 式の中では、その値がユーザレベルの変数であれば、1 である。
+0 であれば、コンパイラが内部的に使う一時的なものであること示す。
 
-In @code{label_ref} and @code{reg_label} expressions, 1 means a reference
-to a non-local label.
+insn の中では、1 であればその insn が既に削除された事を意味する。
 
-In @code{prefetch} expressions, 1 means that the containing insn is a
-scheduling barrier.
+@findex integrated
+@item integrated
+insnを含む、ある種の式の中では、このフラグは、この RTL が手続き統合
+(procedure integration)により生成されたことを意味する。
 
-In an RTL dump, this flag is represented as @samp{/v}.
+@code{reg} 式の中では、このフラグは、このレジスタが、現在の関数に
+より返されるはずの値を含んでいることを示す。
+引数をレジスタで渡す機種では、同じ番号のレジスタが引数としても
+使われるが、その様に使用される場合にはこのフラグはセットされない。
 @end table
 
 @node Machine Modes
