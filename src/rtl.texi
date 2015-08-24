@@ -353,6 +353,160 @@ RTL 式は、ある種の型の式で使われる色々なフラグ(一ビット
 参照される。
 
 @table @code
+@findex MEM_VOLATILE_P
+@cindex @code{mem} and @samp{/v}
+@cindex @code{asm_input} and @samp{/v}
+@cindex @code{asm_operands} and @samp{/v}
+@cindex @code{volatil}, in @code{mem}, @code{asm_operands}, and @code{asm_input}
+@item MEM_VOLATILE_P (@var{x})
+@code{mem} 式において、揮発性のメモリ参照の場合に非 0 となる。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
+
+@findex MEM_IN_STRUCT_P
+@cindex @code{mem} and @samp{/s}
+@cindex @code{in_struct}, in @code{mem}
+@cindex @samp{/s} in RTL dump
+@item MEM_IN_STRUCT_P (@var{x})
+@code{mem} 式において、構造体や共用体、配列全体かそれらの成分を
+参照するときに非0となる。スカラ変数への、あるいは
+ポインタを通してのスカラ変数への参照の場合は 0 となる。
+@code{in_struct} フィールドに格納され、@samp{/s} と出力される。
+このフラグと @code{MEM_SCALAR_P} がどちらもクリアされていると、
+この MEM が構造体の中にあるのかどうかがわからない。
+両方のフラグが同時に設定されることがあってはならない。
+
+@findex MEM_SCALAR_P
+@cindex @code{mem} and @samp{/f}
+@cindex @code{frame_related}, in@code{mem}
+@cindex @samp{/f} in RTL dump
+@item MEM_SCALAR_P (@var{x})
+@code{mem} 式において、構造体や共用体、配列のメンバでないことが
+知られているスカラに対する参照の場合はゼロでない値となる。
+構造体や共用体、配列のメンバに対する参照や、ポインタを経由しての
+間接参照に対しては、たとえそのポインタがスカラ型を指していても
+ゼロとなる。このフラグと @code{MEM_STRUCT_P} が両方ともクリアされていると、
+この MEM が構造体の中にあるのかどうか分からない。
+両方のフラグを同時にセットしてはならない。
+
+@findex MEM_ALIAS_SET
+@cindex @code{mem} and @samp{/j}
+@cindex @code{jump}, in @code{mem}
+@item MEM_ALIAS_SET (@var{x})
+@code{mem} 式において、@var{x} が属する別名のセットを表す。
+これがゼロであれば、@var{x} どの別名のセットにも入っておらず、
+任意のものの別名になりうる。ゼロでない場合は、@var{x} は、同じ
+別名セットに入っているオブジェとの別名にしかならない。
+この値は、言語フロントエンドにより(言語固有の方法で)設定される。
+このフィールドはビットフィールドではない。整数であり、@code{mem} の
+第二引数に現れるものである。
+
+@findex REG_LOOP_TEST_P
+@cindex @code{reg} and @samp{/s}
+@cindex @code{in_struct}, in @code{reg}
+@item REG_LOOP_TEST_P
+@code{reg} 式において、レジスタの生存期間がループの脱出条件の
+テストに含まれるなら、非0となる。
+@code{in_struct} フィールドに格納され、@samp{/s} と出力される。
+
+@findex REG_USERVAR_P
+@cindex @code{reg} and @samp{/v}
+@cindex @code{volatil}, in @code{reg}
+@item REG_USERVAR_P (@var{x})
+@code{reg} 式において、ユーザのソースコード中に存在する変数に
+対応するなら非0となる。コンパイラ内部で一時的に生成されたものなら
+0となる。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
+
+@findex REG_FUNCTION_VALUE_P
+@cindex @code{reg} and @samp{/i}
+@cindex @code{return_val}, in @code{reg}
+@item REG_FUNCTION_VALUE_P (@var{x})
+@code{reg} 式において、このレジスタに現在の関数の戻り値が置かれるなら
+非 0 である。(これは物理レジスタの場合にのみ発生する。)
+@code{integrated} フィールドに格納され、@samp{/i} と出力される。
+
+同じ物理レジスタが現在の関数が呼び出した関数の戻り値を置くのに
+使われても良いが、そういう使い方の場合には @code{REG_FUNCTION_VALUE_P} は
+ 0 である。
+
+@findex SUBREG_PROMOTED_VAR_P
+@cindex @code{subreg} and @samp{/s}
+@cindex @code{in_struct}, in @code{subreg}
+@item SUBREG_PROMOTED_VAR_P (@var{x})
+それが、マシン記述マクロ @code{PROMOTED_MODE} (@pxref{Storage Layout})に
+従って、より幅の広いモードに拡張されたオブジェクトを参照した際に
+作られたものなら、非ゼロである。この場合、@code{subreg} のモードは
+そのオブジェクトの宣言されたモードであり、@code{SUBREG_REG} のモードは
+そのオブジェクトを保持するレジスタのモードである。
+拡張された変数は、それぞれの代入の際に、常に、より幅の広いモードへ
+符号拡張またゼロ拡張される。
+@code{in_struct} フィールドに格納され、@samp{/s} として出力される。
+
+@findex SUBREG_PROMOTED_UNSIGNED_P
+@cindex @code{subreg} and @samp{/u} and @samp{/v}
+@cindex @code{unchanging}, in @code{subreg}
+@cindex @code{volatil}, in @code{subreg}
+@item SUBREG_PROMOTED_UNSIGNED_P (@var{x})
+@code{SUBREG_PROMOTED_VAR_P} が、参照されているオブジェクトがゼロ拡張
+され続ける場合はゼロでなく、符号拡張され続ける場合はゼロとなるような、
+@code{subreg} の中では、非ゼロである。
+@code{unchanging} フィールドに格納され、@samp{/u} と出力される。
+
+@findex RTX_UNCHANGING_P
+@cindex @code{reg} and @samp{/u}
+@cindex @code{mem} and @samp{/u}
+@cindex @code{unchanging}, in @code{reg} and @code{mem}
+@cindex @samp{/u} in RTL dump
+@item RTX_UNCHANGING_P (@var{x})
+@code{reg} または @code{mem} では、その値が変化しないのであれば、
+非 0 である。
+(このフラグは、ポインタを経由しての定数へのメモリ参照では設定されない。
+そういうポインタは、現在の関数ではオブジェクトは明示的には変化しない
+ということを保証するだけである。オブジェクトは、他の関数やエイリアシング
+により変化し得るのである。)
+@code{unchanging} フィールドに格納され、@samp{/u} と出力される。
+
+@findex RTX_INTEGRATED_P
+@cindex @code{integrated}, in @code{insn}
+@item RTX_INTEGRATED_P (@var{insn})
+インライン関数呼び出しの結果生じる insn 中では非 0 である。
+@code{integrated} フィールドに格納され、@samp{/i} と出力される。
+
+@findex RTX_FRAME_RELATED_P
+@item RTX_FRAME_RELATED_P (@var{x})
+一個の insn また式で、関数プロローグの一部であり、かつ、スタックポインタを
+設定しているか、フレームポインタを設定しているか、レジスタをセーブしている
+ものの中であれば、ゼロでない値となる。このフラグは、RTL プロローグを
+持つターゲットで例外処理をサポートするのに必要となる。
+
+@findex RTX_FRAME_RELATED_P
+@cindex @code{insn} and @samp{/f}
+@cindex @code{call_insn} and @samp{/f}
+@cindex @code{jump_insn} and @samp{/f}
+@cindex @code{barrier} and @samp{/f}
+@cindex @code{set} and @samp{/f}
+@cindex @code{frame_related}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{barrier}, and @code{set}
+@item RTX_FRAME_RELATED_P (@var{x})
+一個の insn また式で、関数プロローグの一部であり、かつ、スタックポインタを
+設定しているか、フレームポインタを設定しているか、レジスタをセーブしている
+ものの中であれば、ゼロでない値となる。
+
+このフラグは、RTL プロローグを
+持つターゲットで例外処理をサポートするのに必要となる。
+
+@findex SYMBOL_REF_USED
+@cindex @code{used}, in @code{symbol_ref}
+@item SYMBOL_REF_USED (@var{x})
+@code{symbol_ref} 中で、@var{x} が使われていることを指示する。
+通常は、@var{x} が external として一度だけ宣言されていることを保証する
+のに使われるだけである。@code{used} フィールドに格納される。
+
+@findex SYMBOL_REF_FLAG
+@cindex @code{symbol_ref} and @samp{/v}
+@cindex @code{volatil}, in @code{symbol_ref}
+@item SYMBOL_REF_FLAG (@var{x})
+@code{symbol_ref} 中で、機種に固有な目的のためのフラグとして使われる。
+@code{volatil} フィールドに格納され、@samp{/v} として出力される。
 @findex CONSTANT_POOL_ADDRESS_P
 @cindex @code{symbol_ref} and @samp{/u}
 @cindex @code{unchanging}, in @code{symbol_ref}
@@ -363,13 +517,26 @@ GNU CC は、直接的にアクセスが可能であると仮定する(恐らく
 の助けを借りて)。
 @code{unchanging} フィールドに格納され、@samp{/u} と出力される。
 
-@findex RTL_CONST_CALL_P
-@cindex @code{call_insn} and @samp{/u}
-@cindex @code{unchanging}, in @code{call_insn}
-@item RTL_CONST_CALL_P (@var{x})
-@code{call_insn} の中で、insn が定数関数への呼び出しを表しているか
-どうかを示す。@code{unchanging} フィールドに格納され、@samp{/u} と
-出力される。
+@findex LABEL_OUTSIDE_LOOP_P
+@cindex @code{label_ref} and @samp{/s}
+@cindex @code{in_struct}, in @code{label_ref}
+@item LABEL_OUTSIDE_LOOP_P
+@code{label_ref} 式の中で、ラベルへの参照がある場合、そのラベルが、
+ラベルへの参照を含む最も内側のループの外側にあるなら、非ゼロとなる。
+@code{in_struct} フィールドに格納され、@samp{/s} として出力される。
+
+@findex INSN_DELETED_P
+@cindex @code{insn} and @samp{/v}
+@cindex @code{call_insn} and @samp{/v}
+@cindex @code{jump_insn} and @samp{/v}
+@cindex @code{code_label} and @samp{/v}
+@cindex @code{jump_table_data} and @samp{/v}
+@cindex @code{barrier} and @samp{/v}
+@cindex @code{note} and @samp{/v}
+@cindex @code{volatil}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{code_label}, @code{jump_table_data}, @code{barrier}, and @code{note}
+@item INSN_DELETED_P (@var{x})
+insn の中で、その insn が削除済であれば非 0 である。
+@code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
 @findex INSN_ANNULLED_BRANCH_P
 @cindex @code{jump_insn} and @samp{/u}
@@ -384,19 +551,6 @@ GNU CC は、直接的にアクセスが可能であると仮定する(恐らく
 the branch and should be executed only if the branch is taken; otherwise
 the insn should be executed only if the branch is not taken.
 @xref{Delay Slots}.
-
-@findex INSN_DELETED_P
-@cindex @code{insn} and @samp{/v}
-@cindex @code{call_insn} and @samp{/v}
-@cindex @code{jump_insn} and @samp{/v}
-@cindex @code{code_label} and @samp{/v}
-@cindex @code{jump_table_data} and @samp{/v}
-@cindex @code{barrier} and @samp{/v}
-@cindex @code{note} and @samp{/v}
-@cindex @code{volatil}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{code_label}, @code{jump_table_data}, @code{barrier}, and @code{note}
-@item INSN_DELETED_P (@var{x})
-insn の中で、その insn が削除済であれば非 0 である。
-@code{volatil} フィールドに格納され、@samp{/v} と出力される。
 
 @findex INSN_FROM_TARGET_P
 @cindex @code{insn} and @samp{/s}
@@ -414,6 +568,44 @@ insn は、分岐が成立しなかったときにのみ実行される。
 この insn は常に実行される。
 @code{in_struct} フィールドに格納され、@samp{/s} と出力される。
 
+@findex INSN_ANNULLED_BRANCH_P
+@cindex @code{jump_insn} and @samp{/u}
+@cindex @code{call_insn} and @samp{/u}
+@cindex @code{insn} and @samp{/u}
+@cindex @code{unchanging}, in @code{jump_insn}, @code{call_insn} and @code{insn}
+@item INSN_ANNULLED_BRANCH_P (@var{x})
+遅延スロット中の insn には @code{INSN_ANNULLED_BRANCH_P} が設定され、
+遅延スロット中の insn の効果を条件により無効化するような
+分岐 insn を使うべきであることを指示する。
+@code{INSN_FROM_TARGET_P} indicates that the insn is from the target of
+the branch and should be executed only if the branch is taken; otherwise
+the insn should be executed only if the branch is not taken.
+@xref{Delay Slots}.
+
+@findex INSN_FROM_TARGET_P
+@cindex @code{insn} and @samp{/s}
+@cindex @code{jump_insn} and @samp{/s}
+@cindex @code{call_insn} and @samp{/s}
+@cindex @code{in_struct}, in @code{insn} and @code{jump_insn} and @code{call_insn}
+@item INSN_FROM_TARGET_P (@var{x})
+分岐命令の遅延スロット中の @code{insn} の中で、その insn が
+分岐命令のターゲットから来たものであることを示す。
+分岐 insn の @code{INSN_ANNULLED_BRANCH_P} ビットが立っていれば、
+この insn は、分岐が成立したときにのみ実行される。
+@code{INSN_FROM_TARGET_P}ビットが立っていない無効化された分岐命令の場合は、
+insn は、分岐が成立しなかったときにのみ実行される。
+@code{INSN_ANNULLED_BRANCH_P} が設定されていない場合は、
+この insn は常に実行される。
+@code{in_struct} フィールドに格納され、@samp{/s} と出力される。
+
+@findex RTL_CONST_CALL_P
+@cindex @code{call_insn} and @samp{/u}
+@cindex @code{unchanging}, in @code{call_insn}
+@item RTL_CONST_CALL_P (@var{x})
+@code{call_insn} の中で、insn が定数関数への呼び出しを表しているか
+どうかを示す。@code{unchanging} フィールドに格納され、@samp{/u} と
+出力される。
+
 @findex LABEL_PRESERVE_P
 @cindex @code{code_label} and @samp{/i}
 @cindex @code{note} and @samp{/i}
@@ -422,63 +614,6 @@ insn は、分岐が成立しなかったときにのみ実行される。
 @code{code_label} の中で、そのラベルが削除不可であることを示す。
 非局所的 goto によるラベルの参照でこのビットがセットされる。
 @code{in_struct} フィールドに格納され、@samp{/s} と出力される。
-
-@findex MEM_ALIAS_SET
-@cindex @code{mem} and @samp{/j}
-@cindex @code{jump}, in @code{mem}
-@item MEM_ALIAS_SET (@var{x})
-@code{mem} 式において、@var{x} が属する別名のセットを表す。
-これがゼロであれば、@var{x} どの別名のセットにも入っておらず、
-任意のものの別名になりうる。ゼロでない場合は、@var{x} は、同じ
-別名セットに入っているオブジェとの別名にしかならない。
-この値は、言語フロントエンドにより(言語固有の方法で)設定される。
-このフィールドはビットフィールドではない。整数であり、@code{mem} の
-第二引数に現れるものである。
-
-@findex MEM_VOLATILE_P
-@cindex @code{mem} and @samp{/v}
-@cindex @code{asm_input} and @samp{/v}
-@cindex @code{asm_operands} and @samp{/v}
-@cindex @code{volatil}, in @code{mem}, @code{asm_operands}, and @code{asm_input}
-@item MEM_VOLATILE_P (@var{x})
-@code{mem} 式において、揮発性のメモリ参照の場合に非 0 となる。
-@code{volatil} フィールドに格納され、@samp{/v} と出力される。
-
-@findex REG_FUNCTION_VALUE_P
-@cindex @code{reg} and @samp{/i}
-@cindex @code{return_val}, in @code{reg}
-@item REG_FUNCTION_VALUE_P (@var{x})
-@code{reg} 式において、このレジスタに現在の関数の戻り値が置かれるなら
-非 0 である。(これは物理レジスタの場合にのみ発生する。)
-@code{integrated} フィールドに格納され、@samp{/i} と出力される。
-
-同じ物理レジスタが現在の関数が呼び出した関数の戻り値を置くのに
-使われても良いが、そういう使い方の場合には @code{REG_FUNCTION_VALUE_P} は
- 0 である。
-
-@findex REG_USERVAR_P
-@cindex @code{reg} and @samp{/v}
-@cindex @code{volatil}, in @code{reg}
-@item REG_USERVAR_P (@var{x})
-@code{reg} 式において、ユーザのソースコード中に存在する変数に
-対応するなら非0となる。コンパイラ内部で一時的に生成されたものなら
-0となる。
-@code{volatil} フィールドに格納され、@samp{/v} と出力される。
-
-@findex RTX_FRAME_RELATED_P
-@cindex @code{insn} and @samp{/f}
-@cindex @code{call_insn} and @samp{/f}
-@cindex @code{jump_insn} and @samp{/f}
-@cindex @code{barrier} and @samp{/f}
-@cindex @code{set} and @samp{/f}
-@cindex @code{frame_related}, in @code{insn}, @code{call_insn}, @code{jump_insn}, @code{barrier}, and @code{set}
-@item RTX_FRAME_RELATED_P (@var{x})
-一個の insn また式で、関数プロローグの一部であり、かつ、スタックポインタを
-設定しているか、フレームポインタを設定しているか、レジスタをセーブしている
-ものの中であれば、ゼロでない値となる。
-
-このフラグは、RTL プロローグを
-持つターゲットで例外処理をサポートするのに必要となる。
 
 @findex SCHED_GROUP_P
 @cindex @code{insn} and @samp{/s}
@@ -493,43 +628,6 @@ insn は、分岐が成立しなかったときにのみ実行される。
 分割されないことを保証する。例えば、@code{call_insn} の直前の
 @code{use} insn は、@code{call_insn} から分離されることはない。
 @code{in_struct} フィールドに格納され、@samp{/s} として出力される。
-
-@findex SUBREG_PROMOTED_UNSIGNED_P
-@cindex @code{subreg} and @samp{/u} and @samp{/v}
-@cindex @code{unchanging}, in @code{subreg}
-@cindex @code{volatil}, in @code{subreg}
-@item SUBREG_PROMOTED_UNSIGNED_P (@var{x})
-@code{SUBREG_PROMOTED_VAR_P} が、参照されているオブジェクトがゼロ拡張
-され続ける場合はゼロでなく、符号拡張され続ける場合はゼロとなるような、
-@code{subreg} の中では、非ゼロである。
-@code{unchanging} フィールドに格納され、@samp{/u} と出力される。
-
-@findex SUBREG_PROMOTED_VAR_P
-@cindex @code{subreg} and @samp{/s}
-@cindex @code{in_struct}, in @code{subreg}
-@item SUBREG_PROMOTED_VAR_P (@var{x})
-それが、マシン記述マクロ @code{PROMOTED_MODE} (@pxref{Storage Layout})に
-従って、より幅の広いモードに拡張されたオブジェクトを参照した際に
-作られたものなら、非ゼロである。この場合、@code{subreg} のモードは
-そのオブジェクトの宣言されたモードであり、@code{SUBREG_REG} のモードは
-そのオブジェクトを保持するレジスタのモードである。
-拡張された変数は、それぞれの代入の際に、常に、より幅の広いモードへ
-符号拡張またゼロ拡張される。
-@code{in_struct} フィールドに格納され、@samp{/s} として出力される。
-
-@findex SYMBOL_REF_USED
-@cindex @code{used}, in @code{symbol_ref}
-@item SYMBOL_REF_USED (@var{x})
-@code{symbol_ref} 中で、@var{x} が使われていることを指示する。
-通常は、@var{x} が external として一度だけ宣言されていることを保証する
-のに使われるだけである。@code{used} フィールドに格納される。
-
-@findex SYMBOL_REF_FLAG
-@cindex @code{symbol_ref} and @samp{/v}
-@cindex @code{volatil}, in @code{symbol_ref}
-@item SYMBOL_REF_FLAG (@var{x})
-@code{symbol_ref} 中で、機種に固有な目的のためのフラグとして使われる。
-@code{volatil} フィールドに格納され、@samp{/v} として出力される。
 @end table
 
 以下に、上述のマクロが参照するフィールドを挙げる。
