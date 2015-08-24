@@ -7,48 +7,35 @@
 @chapter Machine Descriptions
 @cindex machine descriptions
 
-A machine description has two parts: a file of instruction patterns
-(@file{.md} file) and a C header file of macro definitions.
+マシン記述は二つの部分からなる。機械命令のパターンを記述する
+ファイル(@file{.md} ファイル) と C のマクロ定義を記述するヘッダファイル
+である。
 
-The @file{.md} file for a target machine contains a pattern for each
-instruction that the target machine supports (or at least each instruction
-that is worth telling the compiler about).  It may also contain comments.
-A semicolon causes the rest of the line to be a comment, unless the semicolon
-is inside a quoted string.
+あるターゲットマシン向けの @file{.md} ファイルは、そのマシンがサポート
+している各機械命令(あるいは、少なくとも、GCC が知っていたほうが良い機械命令) 
+のパターンを記述する。このファイルにはコメントを書くことができる。
+コメントはセミコロンから始まり行末までとなる。ただし、セミコロンが
+引用符つき文字列中にある場合を除く。
 
-See the next chapter for information on the C header file.
+C のヘッダファイルについては、次章を見ていただきたい
 
 @menu
 * Overview::            How the machine description is used.
-* Patterns::            How to write instruction patterns.
-* Example::             An explained example of a @code{define_insn} pattern.
-* RTL Template::        The RTL template defines what insns match a pattern.
-* Output Template::     The output template says how to make assembler code
-                        from such an insn.
-* Output Statement::    For more generality, write C code to output
-                        the assembler code.
-* Predicates::          Controlling what kinds of operands can be used
-                        for an insn.
-* Constraints::         Fine-tuning operand selection.
-* Standard Names::      Names mark patterns to use for code generation.
-* Pattern Ordering::    When the order of patterns makes a difference.
-* Dependent Patterns::  Having one pattern may make you need another.
-* Jump Patterns::       Special considerations for patterns for jump insns.
-* Looping Patterns::    How to define patterns for special looping insns.
-* Insn Canonicalizations::Canonicalization of Instructions
-* Expander Definitions::Generating a sequence of several RTL insns
-                        for a standard operation.
-* Insn Splitting::      Splitting Instructions into Multiple Instructions.
-* Including Patterns::  Including Patterns in Machine Descriptions.
-* Peephole Definitions::Defining machine-specific peephole optimizations.
-* Insn Attributes::     Specifying the value of attributes for generated insns.
-* Conditional Execution::Generating @code{define_insn} patterns for
-                         predication.
-* Define Subst::	Generating @code{define_insn} and @code{define_expand}
-			patterns from other patterns.
-* Constant Definitions::Defining symbolic constants that can be used in the
-                        md file.
-* Iterators::           Using iterators to generate patterns from a template.
+* Patterns::            命令パターンの書き方
+* Example::             @code{define_insn} の例
+* RTL Template::        RTL テンプレート
+* Output Template::     アセンブラコードの出力方法を指定する出力テンプレート
+* Output Statement::    アセンブラコードの出力を行なう C のコード
+* Constraints::         オペランド制約
+* Standard Names::      コード生成で使われるパターン名
+* Pattern Ordering::    パターンの順序が意味を持つ時
+* Dependent Patterns::  一つのパターンが別のパターンを必要とするとき
+* Jump Patterns::       ジャンプ命令のパターンに関する特別な注意
+* Insn Canonicalizations::命令の正規化
+* Peephole Definitions::機種固有のピープホール最適化の定義方法
+* Expander Definitions::標準の演算向けの各種 RTL insn 列の生成
+* Insn Splitting::    複数命令への分割
+* Insn Attributes::     生成された insn の属性値を指定する
 @end menu
 
 @node Overview
