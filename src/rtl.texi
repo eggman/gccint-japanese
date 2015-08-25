@@ -2395,217 +2395,162 @@ insn の一部は実際の命令である。@code{switch} 文のための分岐�
 @table @code
 @findex INSN_UID
 @item INSN_UID (@var{i})
-Accesses the unique id of insn @var{i}.
+insn @var{i} に一意的な識別番号をアクセスする。
 
 @findex PREV_INSN
 @item PREV_INSN (@var{i})
-Accesses the chain pointer to the insn preceding @var{i}.
-If @var{i} is the first insn, this is a null pointer.
+@var{i} の直前の insn へのポインタをアクセスする。
+@var{i} が先頭の insn なら、ヌルポインタになる。
 
 @findex NEXT_INSN
 @item NEXT_INSN (@var{i})
-Accesses the chain pointer to the insn following @var{i}.
-If @var{i} is the last insn, this is a null pointer.
+@var{i} の直後の insn へのポインタをアクセスする。
+@var{i} が末尾の insn なら、ヌルポインタになる。
 @end table
 
 @findex get_insns
 @findex get_last_insn
-The first insn in the chain is obtained by calling @code{get_insns}; the
-last insn is the result of calling @code{get_last_insn}.  Within the
-chain delimited by these insns, the @code{NEXT_INSN} and
-@code{PREV_INSN} pointers must always correspond: if @var{insn} is not
-the first insn,
+insn のリストの先頭の insn は、@code{get_insns} で得ることができる。
+末尾の insn は、@code{get_last_insn} を使って得ることができる。
+先頭の insn から末尾の insn の範囲内では、@code{NEXT_INSN} と
+@code{PREV_INSN} のポインタは常に対応している必要がある。
+つまり、@var{insn} が先頭の insn でなければ、
 
 @smallexample
 NEXT_INSN (PREV_INSN (@var{insn})) == @var{insn}
 @end smallexample
 
 @noindent
-is always true and if @var{insn} is not the last insn,
+上の式は常に真であり、また、@var{insn} が末尾の insn でなければ、
 
 @smallexample
 PREV_INSN (NEXT_INSN (@var{insn})) == @var{insn}
 @end smallexample
 
 @noindent
-is always true.
+は常に真である。
 
-After delay slot scheduling, some of the insns in the chain might be
-@code{sequence} expressions, which contain a vector of insns.  The value
-of @code{NEXT_INSN} in all but the last of these insns is the next insn
-in the vector; the value of @code{NEXT_INSN} of the last insn in the vector
-is the same as the value of @code{NEXT_INSN} for the @code{sequence} in
-which it is contained.  Similar rules apply for @code{PREV_INSN}.
+遅延分岐スケジューリング後、リスト中の insn の幾つかは
+@code{sequence} 式である可能性がある。@code{sequence} は、insn のベクトルを
+含んでいる。このベクトルの中の insn の @code{NEXT_INSN} の値は、
+最後の insn を除いて、ベクトルの中での次の insn を指す。
+ベクトルの最後の insn の @code{NEXT_INSN} の値は、その insn を含む
+@code{sequence} に対する @code{NEXT_INSN} の値と同じである。
+@code{PREV_INSN} についても同様である。
 
-This means that the above invariants are not necessarily true for insns
-inside @code{sequence} expressions.  Specifically, if @var{insn} is the
-first insn in a @code{sequence}, @code{NEXT_INSN (PREV_INSN (@var{insn}))}
-is the insn containing the @code{sequence} expression, as is the value
-of @code{PREV_INSN (NEXT_INSN (@var{insn}))} if @var{insn} is the last
-insn in the @code{sequence} expression.  You can use these expressions
-to find the containing @code{sequence} expression.
+つまり、先に述べた恒等式は、@code{sequence} の中の insn については
+必ずしも真ではないのである。
+特に、@var{insn} が @code{sequence} の先頭の insn なら、
+@code{NEXT_INSN (PREV_INSN (@var{insn}))} は、
+@code{sequence} 式を含む insn になり、同様に、
+@code{PREV_INSN (NEXT_INSN (@var{insn}))} は、@code{sequence} 式の
+最後の insn になる。
+これらの式を使って @code{sequence} 式を含む insn を取り出すことができる。
 
-Every insn has one of the following expression codes:
+どの insn も以下のような6個の式コードの一つを持っている。
 
 @table @code
 @findex insn
 @item insn
-The expression code @code{insn} is used for instructions that do not jump
-and do not do function calls.  @code{sequence} expressions are always
-contained in insns with code @code{insn} even if one of those insns
-should jump or do function calls.
+式コード @code{insn} は、ジャンプも関数呼び出しも行わない命令に対して
+使う。@code{sequence} 式は、その中の insn の一つがジャンプや関数呼び出しを
+行なっても、常にコード が @code{insn} である insn に含まれる。
 
-Insns with code @code{insn} have four additional fields beyond the three
-mandatory ones listed above.  These four are described in a table below.
+コードが @code{insn} である insn は、上記の三つの必須フィールドの他に、
+四つのフィールドを持つ。この四つのフィールドについては後出の表で
+説明する。
 
 @findex jump_insn
 @item jump_insn
-The expression code @code{jump_insn} is used for instructions that may
-jump (or, more generally, may contain @code{label_ref} expressions to
-which @code{pc} can be set in that instruction).  If there is an
-instruction to return from the current function, it is recorded as a
-@code{jump_insn}.
+式コード @code{jump_insn} はジャンプを行なう可能性のある命令(あるいは、
+もっと一般的に言うと、@code{label_ref} 式を含む命令)で使われる。
+現在の関数から復帰する命令があるなら、やはり @code{jump_insn} になる。
 
 @findex JUMP_LABEL
-@code{jump_insn} insns have the same extra fields as @code{insn} insns,
-accessed in the same way and in addition contain a field
-@code{JUMP_LABEL} which is defined once jump optimization has completed.
+@code{jump_insn} の insn には、コード @code{insn} の insn と同じ追加の
+フィールドがあり、同じようにしてアクセスされ、さらに
+ジャンプ最適化が完了したときに一度だけ定義される @code{JUMP_LABLE} という
+フィールドも保持している。
 
-For simple conditional and unconditional jumps, this field contains
-the @code{code_label} to which this insn will (possibly conditionally)
-branch.  In a more complex jump, @code{JUMP_LABEL} records one of the
-labels that the insn refers to; other jump target labels are recorded
-as @code{REG_LABEL_TARGET} notes.  The exception is @code{addr_vec}
-and @code{addr_diff_vec}, where @code{JUMP_LABEL} is @code{NULL_RTX}
-and the only way to find the labels is to scan the entire body of the
-insn.
+単純な、条件ジャンプと無条件ジャンプの場合は、このフィールドは
+@code{code_label} を保持しており、ここに insn が(条件分岐の場合もある)
+分岐していく。もっと複雑なジャンプでは、
+@code{JUMP_LABEL} が insn が参照しているラベルの一つを記録している。
+その他のラベルを探すには insn の本体全体を走査するしかない。
 
-Return insns count as jumps, but since they do not refer to any
-labels, their @code{JUMP_LABEL} is @code{NULL_RTX}.
+関数から復帰する insn はジャンプ insn として数えるが、
+何もラベルを参照していないので、@code{JUMP_LABLE} フィールドは 0 になる。
 
 @findex call_insn
 @item call_insn
-The expression code @code{call_insn} is used for instructions that may do
-function calls.  It is important to distinguish these instructions because
-they imply that certain registers and memory locations may be altered
-unpredictably.
+式コード @code{call_insn} は、関数呼びだしを行なう可能性のある
+命令に対して使われる。
+これらの命令を区別するのは重要である。なぜなら、特定のレジスタや
+メモリ位置の値を、予測できない形で変えてしまう可能性があるからである。
 
 @findex CALL_INSN_FUNCTION_USAGE
-@code{call_insn} insns have the same extra fields as @code{insn} insns,
-accessed in the same way and in addition contain a field
-@code{CALL_INSN_FUNCTION_USAGE}, which contains a list (chain of
-@code{expr_list} expressions) containing @code{use}, @code{clobber} and
-sometimes @code{set} expressions that denote hard registers and
-@code{mem}s used or clobbered by the called function.
-
-A @code{mem} generally points to a stack slot in which arguments passed
-to the libcall by reference (@pxref{Register Arguments,
-TARGET_PASS_BY_REFERENCE}) are stored.  If the argument is
-caller-copied (@pxref{Register Arguments, TARGET_CALLEE_COPIES}),
-the stack slot will be mentioned in @code{clobber} and @code{use}
-entries; if it's callee-copied, only a @code{use} will appear, and the
-@code{mem} may point to addresses that are not stack slots.
-
-Registers occurring inside a @code{clobber} in this list augment
-registers specified in @code{CALL_USED_REGISTERS} (@pxref{Register
-Basics}).
-
-If the list contains a @code{set} involving two registers, it indicates
-that the function returns one of its arguments.  Such a @code{set} may
-look like a no-op if the same register holds the argument and the return
-value.
+@code{call_insn} insn は @code{insn} insn と同じ追加のフィールドを
+持ち、同じ方法で参照する。さらに付け加えて、@code{CALL_INSN_FUNCTION_USAGE}
+というフィールドを持っており、このフィールドは一つのリスト(@code{expr_list}
+式の連鎖である)を保持している。このリストは、被呼びだし関数により
+使われたか、あるいは上書きされたハードレジスタを示す @code{use} 式と
+@code{clobber} 式を含んでいる。
+このリストの @code{clobber} に指定されたレジスタは、@code{call_insn} の
+実行の@emph{後}、変更される。一方、@code{call_insn} の本体の @code{clobber}
+で指定されたレジスタは、insn の実行が完了する前に上書きされる。
+このリストの @code{clobber} 式は @code{CALL_USED_REGISTERS} で
+指定されたレジスタを増やす。(@pxref{Register Basics})。
 
 @findex code_label
 @findex CODE_LABEL_NUMBER
 @item code_label
-A @code{code_label} insn represents a label that a jump insn can jump
-to.  It contains two special fields of data in addition to the three
-standard ones.  @code{CODE_LABEL_NUMBER} is used to hold the @dfn{label
-number}, a number that identifies this label uniquely among all the
-labels in the compilation (not just in the current function).
-Ultimately, the label is represented in the assembler output as an
-assembler label, usually of the form @samp{L@var{n}} where @var{n} is
-the label number.
+@code{code_labe} insn は、分岐命令の分岐先となりうるラベルを
+表す。標準の三つのフィールドに加えて二つの特別なフィールドがある。
+@code{CODE_LABEL_NUMBER} を使って @dfn{ラベル番号}、すなわち、
+コンパイル単位(現在の関数の中だけではない)の全てのラベルの中から、
+このラベルを一意的に特定する番号を保持する。
+最終的には、このラベルはアセンブラ出力ではアセンブララベルとして
+表現される。これは、通常は @samp{L@var{n}} という形式になる。
+ここで @var{n} はラベル番号である。
 
-When a @code{code_label} appears in an RTL expression, it normally
-appears within a @code{label_ref} which represents the address of
-the label, as a number.
-
-Besides as a @code{code_label}, a label can also be represented as a
-@code{note} of type @code{NOTE_INSN_DELETED_LABEL}.
+@code{code_label} が RTL 式に現れるときは、普通はそのラベルのアドレスを
+表す @code{label_ref} の中に、番号として現れる。
 
 @findex LABEL_NUSES
-The field @code{LABEL_NUSES} is only defined once the jump optimization
-phase is completed.  It contains the number of times this label is
-referenced in the current function.
-
-@findex LABEL_KIND
-@findex SET_LABEL_KIND
-@findex LABEL_ALT_ENTRY_P
-@cindex alternate entry points
-The field @code{LABEL_KIND} differentiates four different types of
-labels: @code{LABEL_NORMAL}, @code{LABEL_STATIC_ENTRY},
-@code{LABEL_GLOBAL_ENTRY}, and @code{LABEL_WEAK_ENTRY}.  The only labels
-that do not have type @code{LABEL_NORMAL} are @dfn{alternate entry
-points} to the current function.  These may be static (visible only in
-the containing translation unit), global (exposed to all translation
-units), or weak (global, but can be overridden by another symbol with the
-same name).
-
-Much of the compiler treats all four kinds of label identically.  Some
-of it needs to know whether or not a label is an alternate entry point;
-for this purpose, the macro @code{LABEL_ALT_ENTRY_P} is provided.  It is
-equivalent to testing whether @samp{LABEL_KIND (label) == LABEL_NORMAL}.
-The only place that cares about the distinction between static, global,
-and weak alternate entry points, besides the front-end code that creates
-them, is the function @code{output_alternate_entry_point}, in
-@file{final.c}.
-
-To set the kind of a label, use the @code{SET_LABEL_KIND} macro.
-
-@findex jump_table_data
-@item jump_table_data
-A @code{jump_table_data} insn is a placeholder for the jump-table data
-of a @code{casesi} or @code{tablejump} insn.  They are placed after
-a @code{tablejump_p} insn.  A @code{jump_table_data} insn is not part o
-a basic blockm but it is associated with the basic block that ends with
-the @code{tablejump_p} insn.  The @code{PATTERN} of a @code{jump_table_data}
-is always either an @code{addr_vec} or an @code{addr_diff_vec}, and a
-@code{jump_table_data} insn is always preceded by a @code{code_label}.
-The @code{tablejump_p} insn refers to that @code{code_label} via its
-@code{JUMP_LABEL}.
+フィールド @code{LABEL_NUSES} は、ジャンプ最適化フェーズが完了した時に
+一度だけ定義され、現在の関数の中でこのラベルが参照された回数を保持する。
 
 @findex barrier
 @item barrier
-Barriers are placed in the instruction stream when control cannot flow
-past them.  They are placed after unconditional jump instructions to
-indicate that the jumps are unconditional and after calls to
-@code{volatile} functions, which do not return (e.g., @code{exit}).
-They contain no information beyond the three standard fields.
+バリアは、命令ストリームの、制御の流れが越えることのできない地点に
+置かれる。無条件ジャンプ命令の後ろに置かれ、ジャンプが無条件であることを
+知らせる。また、@code{volatile} 関数呼び出しの後ろにも置かれる。
+これらの関数が戻る事はない(例えば @code{exit} である)。
+これらは、三つの標準フィールド以外の情報は持っていない。
 
 @findex note
 @findex NOTE_LINE_NUMBER
 @findex NOTE_SOURCE_FILE
 @item note
-@code{note} insns are used to represent additional debugging and
-declarative information.  They contain two nonstandard fields, an
-integer which is accessed with the macro @code{NOTE_LINE_NUMBER} and a
-string accessed with @code{NOTE_SOURCE_FILE}.
+@code{note} insn は、付加的な、デバッグ情報および宣言に関する情報を
+表すのに使われる。この insn には、非標準のフィールドが二つある。
+一つは整数で、マクロ @code{NOTE_LINE_NUMBER} で参照され、
+もう一つは文字列で、マクロ @code{NOTE_SOURCE_FILE} で参照される。
 
-If @code{NOTE_LINE_NUMBER} is positive, the note represents the
-position of a source line and @code{NOTE_SOURCE_FILE} is the source file name
-that the line came from.  These notes control generation of line
-number data in the assembler output.
+@code{NOTE_LINE_NUMBER} が正なら、そのノートはソース行の位置を
+表し、@code{NOTE_SOURCE_FILE} は、その行が含まれるソースファイル名を
+表す。このノートは、アセンブラ出力に行番号データを生成するの使われる。
 
-Otherwise, @code{NOTE_LINE_NUMBER} is not really a line number but a
-code with one of the following values (and @code{NOTE_SOURCE_FILE}
-must contain a null pointer):
+@code{NOTE_LINE_NUMBER} が正でないなら、実際の行番号ではなくては、
+以下の値の一つを持つコードである。この場合、@code{NOTE_SOURCE_FILE} は
+ヌルポインタでなければならない。
 
 @table @code
 @findex NOTE_INSN_DELETED
 @item NOTE_INSN_DELETED
-Such a note is completely ignorable.  Some passes of the compiler
-delete insns by altering them into notes of this kind.
+このノートは完全に無視できる。幾つかのフェーズでは、
+insn を削除するのを、それらの insn をこの種類のノートに変えてしまう
+ことで行なっている。
 
 @findex NOTE_INSN_DELETED_LABEL
 @item NOTE_INSN_DELETED_LABEL
@@ -2617,33 +2562,44 @@ code jumps to it.
 @findex NOTE_INSN_BLOCK_END
 @item NOTE_INSN_BLOCK_BEG
 @itemx NOTE_INSN_BLOCK_END
-These types of notes indicate the position of the beginning and end
-of a level of scoping of variable names.  They control the output
-of debugging information.
+この型のノートは、変数名のスコープレベルの開始位置と終了位置を
+表す。デバッグ情報の出力を制御する。
 
 @findex NOTE_INSN_EH_REGION_BEG
 @findex NOTE_INSN_EH_REGION_END
 @item NOTE_INSN_EH_REGION_BEG
 @itemx NOTE_INSN_EH_REGION_END
-These types of notes indicate the position of the beginning and end of a
-level of scoping for exception handling.  @code{NOTE_EH_HANDLER}
-identifies which region is associated with these notes.
+この型のノートは、例外処理のスコープレベルの開始位置と終了位置を
+表す。@code{NOTE_BLOCK_NUBMER} で、どの @code{CODE_LABEL} が
+指定された領域に付属するかを特定する。
 
-@findex NOTE_INSN_FUNCTION_BEG
-@item NOTE_INSN_FUNCTION_BEG
-Appears at the start of the function body, after the function
-prologue.
+@findex NOTE_INSN_LOOP_BEG
+@findex NOTE_INSN_LOOP_END
+@item NOTE_INSN_LOOP_BEG
+@itemx NOTE_INSN_LOOP_END
+この型のノートは、@code{while} または @code{for} ループの開始位置と
+終了位置を表す。これらにより、ループ最適化部が素早くループを見つけられる
+ようになる。
 
-@findex NOTE_INSN_VAR_LOCATION
-@findex NOTE_VAR_LOCATION
-@item NOTE_INSN_VAR_LOCATION
-This note is used to generate variable location debugging information.
-It indicates that the user variable in its @code{VAR_LOCATION} operand
-is at the location given in the RTL expression, or holds a value that
-can be computed by evaluating the RTL expression from that static
-point in the program up to the next such note for the same user
-variable.
+@findex NOTE_INSN_LOOP_CONT
+@item NOTE_INSN_LOOP_CONT
+ループの中の、@code{continue} 文の飛び先位置に現れる。
 
+@findex NOTE_INSN_LOOP_VTOP
+@item NOTE_INSN_LOOP_VTOP
+このノートは、終了テストが複製されるようなループにおいて、
+終了テストが始まる位置を示す。
+この位置は、ループ不変量を考えるときのもう一つの仮想的なループの
+開始位置となる。
+
+@findex NOTE_INSN_FUNCTION_END
+@item NOTE_INSN_FUNCTION_END
+関数本体の終り近く、(一個の命令では関数から戻れないマシンでは)
+@code{return} 文の飛び先ラベルの直前に現れるノートである。
+
+@findex NOTE_INSN_SETJMP
+@item NOTE_INSN_SETJMP
+@code{setjmp} や関係する関数の呼び出し毎に、その直後に現れる。
 @end table
 
 これらのコードは、デバッギングダンプにはシンボルで表示される。
@@ -2653,272 +2609,305 @@ variable.
 @cindex @code{TImode}, in @code{insn}
 @cindex @code{HImode}, in @code{insn}
 @cindex @code{QImode}, in @code{insn}
-The machine mode of an insn is normally @code{VOIDmode}, but some
-phases use the mode for various purposes.
+insn のマシンモードは普通は @code{VOIDmode} だが、
+フェーズによってはモードを色々な目的で使用する。
 
-The common subexpression elimination pass sets the mode of an insn to
-@code{QImode} when it is the first insn in a block that has already
-been processed.
+共通部分式削除パスでは、処理済みのブロックの先頭の insn の場合、
+その insn のモードを @code{QImode} に設定する。
 
-The second Haifa scheduling pass, for targets that can multiple issue,
-sets the mode of an insn to @code{TImode} when it is believed that the
-instruction begins an issue group.  That is, when the instruction
-cannot issue simultaneously with the previous.  This may be relied on
-by later passes, in particular machine-dependent reorg.
+二回目の Haifa スケジューリングパスでは、複数命令の同時発行が可能な
+ターゲットに対しては、insn が同時に発行される命令のグループの
+始まりの命令であると思われる場合は、その insn のモードを @code{TImode}
+に設定する。つまり、その命令は直前の命令と同時に発行できないものである。
+以降のパス、特に機種依存の命令並べ替えではこれはに頼っている。
 
-Here is a table of the extra fields of @code{insn}, @code{jump_insn}
-and @code{call_insn} insns:
+以下は、@code{insn}、@code{jump_insn}、@code{call_insn} insn の
+追加フィールドの表である。
 
 @table @code
 @findex PATTERN
 @item PATTERN (@var{i})
-An expression for the side effect performed by this insn.  This must
-be one of the following codes: @code{set}, @code{call}, @code{use},
-@code{clobber}, @code{return}, @code{simple_return}, @code{asm_input},
-@code{asm_output}, @code{addr_vec}, @code{addr_diff_vec},
-@code{trap_if}, @code{unspec}, @code{unspec_volatile},
-@code{parallel}, @code{cond_exec}, or @code{sequence}.  If it is a
-@code{parallel}, each element of the @code{parallel} must be one these
-codes, except that @code{parallel} expressions cannot be nested and
-@code{addr_vec} and @code{addr_diff_vec} are not permitted inside a
-@code{parallel} expression.
+この insn により発生する副作用を表す式。
+これは次のコードのどれか一つでなければならない。
+@code{set}、 @code{call}、 @code{use}、
+@code{clobber}、 @code{return}、 @code{asm_input}、 @code{asm_output}、
+@code{addr_vec}、 @code{addr_diff_vec}、 @code{trap_if}、 @code{unspec}、
+@code{unspec_volatile}、 @code{parallel}、@code{sequence}。
+もし @code{parallel} なら、@code{parallel} の各要素もこれらのコードで
+なければならない。ただし、@code{parallel} 式はネストできないこと、
+@code{addr_vec} と @code{addr_diff_vec} は @code{parallel} 式の内側では
+許されないという例外がある。
 
 @findex INSN_CODE
 @item INSN_CODE (@var{i})
-An integer that says which pattern in the machine description matches
-this insn, or @minus{}1 if the matching has not yet been attempted.
+マシン記述中のどのパターンがこの insn にマッチするかを特定する整数
+である。照合がまだ行なわれていないなら -1 を返す。
 
-Such matching is never attempted and this field remains @minus{}1 on an insn
-whose pattern consists of a single @code{use}, @code{clobber},
-@code{asm_input}, @code{addr_vec} or @code{addr_diff_vec} expression.
+@code{use}、@code{clobber}、@code{asm_input}、@code{addr_vec}、
+@code{addr_diff_vec} のどれか一個を使った式からなるパターンを
+持つ insn については、照合は行なわれず、このフィールドは -1 のまま変わらない。
 
 @findex asm_noperands
-Matching is also never attempted on insns that result from an @code{asm}
-statement.  These contain at least one @code{asm_operands} expression.
-The function @code{asm_noperands} returns a non-negative value for
-such insns.
+@code{asm} 文から生じる insn の場合も照合は行なわれない。
+これらの insn は少なくとも一個の @code{asm_operands} 式を含む。
+このような insn に対して、関数 @code{asm_noperands} は非負の値を
+返す。
 
-In the debugging output, this field is printed as a number followed by
-a symbolic representation that locates the pattern in the @file{md}
-file as some small positive or negative offset from a named pattern.
+デバッグ出力では、このフィールドは数字の後に記号名表現が出力される。
+この記号名表現は、@file{md} ファイル中のパターンの位置を、
+名前付きパターンからの小さな正または負のオフセットとして示す。
 
 @findex LOG_LINKS
 @item LOG_LINKS (@var{i})
-A list (chain of @code{insn_list} expressions) giving information about
-dependencies between instructions within a basic block.  Neither a jump
-nor a label may come between the related insns.  These are only used by
-the schedulers and by combine.  This is a deprecated data structure.
-Def-use and use-def chains are now preferred.
+基本ブロック内の命令間の依存関係についての情報を与える
+リスト(@code{insn_list} 式の連鎖)。
+ジャンプやラベルは、関係のある insn の間には入らない。
 
 @findex REG_NOTES
 @item REG_NOTES (@var{i})
-A list (chain of @code{expr_list}, @code{insn_list} and @code{int_list}
-expressions) giving miscellaneous information about the insn.  It is often
-information pertaining to the registers used in this insn.
+insn について種々雑多な情報を与えるリスト(@code{expr_list} 式と
+@code{insn_list} 式の連鎖)。
+その insn で使われているレジスタに関係する情報であることが多い。
 @end table
 
-The @code{LOG_LINKS} field of an insn is a chain of @code{insn_list}
-expressions.  Each of these has two operands: the first is an insn,
-and the second is another @code{insn_list} expression (the next one in
-the chain).  The last @code{insn_list} in the chain has a null pointer
-as second operand.  The significant thing about the chain is which
-insns appear in it (as first operands of @code{insn_list}
-expressions).  Their order is not significant.
+insn の @code{LOG_LINKS} フィールドは、@code{insn_list} 式の連鎖である。
+それぞれの @code{insn_list} 式はオペランドを二つ取る。
+一番目はある insn であり、二番目は別の @code{insn_list} 式(連鎖の次のもの)
+である。連鎖の最後の @code{insn_list} では、二番目のオペランドは
+ヌルポインタとなる。
+連鎖について重要なことは、どの insn が(@code{insn_list} 式の
+一番目のオペランドとして)その中に現れるかということである。
+順序は重要ではない。
 
-This list is originally set up by the flow analysis pass; it is a null
-pointer until then.  Flow only adds links for those data dependencies
-which can be used for instruction combination.  For each insn, the flow
-analysis pass adds a link to insns which store into registers values
-that are used for the first time in this insn.
+このリストは最初、フロー解析パスにより設定される。
+それまではヌルポインタになっている。フロー解析パスは、
+命令組合せで使用可能なデータ依存関係についてのリンクを追加するだけである。
+フロー解析パスは、insn 毎に、この insn で始めて使われる値をレジスタに
+格納する insn へのリンクを追加する。
+命令スケジューリングパスは、余分のリンクを追加して、あらゆる依存関係
+が表現されるようにする。
+リンクは、データ依存関係、逆依存関係、出力依存関係を表す。
+リンクのマシンモードがこの三つの型を区別する。
+逆依存関係のモードは @code{REG_DEP_ANTI} であり、
+出力依存関係のモードは @code{REG_DEP_OUTPUT} であり、
+データ依存関係のモードは @code{VOIDmode} である。
 
-The @code{REG_NOTES} field of an insn is a chain similar to the
-@code{LOG_LINKS} field but it includes @code{expr_list} and @code{int_list}
-expressions in addition to @code{insn_list} expressions.  There are several
-kinds of register notes, which are distinguished by the machine mode, which
-in a register note is really understood as being an @code{enum reg_note}.
-The first operand @var{op} of the note is data whose meaning depends on
-the kind of note.
+insn の @code{REG_NOTES} フィールドは、@code{LOG_LINKS} と同様の
+一個の連鎖であるが、@code{insn_list} 式に加えて @code{expr_list} 式も
+含んでいる。色々な種類のレジスタノートがあり、それらはマシンモードに
+より区別され、あるレジスタノート中では、実際に @code{enum reg_note} で
+あると理解される。
+このノートの第一オペランド @var{op} は、ノートの種類によって
+意味の異なるデータである。
 
 @findex REG_NOTE_KIND
 @findex PUT_REG_NOTE_KIND
-The macro @code{REG_NOTE_KIND (@var{x})} returns the kind of
-register note.  Its counterpart, the macro @code{PUT_REG_NOTE_KIND
-(@var{x}, @var{newkind})} sets the register note type of @var{x} to be
-@var{newkind}.
+マクロ @code{REG_NOTE_KIND (@var{x})} は、レジスタノートの種類を返す。
+これと対をなすマクロ @code{PUT_REG_NOTE_KIND(@var{x}, @var{newkind})} は、
+@var{x} のレジスタノートのタイプを @var{newkind} に設定する。
 
-Register notes are of three classes: They may say something about an
-input to an insn, they may say something about an output of an insn, or
-they may create a linkage between two insns.  There are also a set
-of values that are only used in @code{LOG_LINKS}.
+レジスタノートには三つのクラスがある。
+何か insn への入力に関するもの、何か insn の出力に関するもの、
+それに、二つの insn の間のリンケージを作るものである。
+また、@code{LOG_LINKS} でしか使われない値が一セットある。
 
-These register notes annotate inputs to an insn:
+以下のレジスタノートは、insn への入力についての注釈である。
 
 @table @code
 @findex REG_DEAD
 @item REG_DEAD
-The value in @var{op} dies in this insn; that is to say, altering the
-value immediately after this insn would not affect the future behavior
-of the program.
+@var{op} の中の値がこの insn で死ぬ。つまり、この insn の直後で
+この値を書き換えても、プログラムの以後の動作には影響を与えない。
 
-It does not follow that the register @var{op} has no useful value after
-this insn since @var{op} is not necessarily modified by this insn.
-Rather, no subsequent instruction uses the contents of @var{op}.
-
-@findex REG_UNUSED
-@item REG_UNUSED
-The register @var{op} being set by this insn will not be used in a
-subsequent insn.  This differs from a @code{REG_DEAD} note, which
-indicates that the value in an input will not be used subsequently.
-These two notes are independent; both may be present for the same
-register.
+これは、必ずしも、レジスタ @var{op} がこの insn 以後意味のある値を持たない
+ということを意味しない。この insn の出力にもなることがあるからである。
+しかし、その場合、@code{REG_DEAD} ノートは冗長であり、普通は再ロードパス
+迄は存在しない。だが、このことを前提としているコードはない。
 
 @findex REG_INC
 @item REG_INC
-The register @var{op} is incremented (or decremented; at this level
-there is no distinction) by an embedded side effect inside this insn.
-This means it appears in a @code{post_inc}, @code{pre_inc},
-@code{post_dec} or @code{pre_dec} expression.
+レジスタ @var{op} は、この insn 内に埋め込まれた副作用により
+インクリメント(あるいは、デクリメント。このレベルでは違いはない)
+される。
+すなわち、これは @code{post_inc} 式、または @code{pre_inc}式、
+@code{post_dec} 式、@code{pre_dec} 式に現れる。
 
 @findex REG_NONNEG
 @item REG_NONNEG
-The register @var{op} is known to have a nonnegative value when this
-insn is reached.  This is used so that decrement and branch until zero
-instructions, such as the m68k dbra, can be matched.
+この insn に到達したとき、レジスタ @var{op} は非負の値を持つことが
+知られている。これを使って、例えば m68k の dbra のような、
+デクリメントして 0 でない間は分岐する(decrement and branch until zero)
+命令がマッチすることが可能になる。
 
-The @code{REG_NONNEG} note is added to insns only if the machine
-description has a @samp{decrement_and_branch_until_zero} pattern.
+@code{REG_NONNEG} ノートが insn に付加されるのは、
+マシン記述に @samp{decrement_and_branch_until_zero}
+というパターンがある場合のみである。
 
-@findex REG_LABEL_OPERAND
-@item REG_LABEL_OPERAND
-This insn uses @var{op}, a @code{code_label} or a @code{note} of type
-@code{NOTE_INSN_DELETED_LABEL}, but is not a @code{jump_insn}, or it
-is a @code{jump_insn} that refers to the operand as an ordinary
-operand.  The label may still eventually be a jump target, but if so
-in an indirect jump in a subsequent insn.  The presence of this note
-allows jump optimization to be aware that @var{op} is, in fact, being
-used, and flow optimization to build an accurate flow graph.
+@findex REG_NO_CONFLICT
+@item REG_NO_CONFLICT
+この insn は、たとえ衝突を引き起こすように見えても、
+@var{op} とこの insn により設定されるアイテムとの間の
+衝突を引き起こさない。
+言い換えると、そうなっていないと代入先レジスタと @var{op} が
+同じレジスタに割り当てられる場合でも、この insn はその割当を
+妨げない。
 
-@findex REG_LABEL_TARGET
-@item REG_LABEL_TARGET
-This insn is a @code{jump_insn} but not an @code{addr_vec} or
-@code{addr_diff_vec}.  It uses @var{op}, a @code{code_label} as a
-direct or indirect jump target.  Its purpose is similar to that of
-@code{REG_LABEL_OPERAND}.  This note is only present if the insn has
-multiple targets; the last label in the insn (in the highest numbered
-insn-field) goes into the @code{JUMP_LABEL} field and does not have a
-@code{REG_LABEL_TARGET} note.  @xref{Insns, JUMP_LABEL}.
+このノートがある insn は、通常、あるブロックの一部である。
+このブロックは複数ワードの疑似レジスタを指定する一個の @code{clobber} insn
+で始まり、それぞれが一ワードの値を設定し、@code{REG_NO_CONFLICT} が付随
+している insn のグループが一つ、最後に、計算される式を与える
+@code{REG_EQUAL} ノートをつけて、出力をそれ自身にコピーする insn が来る。
+このブロックは、先頭と末尾の insn について、それぞれ @code{REG_LIBCALL}
+ノートと @code{REG_RETVAL} ノートで包み込まれている。
 
-@findex REG_CROSSING_JUMP
-@item REG_CROSSING_JUMP
-This insn is a branching instruction (either an unconditional jump or
-an indirect jump) which crosses between hot and cold sections, which
-could potentially be very far apart in the executable.  The presence
-of this note indicates to other optimizations that this branching
-instruction should not be ``collapsed'' into a simpler branching
-construct.  It is used when the optimization to partition basic blocks
-into hot and cold sections is turned on.
-
-@findex REG_SETJMP
-@item REG_SETJMP
-Appears attached to each @code{CALL_INSN} to @code{setjmp} or a
-related function.
+@findex REG_LABEL
+@item REG_LABEL
+この insn は @var{op}、@code{code_label} を使うが、@code{jump_insn} では
+ない。このノートにより、@var{op} が実際に使われることをジャンプ最適化
+に対して知らせる。
 @end table
 
-The following notes describe attributes of outputs of an insn:
+以下のノートは、insn の出力の属性を記述する。
 
 @table @code
 @findex REG_EQUIV
 @findex REG_EQUAL
 @item REG_EQUIV
 @itemx REG_EQUAL
-This note is only valid on an insn that sets only one register and
-indicates that that register will be equal to @var{op} at run time; the
-scope of this equivalence differs between the two types of notes.  The
-value which the insn explicitly copies into the register may look
-different from @var{op}, but they will be equal at run time.  If the
-output of the single @code{set} is a @code{strict_low_part} expression,
-the note refers to the register that is contained in @code{SUBREG_REG}
-of the @code{subreg} expression.
+このノートは、一個のレジスタだけを設定する insn についてのみ有効であり、
+そのレジスタが実行時には @var{op} に等しいことを示す。
+これが等しくなる範囲は、二つのノートのタイプで異なる。
+この insn が明示的にそのレジスタにコピーする値は @var{op} とは
+違って見えるかもしれないが、実行時には等しくなる。
+一個の @code{set} の出力が @code{strict_low_part} 式なら、
+このノートは @code{subreg} 式の @code{SUBREG_REG} に含まれている
+レジスタを参照している。
 
-For @code{REG_EQUIV}, the register is equivalent to @var{op} throughout
-the entire function, and could validly be replaced in all its
-occurrences by @var{op}.  (``Validly'' here refers to the data flow of
-the program; simple replacement may make some insns invalid.)  For
-example, when a constant is loaded into a register that is never
-assigned any other value, this kind of note is used.
+@code{REG_EQUIV} の場合は、レジスタは関数全体を通して @var{op} に
+等価であり、全て @var{op} で正当に置き換えることができる。
+(ここで「正当に」はプログラムのデータ流を指す。単純な置き換えは
+幾つかの insn を不正にする。)
+例えば、ある定数が、他の値が決して代入されることのない、あるレジスタに
+ロードされるとき、この種類のノートが使われる。
 
-When a parameter is copied into a pseudo-register at entry to a function,
-a note of this kind records that the register is equivalent to the stack
-slot where the parameter was passed.  Although in this case the register
-may be set by other insns, it is still valid to replace the register
-by the stack slot throughout the function.
+ある仮引数が関数の入り口点で疑似レジスタにコピーされるとき、
+この種類のノートが仮引数が渡されたスタックスロットに等価なレジスタを
+記録する。この場合、レジスタは他の insn により設定されることもあるが、
+その関数内でそのレジスタをスタックスロットに置き換えることはなお有効である。
 
-A @code{REG_EQUIV} note is also used on an instruction which copies a
-register parameter into a pseudo-register at entry to a function, if
-there is a stack slot where that parameter could be stored.  Although
-other insns may set the pseudo-register, it is valid for the compiler to
-replace the pseudo-register by stack slot throughout the function,
-provided the compiler ensures that the stack slot is properly
-initialized by making the replacement in the initial copy instruction as
-well.  This is used on machines for which the calling convention
-allocates stack space for register parameters.  See
-@code{REG_PARM_STACK_SPACE} in @ref{Stack Arguments}.
+@code{REG_EQUIV} は、仮引数を格納可能なスタックスロットがある場合、
+ある関数の入り口でレジスタ仮引数を疑似レジスタにコピーする命令で使われる。
+他の insn がその疑似レジスタを設定する可能性もあるが、
+コンパイラにとっては、関数全体で疑似レジスタをそのスタックスロットに
+置き換えるのは正当である。
+ただし、コンパイラは、そのスタックスロットが、最初のコピー命令での
+同じように置き換えを行なうことで適切に初期化されていることを保証されている
+場合である。
+これは、呼び出し規約でレジスタ仮引数についてスタックスペースを
+割り当てるようになっている機種で使われる。
+@ref{Stack Arguments} の @code{REG_PARM_STACK_SPACE} を参照のこと。
 
-In the case of @code{REG_EQUAL}, the register that is set by this insn
-will be equal to @var{op} at run time at the end of this insn but not
-necessarily elsewhere in the function.  In this case, @var{op}
-is typically an arithmetic expression.  For example, when a sequence of
-insns such as a library call is used to perform an arithmetic operation,
-this kind of note is attached to the insn that produces or copies the
-final value.
+@code{REG_EQUAL} の場合は、この insn により設定されるレジスタは、
+この insn の最後では実行時に @var{op} に等価になるが、
+関数内の他の場所では必ずしも等価ではない。
+この場合、@var{op} は算術式であることが多い。
+例えば、ライブラリ呼び出しのような insn 列が、ある算術演算を
+実行するのに使われるとき、この種類のノートが最終的な値を
+生成したりコピーする insn に付随する。
 
-These two notes are used in different ways by the compiler passes.
-@code{REG_EQUAL} is used by passes prior to register allocation (such as
-common subexpression elimination and loop optimization) to tell them how
-to think of that value.  @code{REG_EQUIV} notes are used by register
-allocation to indicate that there is an available substitute expression
-(either a constant or a @code{mem} expression for the location of a
-parameter on the stack) that may be used in place of a register if
-insufficient registers are available.
+これらの二つのノートは、コンパイラのパス群により異なる方法で使われる。
+@code{REG_EQUAL} は、レジスタ割当に先立つパス(例えば、
+共通部分式削除とループ最適化)により使われ、その値をどう考えれば良いかを
+そのパスに知らせる。
+@code{REG_EQUIV} ノートは、レジスタ割当により使われ、
+利用可能なレジスタが足りなければ、レジスタの代わりに使われる
+代入式(定数か、スタック上の仮引数の位置を表す @code{mem} 式)
+が利用可能であることを示す。
 
-Except for stack homes for parameters, which are indicated by a
-@code{REG_EQUIV} note and are not useful to the early optimization
-passes and pseudo registers that are equivalent to a memory location
-throughout their entire life, which is not detected until later in
-the compilation, all equivalences are initially indicated by an attached
-@code{REG_EQUAL} note.  In the early stages of register allocation, a
-@code{REG_EQUAL} note is changed into a @code{REG_EQUIV} note if
-@var{op} is a constant and the insn represents the only set of its
-destination register.
+仮引数のスタックのホームとそのライフタイムを通じてメモリ位置に
+等かな疑似レジスタを除いて、全ての等価なものは、
+付随する @code{REG_EQUAL} ノートにより最初に示される。
+ここで、仮引数のスタックホームは、@code{REG_EQUIV} ノートにより
+指示され、最適化の最初の方のパスでは役に立たない。
+また、メモリ位置に等価な疑似レジスタは、コンパイルの後の段階に
+なるまで検出されない。
+@var{op} が定数であり、その insn が
+その代入先レジスタの組を一つしか表現しないのであれば、
+レジスタ割当の初期の段階で、@code{REG_EQUAL} ノートは @code{REG_EQUIV}
+ノートに変えられる。
 
-Thus, compiler passes prior to register allocation need only check for
-@code{REG_EQUAL} notes and passes subsequent to register allocation
-need only check for @code{REG_EQUIV} notes.
+こうして、レジスタ割当より前のコンパイラのパスでは、@code{REG_EQUAL}
+ノートだけを検査する必要があり、レジスタ割当の後のパスでは
+@code{REG_EQUIV} ノートだけを検査すれば良い。
+
+@findex REG_UNUSED
+@item REG_UNUSED
+この insn により設定されるレジスタ @var{op} は、次の insn では
+使われない。
+@code{REG_DEAD} ノートとの違いは、@code{REG_DEAD} の方は、
+入力中の値が後で使われることがないことを示す点にある。
+この二つのノートは独立であり、同じレジスタに対して両方とも
+存在してもかまわない。
+
+@findex REG_WAS_0
+@item REG_WAS_0
+この insn の一個の出力は、この insn の前にゼロを含んでいた。
+@var{op} が、ゼロに設定した insn である。
+このノートが存在し、かつ @var{op} が削除されていたり、@code{note} に
+変換されたりしていなければ、このノートを信頼することができる。
+このノートが存在しない場合は、何も意味しない。
 @end table
 
-These notes describe linkages between insns.  They occur in pairs: one
-insn has one of a pair of notes that points to a second insn, which has
-the inverse note pointing back to the first insn.
+以下のノートは、insn 間のリンケージを記述する。
+これらは、対で現れる。一個の insn には、ノートの対があり、それらは
+二番目の insn を指す。二番目の insn には、最初のinsn を指す逆のノートが
+ある。
 
 @table @code
+@findex REG_RETVAL
+@item REG_RETVAL
+この insn は、複数の insn から成る列(例えば、ライブラリ呼び出し)の
+値をコピーする。@var{op} は、列の先頭の insn である
+(ライブラリ呼び出しの場合は、ライブラリ呼び出しの引数を
+設定するように生成された先頭の insn である)。
+
+ループ最適化はこのノートを使って、コードの移動の目的のために、
+このような列を一個の演算として取り扱う。
+また、フロー解析ではこのノートを使って、このような列で結果が死んでいる
+ものを削除する。
+
+通常、@code{REG_EQUAL} ノートもこの insn に付属し、
+この列により計算される式を提供する。
+
+これらのノートは再ロード後に削除される。もはや不正確だったり役に
+立たなかったりするからである。
+
+@findex REG_LIBCALL
+@item REG_LIBCALL
+これは、@code{REG_RETVAL} の逆である。
+これは複数 insn の列の先頭の insn に置かれ、最後の insn を指す。
+
+これらのノートは再ロード後に削除される。もはや不正確だったり役に
+立たなかったりするからである。
+
 @findex REG_CC_SETTER
 @findex REG_CC_USER
 @item REG_CC_SETTER
 @itemx REG_CC_USER
-On machines that use @code{cc0}, the insns which set and use @code{cc0}
-set and use @code{cc0} are adjacent.  However, when branch delay slot
-filling is done, this may no longer be true.  In this case a
-@code{REG_CC_USER} note will be placed on the insn setting @code{cc0} to
-point to the insn using @code{cc0} and a @code{REG_CC_SETTER} note will
-be placed on the insn using @code{cc0} to point to the insn setting
-@code{cc0}.
+@code{cc0} を使う機種では、@code{cc0} を設定したり使ったりする
+insn はお互いに近くにある。だが、遅延分岐スロットを埋める処理が
+行なわれると、もはや近くにあるとは言えなくなる可能性がある。
+その場合、@code{REG_CC_USER} ノートが、@code{cc0} を設定する insn に
+置かれて、@code{cc0} を使う insn を指し、@code{REG_CC_SETTER} ノートが
+@code{cc0} を使う insn に置かれて、@code{cc0} を設定する insn を
+指すようになる。
 @end table
 
-These values are only used in the @code{LOG_LINKS} field, and indicate
-the type of dependency that each link represents.  Links which indicate
-a data dependence (a read after write dependence) do not use any code,
-they simply have mode @code{VOIDmode}, and are printed without any
-descriptive text.
+以下の値は、@code{LOG_LINKS} フィールドでのみ使われ、
+各リンクが表現する依存関係の型を指し示す。
+データ依存関係(書き込み後の読み込み依存関係, read after write dependence)
+を指し示すリンクはどのコードも使わず、単にモードが @code{VOIDmode} であり、
+何の説明文もなく出力される。
 
 @table @code
 @findex REG_DEP_TRUE
@@ -2927,49 +2916,55 @@ This indicates a true dependence (a read after write dependence).
 
 @findex REG_DEP_OUTPUT
 @item REG_DEP_OUTPUT
-This indicates an output dependence (a write after write dependence).
+これは出力依存関係(WAW、書き込み後の書き込み依存)を示す
 
 @findex REG_DEP_ANTI
 @item REG_DEP_ANTI
-This indicates an anti dependence (a write after read dependence).
+これは逆依存関係(WAR、読み込み後の書き込み依存)
+を示す。
 
 @end table
 
-These notes describe information gathered from gcov profile data.  They
-are stored in the @code{REG_NOTES} field of an insn.
+これらのノートは gcov によるプロファイルデータから収集した情報を
+記述する。insn の @code{REG_NOTES} フィールドに @code{expr_list} として
+格納される。
 
 @table @code
+@findex REG_EXEC_COUNT
+@item REG_EXEC_COUNT
+プロファイルデータに基づく、基本ブロックの実行回数を示す。
+このノートは、基本ブロックの先頭の insn に付加される。
+
 @findex REG_BR_PROB
 @item REG_BR_PROB
-This is used to specify the ratio of branches to non-branches of a
-branch insn according to the profile data.  The note is represented
-as an @code{int_list} expression whose integer value is between 0 and
-REG_BR_PROB_BASE.  Larger values indicate a higher probability that
-the branch will be taken.
+プロファイルデータに基づく、ある分岐 insn の、分岐が行なわれた回数と
+行なわれなかった回数の比を示す。
+0 と @code{REG_BR_PROB_BASE} の間の値として格納される。
+値が大きくなると、分岐が成立する確率がより高くなることを示す。
 
 @findex REG_BR_PRED
 @item REG_BR_PRED
-These notes are found in JUMP insns after delayed branch scheduling
-has taken place.  They indicate both the direction and the likelihood
-of the JUMP@.  The format is a bitmask of ATTR_FLAG_* values.
+このノートは、遅延分岐スケジューリングが起きた後のジャンプ insn に
+現れる。これらは、ジャンプの方向と可能性を示す。
+フォーマットは、@code{ATTR_FLAG_*} 値のビットマスクである。
 
 @findex REG_FRAME_RELATED_EXPR
 @item REG_FRAME_RELATED_EXPR
-This is used on an RTX_FRAME_RELATED_P insn wherein the attached expression
-is used in place of the actual insn pattern.  This is done in cases where
-the pattern is either complex or misleading.
+これは、@code{RTX_FRAME_RELATED_P} insn で使われる。
+この insn では、付属した式が、実際の insn パターンの代わりに使われる。
+これは、パターンが複雑か間違っている場合に行われる。
 @end table
 
-For convenience, the machine mode in an @code{insn_list} or
-@code{expr_list} is printed using these symbolic codes in debugging dumps.
+便宜上、@code{insn_list} や @code{expr_list} 中のマシンモードは、
+デバッグダンプでは、これらのシンボリックコードで出力される。
 
 @findex insn_list
 @findex expr_list
-The only difference between the expression codes @code{insn_list} and
-@code{expr_list} is that the first operand of an @code{insn_list} is
-assumed to be an insn and is printed in debugging dumps as the insn's
-unique id; the first operand of an @code{expr_list} is printed in the
-ordinary way as an expression.
+式コード @code{insn_list} と @code{expr_list} の唯一の相違点は、
+@code{insn_list} の先頭のオペランドは insn であると仮定され、
+デバッグダンプ中では insn の一意的な ID として出力されること、
+@code{expr_list} の先頭のオペランドは式として通常の方法で
+出力される点にある。
 
 @node Calls
 @section RTL Representation of Function-Call Insns
