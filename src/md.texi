@@ -92,81 +92,70 @@ acts like it's unnamed, since the names are ignored.
 @cindex instruction patterns
 
 @findex define_insn
-A @code{define_insn} expression is used to define instruction patterns
-to which insns may be matched.  A @code{define_insn} expression contains
-an incomplete RTL expression, with pieces to be filled in later, operand
-constraints that restrict how the pieces can be filled in, and an output
-template or C code to generate the assembler output.
+各命令パターンには、後で埋められる部分を持つ不完全な RTL 式と、各部分が
+どのように埋められるかを限定するオペランド制約、それに、出力パターンまたは
+アセンブラ出力を生成する C コードが含まれており、全て @code{define_insn} 式
+中に記述される。
 
-A @code{define_insn} is an RTL expression containing four or five operands:
+@code{define_insn} は一つの RTL 式で、四つか五つのオペランドを持つ。
+それぞれのオペランドは以下の通りである。
 
 @enumerate
 @item
-An optional name.  The presence of a name indicate that this instruction
-pattern can perform a certain standard job for the RTL-generation
-pass of the compiler.  This pass knows certain names and will use
-the instruction patterns with those names, if the names are defined
-in the machine description.
+名前。無くても良い。名前があると、
+その命令パターンが、GCC の RTL生成パスにおいてある決まった仕事を
+成しうるということを意味する。RTL生成パスは一定のパターン名を知っていて、
+マシン記述に定義されている名前であれば、その名前の命令パターンを
+使おうとする。
 
-The absence of a name is indicated by writing an empty string
-where the name should go.  Nameless instruction patterns are never
-used for generating RTL code, but they may permit several simpler insns
-to be combined later on.
+名前を書くべき位置に空文字列を書くと名前がないということになる。
+名無しの命令パターンは RTL コードの生成に使われることはありえない。
+しかし、名無しの命令パターンを使うと、様々なより単純な insn を後で
+結合させることが出来る。
 
-Names that are not thus known and used in RTL-generation have no
-effect; they are equivalent to no name at all.
-
-For the purpose of debugging the compiler, you may also specify a
-name beginning with the @samp{*} character.  Such a name is used only
-for identifying the instruction in RTL dumps; it is equivalent to having
-a nameless pattern for all other purposes.  Names beginning with the
-@samp{*} character are not required to be unique.
+つまり、RTL生成時に知られていない、あるいは使われもしない名前は
+何の効果ももたらさない。名無しと全く同じである。
+@c !!! 「知られていないのに使っても駄目」という意味か?
 
 @item
-The @dfn{RTL template}: This is a vector of incomplete RTL expressions
-which describe the semantics of the instruction (@pxref{RTL Template}).
-It is incomplete because it may contain @code{match_operand},
-@code{match_operator}, and @code{match_dup} expressions that stand for
-operands of the instruction.
+@dfn{RTL テンプレート} (@pxref{RTL Template}) は、不完全な RTL 式を
+要素とするベクトルであり、命令がどのように見えるかを示す。
+不完全というのは、その命令のオペランドの代理である、@code{match_operand}
+や @code{match_operator}、@code{match_dup} 等の式を含むからである。
 
-If the vector has multiple elements, the RTL template is treated as a
-@code{parallel} expression.
+RTL テンプレート・ベクトルに要素が一つしかなければ、その要素は命令パターンの
+テンプレートである。ベクトルに要素が複数あれば、その命令パターンは
+列挙された要素を含む @code{parallel} 式である。
 
 @item
 @cindex pattern conditions
 @cindex conditions, in patterns
-The condition: This is a string which contains a C expression.  When the
-compiler attempts to match RTL against a pattern, the condition is
-evaluated.  If the condition evaluates to @code{true}, the match is
-permitted.  The condition may be an empty string, which is treated
-as always @code{true}.
+条件。これは文字列であり、insn 本体がパターンにマッチするかどうかを
+最終的に決定するための条件を C 言語の式で表したものである。
 
 @cindex named patterns and conditions
-For a named pattern, the condition may not depend on the data in the
-insn being matched, but only the target-machine-type flags.  The compiler
-needs to test these conditions during initialization in order to learn
-exactly which named instructions are available in a particular run.
+名前を持つパターンについては、条件は(もしあれば)、
+マッチする insn 中のデータには依存せず、ターゲット機種の型のフラグに
+のみ依存する。GCC は、初期化時にこの条件を調べて、どういう名前の
+命令が一回毎の実行時に利用できるのかを厳密に調べる必要がある。
+
 
 @findex operands
-For nameless patterns, the condition is applied only when matching an
-individual insn, and only after the insn has matched the pattern's
-recognition template.  The insn's operands may be found in the vector
-@code{operands}.
-
-For an insn where the condition has once matched, it
-cannot later be used to control register allocation by excluding
-certain register or value combinations.
+名無しのパターンについては、条件は個々の insn とのマッチングを行なう時と、
+insn が、そのパターンの評価テンプレートにマッチした後にのみ
+適用される。insn のオペランドは、ベクトル @code{operands} に入っている。
 
 @item
-The @dfn{output template} or @dfn{output statement}: This is either
-a string, or a fragment of C code which returns a string.
+出力テンプレート。 マッチした insn をどのようにアセンブラコードとして
+出力するかを指示する文字列である。文字列中の @samp{%} は、オペランドの値を
+どこに代入するかを指示する。@xref{Output Template}.
 
-When simple substitution isn't general enough, you can specify a piece
-of C code to compute the output.  @xref{Output Statement}.
+単なる置き換えでは充分でないときは、C コードの断片を指定して、計算を
+行なったうえで出力させることも出来る。@xref{Output Statement}.
 
 @item
-The @dfn{insn attributes}: This is an optional vector containing the values of
-attributes for insns matching this pattern (@pxref{Insn Attributes}).
+このパターンにマッチする insn の属性値を含むベクトル。
+省略可能である。 @xref{Insn Attributes}.
 @end enumerate
 
 @node Example
