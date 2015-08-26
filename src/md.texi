@@ -1706,6 +1706,28 @@ register preferences.
 ないものがある。
 制約は以下のマクロ群によって定義される。
 
+@table @code
+@item REG_CLASS_FROM_LETTER
+レジスタクラスの制約(普通は小文字だけである)。
+
+@item CONST_OK_FOR_LETTER_P
+即値定数の制約。ワード長、あるいはそれより短い精度の、非浮動小数点定数
+向けである。通常、大文字である。
+
+@item CONST_DOUBLE_OK_FOR_LETTER_P
+即値定数の制約。全ての浮動小数点定数とワード長を越える精度の定数
+向けである。通常、大文字である。
+
+@item EXTRA_CONSTRAINT
+レジスタまたはメモリの特別な場合。
+このマクロは必須ではなく、少数のマシンでのみ定義されている。
+@end table
+
+本コンパイラのソースの、読者のマシン向けのマクロ定義を調べるのが、
+正しい制約を使っているかどうかを確認するのに一番良い方法である。
+とはいうものの、以下に幾つかの特定の機種で使える機種依存の制約を
+要約しておく。
+
 @c Please keep this table alphabetized by target!
 @table @emph
 
@@ -1853,460 +1875,170 @@ FPR-GPR 間移動用の @samp{FPMEM} スタックメモリ
 Sun の FPA で使用可能な浮動小数点定数。
 @end table
 
-@end table
-@item PowerPC and IBM RS6000---@file{config/rs6000/constraints.md}
+@item IBM RS6000---@file{rs6000.h}
 @table @code
 @item b
-Address base register
-
-@item d
-Floating point register (containing 64-bit value)
+アドレスベースレジスタ
 
 @item f
-Floating point register (containing 32-bit value)
-
-@item v
-Altivec vector register
-
-@item wa
-Any VSX register if the -mvsx option was used or NO_REGS.
-
-When using any of the register constraints (@code{wa}, @code{wd},
-@code{wf}, @code{wg}, @code{wh}, @code{wi}, @code{wj}, @code{wk},
-@code{wl}, @code{wm}, @code{wp}, @code{wq}, @code{ws}, @code{wt},
-@code{wu}, @code{wv}, @code{ww}, or @code{wy})
-that take VSX registers, you must use @code{%x<n>} in the template so
-that the correct register is used.  Otherwise the register number
-output in the assembly file will be incorrect if an Altivec register
-is an operand of a VSX instruction that expects VSX register
-numbering.
-
-@smallexample
-asm ("xvadddp %x0,%x1,%x2" : "=wa" (v1) : "wa" (v2), "wa" (v3));
-@end smallexample
-
-is correct, but:
-
-@smallexample
-asm ("xvadddp %0,%1,%2" : "=wa" (v1) : "wa" (v2), "wa" (v3));
-@end smallexample
-
-is not correct.
-
-@item wd
-VSX vector register to hold vector double data or NO_REGS.
-
-@item wf
-VSX vector register to hold vector float data or NO_REGS.
-
-@item wg
-If @option{-mmfpgpr} was used, a floating point register or NO_REGS.
-
-@item wh
-Floating point register if direct moves are available, or NO_REGS.
-
-@item wi
-FP or VSX register to hold 64-bit integers for VSX insns or NO_REGS.
-
-@item wj
-FP or VSX register to hold 64-bit integers for direct moves or NO_REGS.
-
-@item wk
-FP or VSX register to hold 64-bit doubles for direct moves or NO_REGS.
-
-@item wl
-Floating point register if the LFIWAX instruction is enabled or NO_REGS.
-
-@item wm
-VSX register if direct move instructions are enabled, or NO_REGS.
-
-@item wn
-No register (NO_REGS).
-
-@item wp
-VSX register to use for IEEE 128-bit floating point TFmode, or NO_REGS.
-
-@item wq
-VSX register to use for IEEE 128-bit floating point, or NO_REGS.
-
-@item wr
-General purpose register if 64-bit instructions are enabled or NO_REGS.
-
-@item ws
-VSX vector register to hold scalar double values or NO_REGS.
-
-@item wt
-VSX vector register to hold 128 bit integer or NO_REGS.
-
-@item wu
-Altivec register to use for float/32-bit int loads/stores  or NO_REGS.
-
-@item wv
-Altivec register to use for double loads/stores  or NO_REGS.
-
-@item ww
-FP or VSX register to perform float operations under @option{-mvsx} or NO_REGS.
-
-@item wx
-Floating point register if the STFIWX instruction is enabled or NO_REGS.
-
-@item wy
-FP or VSX register to perform ISA 2.07 float ops or NO_REGS.
-
-@item wz
-Floating point register if the LFIWZX instruction is enabled or NO_REGS.
-
-@item wD
-Int constant that is the element number of the 64-bit scalar in a vector.
-
-@item wQ
-A memory address that will work with the @code{lq} and @code{stq}
-instructions.
+浮動小数点レジスタ
 
 @item h
-@samp{MQ}, @samp{CTR}, or @samp{LINK} register
+@samp{MQ}, @samp{CTR},  @samp{LINK} レジスタ
+
+@item q
+@samp{MQ} レジスタ
 
 @item c
-@samp{CTR} register
+@samp{CTR} レジスタ
 
 @item l
-@samp{LINK} register
+@samp{LINK} レジスタ
 
 @item x
-@samp{CR} register (condition register) number 0
+@samp{CR} レジスタ(条件レジスタ)の 0 番
 
 @item y
-@samp{CR} register (condition register)
+@samp{CR} レジスタ(条件レジスタ)
 
 @item z
-@samp{XER[CA]} carry bit (part of the XER register)
+FPR-GPR 間転送用の @samp{FPMEM} スタックメモリ
 
 @item I
-Signed 16-bit constant
+符号付きの 16 ビット定数
 
 @item J
-Unsigned 16-bit constant shifted left 16 bits (use @samp{L} instead for
-@code{SImode} constants)
+下位16ビットが 0 の定数
 
 @item K
-Unsigned 16-bit constant
+上位の 16 ビットが 0 の定数
 
 @item L
-Signed 16-bit constant shifted left 16 bits
+マスク用オペランドとして適切な定数
 
 @item M
-Constant larger than 31
+31 より大きい定数
 
 @item N
-Exact power of 2
+2 の正確な冪乗
 
 @item O
-Zero
+ゼロ
 
 @item P
-Constant whose negation is a signed 16-bit constant
+符号反転したものが符号付き 16 ビット定数になる定数
 
 @item G
-Floating point constant that can be loaded into a register with one
-instruction per word
-
-@item H
-Integer/Floating point constant that can be loaded into a register using
-three instructions
-
-@item m
-Memory operand.
-Normally, @code{m} does not allow addresses that update the base register.
-If @samp{<} or @samp{>} constraint is also used, they are allowed and
-therefore on PowerPC targets in that case it is only safe
-to use @samp{m<>} in an @code{asm} statement if that @code{asm} statement
-accesses the operand exactly once.  The @code{asm} statement must also
-use @samp{%U@var{<opno>}} as a placeholder for the ``update'' flag in the
-corresponding load or store instruction.  For example:
-
-@smallexample
-asm ("st%U0 %1,%0" : "=m<>" (mem) : "r" (val));
-@end smallexample
-
-is correct but:
-
-@smallexample
-asm ("st %1,%0" : "=m<>" (mem) : "r" (val));
-@end smallexample
-
-is not.
-
-@item es
-A ``stable'' memory operand; that is, one which does not include any
-automodification of the base register.  This used to be useful when
-@samp{m} allowed automodification of the base register, but as those are now only
-allowed when @samp{<} or @samp{>} is used, @samp{es} is basically the same
-as @samp{m} without @samp{<} and @samp{>}.
+一ワードにつき一回の命令でレジスタにロード可能な浮動小数点定数。
 
 @item Q
-Memory operand that is an offset from a register (it is usually better
-to use @samp{m} or @samp{es} in @code{asm} statements)
-
-@item Z
-Memory operand that is an indexed or indirect from a register (it is
-usually better to use @samp{m} or @samp{es} in @code{asm} statements)
+あるレジスタからのオフセットであるメモリオペランド
+(@code{asm} 文の場合は、@samp{m} の方が良い)。
 
 @item R
-AIX TOC entry
+AIX の TOC エントリ
 
-@item a
-Address operand that is an indexed or indirect from a register (@samp{p} is
-preferable for @code{asm} statements)
+@item S
+64ビットのマスク・オペランドとして適した定数。
 
 @item U
-System V Release 4 small data area reference
-
-@item W
-Vector constant that does not require memory
-
-@item j
-Vector constant that is all zeros.
-
+System V Release 4 の小データ領域の参照
 @end table
 
 @need 1000
-@item SPARC---@file{config/sparc/sparc.h}
+@item SPARC---@file{sparc.h}
 @table @code
 @item f
-Floating-point register on the SPARC-V8 architecture and
-lower floating-point register on the SPARC-V9 architecture.
+32 ビットまたは 64 ビットの値を保持できる浮動小数点レジスタ。
 
 @item e
-Floating-point register.  It is equivalent to @samp{f} on the
-SPARC-V8 architecture and contains both lower and upper
-floating-point registers on the SPARC-V9 architecture.
-
-@item c
-Floating-point condition code register.
-
-@item d
-Lower floating-point register.  It is only valid on the SPARC-V9
-architecture when the Visual Instruction Set is available.
-
-@item b
-Floating-point register.  It is only valid on the SPARC-V9 architecture
-when the Visual Instruction Set is available.
-
-@item h
-64-bit global or out register for the SPARC-V8+ architecture.
-
-@item C
-The constant all-ones, for floating-point.
-
-@item A
-Signed 5-bit constant
-
-@item D
-A vector constant
+64 ビットまたは 128 ビットの値を保持できる浮動小数点レジスタ。
 
 @item I
-Signed 13-bit constant
+13ビットの符号付き定数
 
 @item J
-Zero
+ゼロ
 
 @item K
-32-bit constant with the low 12 bits clear (a constant that can be
-loaded with the @code{sethi} instruction)
-
-@item L
-A constant in the range supported by @code{movcc} instructions (11-bit
-signed immediate)
-
-@item M
-A constant in the range supported by @code{movrcc} instructions (10-bit
-signed immediate)
-
-@item N
-Same as @samp{K}, except that it verifies that bits that are not in the
-lower 32-bit range are all zero.  Must be used instead of @samp{K} for
-modes wider than @code{SImode}
-
-@item O
-The constant 4096
+下位12ビットが 0 の 32ビット定数(@code{sethi} 命令でロード可能な
+定数)
 
 @item G
-Floating-point zero
+浮動小数点数のゼロ。
 
 @item H
-Signed 13-bit constant, sign-extended to 32 or 64 bits
-
-@item P
-The constant -1
+13 ビットの符号付き定数で、32 ビットまたは 64 ビットに符号拡張される。
 
 @item Q
-Floating-point constant whose integral representation can
-be moved into an integer register using a single sethi
-instruction
-
-@item R
-Floating-point constant whose integral representation can
-be moved into an integer register using a single mov
-instruction
+1命令でロード可能なメモリ参照(@samp{m} の方が、@code{asm} 文には
+もっと適している。)
 
 @item S
-Floating-point constant whose integral representation can
-be moved into an integer register using a high/lo_sum
-instruction sequence
+定数、またはメモリアドレス
 
 @item T
-Memory address aligned to an 8-byte boundary
+8バイト境界に整合されたメモリアドレス
 
 @item U
-Even register
-
-@item W
-Memory address for @samp{e} constraint registers
-
-@item w
-Memory address with only a base register
-
-@item Y
-Vector zero
-
+偶数レジスタ
 @end table
 
-@item x86 family---@file{config/i386/constraints.md}
+@item Intel 386---@file{i386.h}
 @table @code
-@item R
-Legacy register---the eight integer registers available on all
-i386 processors (@code{a}, @code{b}, @code{c}, @code{d},
-@code{si}, @code{di}, @code{bp}, @code{sp}).
-
 @item q
-Any register accessible as @code{@var{r}l}.  In 32-bit mode, @code{a},
-@code{b}, @code{c}, and @code{d}; in 64-bit mode, any integer register.
-
-@item Q
-Any register accessible as @code{@var{r}h}: @code{a}, @code{b},
-@code{c}, and @code{d}.
-
-@ifset INTERNALS
-@item l
-Any register that can be used as the index in a base+index memory
-access: that is, any general register except the stack pointer.
-@end ifset
-
-@item a
-The @code{a} register.
-
-@item b
-The @code{b} register.
-
-@item c
-The @code{c} register.
-
-@item d
-The @code{d} register.
-
-@item S
-The @code{si} register.
-
-@item D
-The @code{di} register.
+@samp{a}、@code{b}、@code{c}、@code{d} レジスタ
 
 @item A
-The @code{a} and @code{d} registers.  This class is used for instructions
-that return double word results in the @code{ax:dx} register pair.  Single
-word values will be allocated either in @code{ax} or @code{dx}.
-For example on i386 the following implements @code{rdtsc}:
-
-@smallexample
-unsigned long long rdtsc (void)
-@{
-  unsigned long long tick;
-  __asm__ __volatile__("rdtsc":"=A"(tick));
-  return tick;
-@}
-@end smallexample
-
-This is not correct on x86-64 as it would allocate tick in either @code{ax}
-or @code{dx}.  You have to use the following variant instead:
-
-@smallexample
-unsigned long long rdtsc (void)
-@{
-  unsigned int tickl, tickh;
-  __asm__ __volatile__("rdtsc":"=a"(tickl),"=d"(tickh));
-  return ((unsigned long long)tickh << 32)|tickl;
-@}
-@end smallexample
-
+@samp{a}、@code{d} レジスタ(64ビット int 向け)
 
 @item f
-Any 80387 floating-point (stack) register.
+浮動小数点レジスタ
 
 @item t
-Top of 80387 floating-point stack (@code{%st(0)}).
+第一(スタックの一番上の)浮動小数点レジスタ
 
 @item u
-Second from top of 80387 floating-point stack (@code{%st(1)}).
+第二浮動小数点レジスタ
 
-@item y
-Any MMX register.
+@item a
+@samp{a} レジスタ
 
-@item x
-Any SSE register.
+@item b
+@samp{b} レジスタ
 
-@item Yz
-First SSE register (@code{%xmm0}).
+@item c
+@samp{c} レジスタ
 
-@ifset INTERNALS
-@item Y2
-Any SSE register, when SSE2 is enabled.
+@item d
+@samp{d} レジスタ
 
-@item Yi
-Any SSE register, when SSE2 and inter-unit moves are enabled.
+@item D
+@samp{di} レジスタ
 
-@item Ym
-Any MMX register, when inter-unit moves are enabled.
-@end ifset
+@item S
+@samp{si} レジスタ
 
 @item I
-Integer constant in the range 0 @dots{} 31, for 32-bit shifts.
+0〜31 の定数(32ビットのシフト用)
 
 @item J
-Integer constant in the range 0 @dots{} 63, for 64-bit shifts.
+0〜63 の定数(64ビットのシフト用)
 
 @item K
-Signed 8-bit integer constant.
+@samp{0xff}
 
 @item L
-@code{0xFF} or @code{0xFFFF}, for andsi as a zero-extending move.
+@samp{0xffff}
 
 @item M
-0, 1, 2, or 3 (shifts for the @code{lea} instruction).
+0、1、2、3(@code{lea} 命令のシフト数である)
 
 @item N
-Unsigned 8-bit integer constant (for @code{in} and @code{out}
-instructions).
-
-@ifset INTERNALS
-@item O
-Integer constant in the range 0 @dots{} 127, for 128-bit shifts.
-@end ifset
+0 から 255 の範囲の定数(@code{out} 命令用)
 
 @item G
-Standard 80387 floating point constant.
-
-@item C
-Standard SSE floating point constant.
-
-@item e
-32-bit signed integer constant, or a symbolic reference known
-to fit that range (for immediate operands in sign-extending x86-64
-instructions).
-
-@item Z
-32-bit unsigned integer constant, or a symbolic reference known
-to fit that range (for immediate operands in zero-extending x86-64
-instructions).
-
+80387 標準の浮動小数点定数
 @end table
 
 @end table
