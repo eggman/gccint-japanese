@@ -1691,256 +1691,167 @@ register preferences.
 @cindex machine specific constraints
 @cindex constraints, machine specific
 
-Whenever possible, you should use the general-purpose constraint letters
-in @code{asm} arguments, since they will convey meaning more readily to
-people reading your code.  Failing that, use the constraint letters
-that usually have very similar meanings across architectures.  The most
-commonly used constraints are @samp{m} and @samp{r} (for memory and
-general-purpose registers respectively; @pxref{Simple Constraints}), and
-@samp{I}, usually the letter indicating the most common
-immediate-constant format.
+@code{asm} の引数には、可能な限り、汎用の制約文字を使ったほうが良い。
+その方が読む人に意味が伝わりやすくなるからだ。
+汎用の制約文字では駄目な場合は、色々なアーキテクチャで同じような
+意味を持つ制約文字を使うようにする。最も共通して良く使われるのは、
+@samp{m} と @samp{r} である。それぞれ、メモリと汎用レジスタを表す。
+@pxref{Simple Constraints}
+それに、@samp{I} が、最も一般的な即値定数の形式を表す文字として使われる。
 
-Each architecture defines additional constraints.  These constraints
-are used by the compiler itself for instruction generation, as well as
-for @code{asm} statements; therefore, some of the constraints are not
-particularly useful for @code{asm}.  Here is a summary of some of the
-machine-dependent constraints available on some particular machines;
-it includes both constraints that are useful for @code{asm} and
-constraints that aren't.  The compiler source file mentioned in the
-table heading for each architecture is the definitive reference for
-the meanings of that architecture's constraints.
+マシンアーキテクチャ毎に、@file{config/@var{machine}.h} というファイルで、
+固有の制約を追加定義している。これらの制約は、@code{asm} 文だけでなく、
+コンパイラ自身の命令の生成に使われる。
+このため、制約のうちいくつかは、@code{asm} 文に使うにはあまり意味の
+ないものがある。
+制約は以下のマクロ群によって定義される。
 
 @c Please keep this table alphabetized by target!
 @table @emph
 
-@item ARM family---@file{config/arm/constraints.md}
+@item ARM family---@file{arm.h}
 @table @code
-
-@item h
-In Thumb state, the core registers @code{r8}-@code{r15}.
-
-@item k
-The stack pointer register.
-
-@item l
-In Thumb State the core registers @code{r0}-@code{r7}.  In ARM state this
-is an alias for the @code{r} constraint.
-
-@item t
-VFP floating-point registers @code{s0}-@code{s31}.  Used for 32 bit values.
-
-@item w
-VFP floating-point registers @code{d0}-@code{d31} and the appropriate
-subset @code{d0}-@code{d15} based on command line options.
-Used for 64 bit values only.  Not valid for Thumb1.
-
-@item y
-The iWMMX co-processor registers.
-
-@item z
-The iWMMX GR registers.
-
-@item G
-The floating-point constant 0.0
-
-@item I
-Integer that is valid as an immediate operand in a data processing
-instruction.  That is, an integer in the range 0 to 255 rotated by a
-multiple of 2
-
-@item J
-Integer in the range @minus{}4095 to 4095
-
-@item K
-Integer that satisfies constraint @samp{I} when inverted (ones complement)
-
-@item L
-Integer that satisfies constraint @samp{I} when negated (twos complement)
-
-@item M
-Integer in the range 0 to 32
-
-@item Q
-A memory reference where the exact address is in a single register
-(`@samp{m}' is preferable for @code{asm} statements)
-
-@item R
-An item in the constant pool
-
-@item S
-A symbol in the text segment of the current file
-
-@item Uv
-A memory reference suitable for VFP load/store insns (reg+constant offset)
-
-@item Uy
-A memory reference suitable for iWMMXt load/store instructions.
-
-@item Uq
-A memory reference suitable for the ARMv4 ldrsb instruction.
-@end table
-
-@item MIPS---@file{config/mips/constraints.md}
-@table @code
-@item d
-An address register.  This is equivalent to @code{r} unless
-generating MIPS16 code.
 
 @item f
-A floating-point register (if available).
+浮動小数点レジスタ
+
+@item F
+浮動小数点定数 0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0 のどれか一つ
+
+@item G
+符号反転したときに制約 @samp{F} を満たす浮動小数点定数
+
+@item z
+FPR-GPR 間移動用の @samp{FPMEM} スタックメモリ
+
+@item I
+データ処理命令の即値オペランドとして有効な整数。
+すなわち、0 から 255 の間の整数を 2 の倍数分回転したものである。
+
+@item J
+-4095 〜 4095 の範囲の整数
+
+@item K
+ビット反転(1の補数)したときに制約 @samp{I} を満たす整数
+
+@item L
+符号反転(2の補数)したときに制約 @samp{I} を満たす整数
+
+@item M
+0 〜 32 の範囲の整数
+
+@item Q
+正確なアドレスが一個のレジスタにある場合のメモリ参照
+(@code{asm} 文の場合には、@samp{m} の方が良い)。
+
+@item R
+定数領域に置かれるデータ
+
+@item S
+現在ファイルのテキストセグメント中のシンボル
+@end table
+
+@item MIPS---@file{mips.h}
+@table @code
+@item d
+汎用整数レジスタ
+
+@item f
+浮動小数点レジスタ(もしあれば)
 
 @item h
-Formerly the @code{hi} register.  This constraint is no longer supported.
+@samp{Hi} レジスタ
 
 @item l
-The @code{lo} register.  Use this register to store values that are
-no bigger than a word.
+@samp{Lo} レジスタ
 
 @item x
-The concatenated @code{hi} and @code{lo} registers.  Use this register
-to store doubleword values.
-
-@item c
-A register suitable for use in an indirect jump.  This will always be
-@code{$25} for @option{-mabicalls}.
-
-@item v
-Register @code{$3}.  Do not use this constraint in new code;
-it is retained only for compatibility with glibc.
+@samp{Hi} または @samp{Lo} レジスタ
 
 @item y
-Equivalent to @code{r}; retained for backwards compatibility.
+汎用整数レジスタ
 
 @item z
-A floating-point condition code register.
+浮動小数点ステータスレジスタ
 
 @item I
-A signed 16-bit constant (for arithmetic instructions).
+符号付き 16 ビット定数(算術演算命令向け)
 
 @item J
-Integer zero.
+ゼロ
 
 @item K
-An unsigned 16-bit constant (for logic instructions).
+ゼロ拡張された 16 ビット定数(論理命令向け)
 
 @item L
-A signed 32-bit constant in which the lower 16 bits are zero.
-Such constants can be loaded using @code{lui}.
+下位16ビットがゼロの定数(@code{lui} でロード可能)
 
 @item M
-A constant that cannot be loaded using @code{lui}, @code{addiu}
-or @code{ori}.
+32ビット定数のうち、ロードするのに 2 命令必要なもの(@samp{I} でも
+@samp{K} でも @samp{L} でもない定数)
 
 @item N
-A constant in the range @minus{}65535 to @minus{}1 (inclusive).
+負の16ビット定数
 
 @item O
-A signed 15-bit constant.
+二の冪乗
 
 @item P
-A constant in the range 1 to 65535 (inclusive).
+正の 16 ビット定数
 
 @item G
-Floating-point zero.
-
-@item R
-An address that can be used in a non-macro load or store.
-
-@item ZC
-A memory operand whose address is formed by a base register and offset
-that is suitable for use in instructions with the same addressing mode
-as @code{ll} and @code{sc}.
-
-@item ZD
-An address suitable for a @code{prefetch} instruction, or for any other
-instruction with the same addressing mode as @code{prefetch}.
-@end table
-
-@item Motorola 680x0---@file{config/m68k/constraints.md}
-@table @code
-@item a
-Address register
-
-@item d
-Data register
-
-@item f
-68881 floating-point register, if available
-
-@item I
-Integer in the range 1 to 8
-
-@item J
-16-bit signed number
-
-@item K
-Signed number whose magnitude is greater than 0x80
-
-@item L
-Integer in the range @minus{}8 to @minus{}1
-
-@item M
-Signed number whose magnitude is greater than 0x100
-
-@item N
-Range 24 to 31, rotatert:SI 8 to 1 expressed as rotate
-
-@item O
-16 (for rotate using swap)
-
-@item P
-Range 8 to 15, rotatert:HI 8 to 1 expressed as rotate
-
-@item R
-Numbers that mov3q can handle
-
-@item G
-Floating point constant that is not a 68881 constant
-
-@item S
-Operands that satisfy 'm' when -mpcrel is in effect
-
-@item T
-Operands that satisfy 's' when -mpcrel is not in effect
+浮動小数点のゼロ
 
 @item Q
-Address register indirect addressing mode
+一個以上の命令でロード可能なメモリ参照
+(@code{asm} 文の場合は、@samp{m} の方が良い)。
 
-@item U
-Register offset addressing
+@item R
+一個の命令でロード可能なメモリ参照
+(@code{asm} 文の場合は、@samp{m} の方が良い)。
 
-@item W
-const_call_operand
+@item S
+外部 OSF/rose PIC 形式でのメモリ参照
+(@code{asm} 文の場合は、@samp{m} の方が良い)。
+@end table
 
-@item Cs
-symbol_ref or const
+@item Motorola 680x0---@file{m68k.h}
+@table @code
+@item a
+アドレスレジスタ
 
-@item Ci
-const_int
+@item d
+データレジスタ
 
-@item C0
-const_int 0
+@item f
+利用可能なら、68881 の浮動小数点レジスタ
 
-@item Cj
-Range of signed numbers that don't fit in 16 bits
+@item x
+利用可能なら、Sun の FPA の浮動小数点レジスタ。
 
-@item Cmvq
-Integers valid for mvq
+@item y
+利用可能なら、Sun の FPA の浮動小数点レジスタの最初の 16 個。
 
-@item Capsw
-Integers valid for a moveq followed by a swap
+@item I
+1 〜 8 までの整数
 
-@item Cmvz
-Integers valid for mvz
+@item J
+16 ビットの符号付きの数
 
-@item Cmvs
-Integers valid for mvs
+@item K
+絶対値が 0x80 より大きい符号付き整数。
 
-@item Ap
-push_operand
+@item L
+-8 〜 -1 の整数
 
-@item Ac
-Non-register operands allowed in clr
+@item M
+
+@item G
+68881 の定数ではない浮動小数点定数。
+
+@item H
+Sun の FPA で使用可能な浮動小数点定数。
+@end table
 
 @end table
 @item PowerPC and IBM RS6000---@file{config/rs6000/constraints.md}
