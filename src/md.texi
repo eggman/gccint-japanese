@@ -4436,38 +4436,116 @@ If this pattern is not defined, a call to the library function
 @cindex jump instruction patterns
 @cindex defining jump instruction patterns
 
-GCC does not assume anything about how the machine realizes jumps.
-The machine description should define a single pattern, usually
-a @code{define_expand}, which expands to all the required insns.
+ほとんどの機種について、GNU CC は、その機種に条件コードがあることを
+想定している。比較 insn が条件コードを設定し、与えられたオペランドに
+ついての、符号付き比較と符号なし比較の両方の結果を記録する。
+それとは別の分岐 insn が、条件コードをテストし、その値にしたがって
+分岐したり、しなかったりする。
+分岐 insn は、符号付きと符号無しでは違ってくる。
+良く知られた機種、例えば、Vax や 68000、32000 等はこのように
+動作する。
 
-Usually, this would be a comparison insn to set the condition code
-and a separate branch insn testing the condition code and branching
-or not according to its value.  For many machines, however,
-separating compares and branches is limiting, which is why the
-more flexible approach with one @code{define_expand} is used in GCC.
-The machine description becomes clearer for architectures that
-have compare-and-branch instructions but no condition code.  It also
-works better when different sets of comparison operators are supported
-by different kinds of conditional branches (e.g. integer vs. floating-point),
-or by conditional branches with respect to conditional stores.
+機種によっては、符号付きと符号なしで別の比較命令を持っているが、
+条件分岐命令は、どちらか一方向けのセットしかないというものがある。
+こういう機種を扱うのに一番簡単な方法は、アセンブリコードが書き出される
+最後の段階までは、それ以外の機種と全く同じように扱うことである。
+この最後の段階で、比較命令用のコードを出力するときに、
+@code{next_cc0_user (insn)} を使って後続の分岐を先読みするのである。
+(変数 @code{insn} は、ある命令パターンの出力を書き出すコードの中では、
+出力中の insn を参照している。)
+その RTL を見て、符号なし分岐であれば、符号なし比較を出力し、
+さもなければ符号付き比較を出力する。その分岐自体を出力するときは、
+符号付き分岐と符号なし分岐を全く同一に扱うことができる。
 
-Two separate insns are always used if the machine description represents
-a condition code register using the legacy RTL expression @code{(cc0)},
-and on most machines that use a separate condition code register
-(@pxref{Condition Code}).  For machines that use @code{(cc0)}, in
-fact, the set and use of the condition code must be separate and
-adjacent@footnote{@code{note} insns can separate them, though.}, thus
-allowing flags in @code{cc_status} to be used (@pxref{Condition Code}) and
-so that the comparison and branch insns could be located from each other
-by using the functions @code{prev_cc0_setter} and @code{next_cc0_user}.
+こんなことが可能なのは、GNU CC が連続する RTL insn の対を生成するからである。
+間に @code{note} insn が入ってもよい。この対の一つは、条件コードを
+設定し、もう一つがそれをテストする。GNU CC は、この対を最後まで
+いじらないようにする。
 
-Even in this case having a single entry point for conditional branches
-is advantageous, because it handles equally well the case where a single
-comparison instruction records the results of both signed and unsigned
-comparison of the given operands (with the branch insns coming in distinct
-signed and unsigned flavors) as in the x86 or SPARC, and the case where
-there are distinct signed and unsigned compare instructions and only
-one set of conditional branch instructions as in the PowerPC.
+この方法を取るには、マシン記述マクロ @code{NOTICE_UPDATE_CC} を
+@code{CC_STATUS_INIT} を実行するように定義しなければならない。
+言い換えると、余計な比較命令はない。
+
+機種によっては比較-分岐命令はあるが、条件コードはないというものがある。
+こういう機種についても同様の方法が使える。
+比較命令を「出力」すべき時が来たら、そのオペランドを二つの静的変数に
+記録する。次に続く「条件コードにより分岐」命令を出力するときは、
+実際には記録したオペランドを使う、比較-分岐命令を出力する。
+
+比較-分岐命令向けにパターンを定義するのでも良い。
+最適化ありのコンパイルでは、比較命令と分岐命令の組をこのパターンに
+従って組み合わせる。だが、これは最適化を要求しない場合は
+行なわれない。このため、読者が定義するなんらかの特別なパターンに加えて、
+上記の解決策の一つを取る必要がある。
+
+RISC 機種の多くでは、条件コードに影響する命令はほとんどなく、
+独立した条件コードレジスタさえないこともある。
+こういう機種では、条件コードの定義と使用は連続した insn でなければ
+ならないという制限は必要ないし、重要な最適化を妨げてしまう。
+例えば、IBM RS/6000 では、条件コードレジスタが条件分岐の
+三つ前の命令で設定されていない限り、成立した分岐に対して遅延が
+生じる。
+条件コードレジスタの定義と使い方を分離することが許されていないと、
+命令スケジューラは、この最適化を行なうことができない。
+
+こういう機種では、@code{(cc0)} を使わず、代わりに
+条件コードを表すレジスタを使うこと。専用の条件コードレジスタが
+存在する場合には、ハードレジスタを使うこと。
+条件コードや比較の結果をどの汎用レジスタにでも置くことが出来るのなら、
+あるいは条件コードレジスタが複数あるなら、疑似レジスタを使うこと。
+
+@findex prev_cc0_setter
+@findex next_cc0_user
+機種によっては、生成される分岐命令のタイプは条件コードの生成のされ方に
+依存する。例えば、68k と SPARC では、加算命令や減算命令で
+直接的に条件コードを設定すると、テスト命令が行なうような、オーバフロー
+ビットのクリアを行なわないので、ある種の条件分岐に対しては
+異なる分岐命令を使う必要がある。@code{(cc0)} を使う機種では、
+条件コードの設定と使用は、連続して置かなければならず(間に
+置いて良いのは @code{note} insn だけ)、@code{cc_status} 中のフラグを
+使えるようにしなければならない。(@xref{Condition Code}。)
+また、比較 insn と分岐 insn は、関数 @code{prev_cc0_setter} と
+@code{next_cc0_user} によってお互いを見つけることができる。
+
+だが、@code{(cc0)} を使わない機種ではこの事は正しくない。
+@code{(cc0)} を使わない機種では、比較 insn と分岐 insn が連続しているという
+仮定を置くことは出来ず、上記の方法は使えない。
+代わりに、条件コードレジスタのマシンモードを使って、条件コードレジスタの
+異なる形式を記録するようにする。
+
+条件コードの値をストアするのに使うレジスタのモードは、クラス @code{MODE_CC}
+のモードでなければならない。普通は、@code{CCmode} になる。
+他にモードが必要になる場合は(上で述べた、Sparc の add の例について言えば)、
+マクロ @code{EXTRA_CC_MODES} を
+定義して、追加で必要なモードを列挙する(@pxref{Condition Code})。
+また、@code{EXTRA_CC_NAMES} を定義して、追加するモードの名前を列挙し、
+@code{SELECT_CC_MODE} を定義して、比較のオペランドに与えられたモードを
+選択するようにする。
+
+RTL 生成の間、異なるモードが必要な事が判っている場合
+(例えば、IBM のほとんどのプロセッサのように、符号付きと符号なしで
+別々の比較命令を持っている機種の場合である)、RTL 生成時に
+指定することができる。
+
+異なるモードが要求されるのが、命令組合せにより発生する場合は、
+マクロ @code{SELECT_CC_MODE} が比較の結果に対してどのマシンモードを
+使うべきかを決定する。そのパターンはこのモードを使って書く必要がある。
+上で議論した SPARC での加算の場合を考えると、パターンを以下のように
+する必要がある。
+
+@smallexample
+(define_insn ""
+  [(set (reg:CC_NOOV 0)
+        (compare:CC_NOOV
+          (plus:SI (match_operand:SI 0 "register_operand" "%r")
+                   (match_operand:SI 1 "arith_operand" "rI"))
+          (const_int 0)))]
+  ""
+  "@dots{}")
+@end smallexample
+
+SPARC での @code{SELECT_CC_MODE} マクロは、引数が @code{plus} である
+比較に対しては @code{CC_NOOVmode} を返す。
 
 @end ifset
 @ifset INTERNALS
