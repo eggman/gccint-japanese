@@ -4328,23 +4328,23 @@ If this pattern is not defined, a call to the library function
 @cindex Pattern Ordering
 @cindex Ordering of Patterns
 
-Sometimes an insn can match more than one instruction pattern.  Then the
-pattern that appears first in the machine description is the one used.
-Therefore, more specific patterns (patterns that will match fewer things)
-and faster instructions (those that will produce better code when they
-do match) should usually go first in the description.
+ある insn が複数の命令パターンにマッチ可能なことが時々ある。
+その時は、マシン記述に最初に現れるパターンが使われる。
+このため、より限定されるパターン(マッチするものがより少ないパターン)や
+より高速のパターン(マッチしたときにより良いコードを生成するパターン)を
+通常はマシン記述で先に置くべきである。
 
-In some cases the effect of ordering the patterns can be used to hide
-a pattern when it is not valid.  For example, the 68000 has an
-instruction for converting a fullword to floating point and another
-for converting a byte to floating point.  An instruction converting
-an integer to floating point could match either one.  We put the
-pattern to convert the fullword first to make sure that one will
-be used rather than the other.  (Otherwise a large integer might
-be generated as a single-byte immediate quantity, which would not work.)
-Instead of using this pattern ordering it would be possible to make the
-pattern for convert-a-byte smart enough to deal properly with any
-constant value.
+場合によっては、パターンの順番の効果を使って、有効でないパターンを
+隠すこともできる。
+例えば、68000 は、フルワードを浮動小数点に変換する命令と
+もう一つ別のバイトを浮動小数点に変換する命令を持っている。
+整数を浮動小数点に変換する命令はどちらにもマッチし得る。
+我々は、フルワードを変換するパターンを先において、バイトを変換する
+パターンではなくてフルワードを変換する方が使われることを保証している。
+(そうしないと、大きな整数が一バイトの即値量として生成されてしまい、
+動作しなくなる。)
+このパターンの順序を使う代わりに、バイトを変換するパターンを
+任意の定数値を適切に扱えるように賢いものにすることも可能である。
 
 @end ifset
 @ifset INTERNALS
@@ -4353,10 +4353,52 @@ constant value.
 @cindex Dependent Patterns
 @cindex Interdependence of Patterns
 
-In some cases machines support instructions identical except for the
-machine mode of one or more operands.  For example, there may be
-``sign-extend halfword'' and ``sign-extend byte'' instructions whose
-patterns are
+どのマシン記述でも、条件分岐名 @samp{b@var{cond}} のそれぞれに
+ついて名前付きパターンがなければならない。
+この場合、許されるテンプレートは常に以下の形でなければならない。
+
+@example
+(set (pc)
+     (if_then_else (@var{cond} (cc0) (const_int 0))
+                   (label_ref (match_operand 0 "" ""))
+                   (pc)))
+@end example
+
+@noindent
+さらに、どのマシン記述でも、条件を逆にした分岐毎に名無しのパターンが
+なければならない。
+テンプレートは以下の形となる。
+
+@example
+(set (pc)
+     (if_then_else (@var{cond} (cc0) (const_int 0))
+                   (pc)
+                   (label_ref (match_operand 0 "" ""))))
+@end example
+
+@noindent
+これらが必要なのは、ジャンプ最適化で順条件分岐が逆条件分岐に
+変換されることがあるためである。
+
+@code{match_operator} を使って、分岐に対し指定しなければならない
+パターンの数を押さえるということを良く行なう。
+例えば、以下のようにする。
+
+@smallexample
+(define_insn ""
+  [(set (pc)
+        (if_then_else (match_operator 0 "comparison_operator"
+                                      [(cc0) (const_int 0)])
+                      (pc)
+                      (label_ref (match_operand 1 "" ""))))]
+  "@var{condition}"
+  "@dots{}")
+@end smallexample
+
+場合によっては、一個以上のオペランドのマシンモードを除けば同じになる命令を
+サポートしている機種がある。例えば、
+``sign-extend halfword'' と ``sign-extend byte'' という命令があり、
+そのパターンは以下のようになる。
 
 @smallexample
 (set (match_operand:SI 0 @dots{})
@@ -4367,24 +4409,25 @@ patterns are
 @end smallexample
 
 @noindent
-Constant integers do not specify a machine mode, so an instruction to
-extend a constant value could match either pattern.  The pattern it
-actually will match is the one that appears first in the file.  For correct
-results, this must be the one for the widest possible mode (@code{HImode},
-here).  If the pattern matches the @code{QImode} instruction, the results
-will be incorrect if the constant value does not actually fit that mode.
+整数定数はマシンモードを指定しないので、定数値を拡張する命令は
+どちらのパターンにもマッチし得る。
+実際にマッチするパターンは、ファイルで先に現れたものになる。
+正しい結果を得るためには、先に置くのは最も幅の広いモード(ここでは 
+@code{HImode}) のものでなければならない。
+パターンが @code{QImode} の命令にマッチした場合、
+定数値がこのモードに実際に収まらない場合は正しくない結果になる。
 
-Such instructions to extend constants are rarely generated because they are
-optimized away, but they do occasionally happen in nonoptimized
-compilations.
+定数を拡張するような命令は最適化の際になくなるので、滅多に生成される
+ことはないが、最適化をしないコンパイルでは時々出てくる。
 
-If a constraint in a pattern allows a constant, the reload pass may
-replace a register with a constant permitted by the constraint in some
-cases.  Similarly for memory references.  Because of this substitution,
-you should not provide separate patterns for increment and decrement
-instructions.  Instead, they should be generated from the same pattern
-that supports register-register add insns by examining the operands and
-generating the appropriate machine instruction.
+あるパターンのある制約が定数を許すなら、再ロードパスが、いくつかのケースの
+制約で許されているなら、レジスタを定数で置き換える可能性がある。
+メモリ参照についても同様である。
+この置き換えがあるので、インクリメントとデクリメント命令に別々の
+パターンを与えるべきではない。
+代わりに、同一のパターンから生成されるようにする必要がある。
+このパターンは、オペランドを調べて適切な機械命令を生成するような
+レジスタ同士の加算 insn をサポートする必要がある。
 
 @end ifset
 @ifset INTERNALS
