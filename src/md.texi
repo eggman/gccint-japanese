@@ -1773,6 +1773,63 @@ FPR-GPR 間移動用の @samp{FPMEM} スタックメモリ
 現在ファイルのテキストセグメント中のシンボル
 @end table
 
+@item AMD 29000 family---@file{a29k.h}
+@table @code
+@item l
+ローカルレジスタ 0
+
+@item b
+バイトポインタ(@samp{BP})レジスタ
+
+@item q
+@samp{Q} レジスタ
+
+@item h
+特殊目的のレジスタ
+
+@item A
+第一アキュムレータレジスタ
+
+@item a
+他のアキュムレータレジスタ
+
+@item f
+浮動小数点レジスタ
+
+@item I
+0 より大きく、0x100 より小さい定数
+
+@item J
+0 より大きく、0x1000 より小さい定数
+
+@item K
+上位 24 ビットがオン(1)の定数
+
+@item L
+上位 8 ビットがオン(1) の 16 ビット定数
+
+@item M
+上位 16 ビットがオン(1) の 32 ビット定数
+
+@item N
+8ビットに収まる 32ビットの負の定数。
+
+@item O
+定数 0x80000000か、あるいは、29050 の場合は、下位16ビットが 0 である
+任意の32ビット定数。
+
+@item P
+8ビットに収まる 16ビットの負の定数。
+
+@item G
+@itemx H
+浮動小数点定数(@code{asm} 文では、代わりに機種独立の @samp{E} か @samp{F}
+を使うこと。)
+@end table
+
+
+
+
 @item MIPS---@file{mips.h}
 @table @code
 @item d
@@ -2040,6 +2097,38 @@ System V Release 4 の小データ領域の参照
 @item G
 80387 標準の浮動小数点定数
 @end table
+
+@item Intel 960---@file{i960.h}
+@table @code
+@item f
+浮動小数点レジスタ(@code{fp0} から @code{fp3})
+
+@item l
+ローカルレジスタ(@code{r0} から @code{r15})
+
+@item b
+グローバルレジスタ(@code{g0} から @code{g15})
+
+@item d
+任意のローカルまたはグローバルレジスタ
+
+@item I
+0 から 31 の整数
+
+@item J
+0
+
+@item K
+-31 から 0 の整数
+
+@item G
+浮動小数点の 0
+
+@item H
+浮動小数点の 1
+@end table
+
+
 
 @end table
 
