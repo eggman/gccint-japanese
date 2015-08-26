@@ -197,136 +197,152 @@ insn が、そのパターンの評価テンプレートにマッチした後に
 @cindex recognizing insns
 @cindex insns, recognizing
 
-The RTL template is used to define which insns match the particular pattern
-and how to find their operands.  For named patterns, the RTL template also
-says how to construct an insn from specified operands.
+RTL テンプレートを使い、どの insn が特定のパターンにマッチするのか、および、
+そのオペランドの見つけ方を定義する。名前付きパターンの場合は、
+RTL テンプレートは、指定されたオペランドからどのように insn を構築するかに
+ついても指示する。
 
-Construction involves substituting specified operands into a copy of the
-template.  Matching involves determining the values that serve as the
-operands in the insn being matched.  Both of these activities are
-controlled by special expression types that direct matching and
-substitution of the operands.
+構築するということには、指定されたオペランドをテンプレートのコピーに
+代入することも含まれる。
+照合することには、一致しようとしている insn のオペランドの役割を
+果たす値を決定することも含まれる。
+どちらの動作も、照合とオペランドの代入を指示する特別な式の型に
+より制御される。
 
 @table @code
 @findex match_operand
 @item (match_operand:@var{m} @var{n} @var{predicate} @var{constraint})
-This expression is a placeholder for operand number @var{n} of
-the insn.  When constructing an insn, operand number @var{n}
-will be substituted at this point.  When matching an insn, whatever
-appears at this position in the insn will be taken as operand
-number @var{n}; but it must satisfy @var{predicate} or this instruction
-pattern will not match at all.
+この式は、insn の @var{n} 番目のオペランドのプレースホルダーである。
+insn の構築時に、@var{n}番目のオペランドがここに挿入される。
+insn の照合時には、insn のこの位置に現れるものは何であれ、
+@var{n} 番目のオペランドとして扱われる。ただし、その場合 @var{predicate} を
+満たしている必要があり、さもなければこの命令パターンは全くマッチしない。
 
-Operand numbers must be chosen consecutively counting from zero in
-each instruction pattern.  There may be only one @code{match_operand}
-expression in the pattern for each operand number.  Usually operands
-are numbered in the order of appearance in @code{match_operand}
-expressions.  In the case of a @code{define_expand}, any operand numbers
-used only in @code{match_dup} expressions have higher values than all
-other operand numbers.
+オペランド番号は、各命令パターンにおいて 0 から始まる数字に
+ならなければならない。各オペランド番号について、パターンには
+@code{match_operand} 式が一個だけ存在し得る。
+普通は、オペランドは @code{match_operand} 式群に現れた順に
+番号が付く。
+@code{define_expand} の場合には、@code{match_dup} 式でのみ
+使用されるオペランド番号はどれも、他のどのオペランド番号よりも
+大きな値になる。
 
-@var{predicate} is a string that is the name of a function that
-accepts two arguments, an expression and a machine mode.
-@xref{Predicates}.  During matching, the function will be called with
-the putative operand as the expression and @var{m} as the mode
-argument (if @var{m} is not specified, @code{VOIDmode} will be used,
-which normally causes @var{predicate} to accept any mode).  If it
-returns zero, this instruction pattern fails to match.
-@var{predicate} may be an empty string; then it means no test is to be
-done on the operand, so anything which occurs in this position is
-valid.
+@var{predicate} は、ある C の関数名を表す文字列でり、その関数は
+二つの引数、すなわち一個の式と一個のマシンモードを受け付ける。
+照合が行なわれる間に、式として仮想的なオペランド、モード引数として @var{m} を
+使ってその関数が呼び出される。(@var{m} が指定されない場合は、
+@code{VOIDmode} が使われ、@var{predicate} は任意のモードを受け付けることに
+なる。)
+この関数が 0 を返した場合は、この命令パターンの照合に失敗することになる。
+@var{predicate} は空の文字列であっても良い。
+その場合、オペランドについては何のテストも行なわれず、この位置に
+現れるものは何でも有効になる。
 
-Most of the time, @var{predicate} will reject modes other than @var{m}---but
-not always.  For example, the predicate @code{address_operand} uses
-@var{m} as the mode of memory ref that the address should be valid for.
-Many predicates accept @code{const_int} nodes even though their mode is
-@code{VOIDmode}.
+ほとんどの場合、@var{predicate} は @var{m} 以外のモードを受け付けない。
+ただし、いつでも受け付けないわけではない。
+例えば、述語(predicate) @code{address_operand} は、@var{m} を、
+そのアドレスが有効なメモリ参照のモードとして使う。
+多くの述語は、それらのモードが @code{VOIDmode} であっても @code{const_int}
+ノードを受け付ける。
 
-@var{constraint} controls reloading and the choice of the best register
-class to use for a value, as explained later (@pxref{Constraints}).
-If the constraint would be an empty string, it can be omitted.
+@var{constraint} は再ロードとある値に最適なレジスタクラスの選択を
+制御する。これについては後で説明する (@pxref{Constraints})。
 
-People are often unclear on the difference between the constraint and the
-predicate.  The predicate helps decide whether a given insn matches the
-pattern.  The constraint plays no role in this decision; instead, it
-controls various decisions in the case of an insn which does match.
+制約と述語の違いが良く判らないという人が多い。
+述語は、ある与えられた insn がパターンにマッチするかどうかを
+判断する手助けをする。
+一方、制約は、この判断には関与しない。代わりに、
+insn がパターンにマッチした場合の色々な判断を制御するのである。
+
+@findex general_operand
+CISC では、最も良く出てくる述語は、@code{"general_operand"} 
+である。これは、仮想オペランドが、定数であるのか、レジスタなのか、
+メモリ参照なのかを調べ、それがモード @var{m} で有効なのものかどうかを
+確かめる。
+
+@findex register_operand
+レジスタでなければならないオペランドの場合は、述語としては
+@code{"register_operand"} を使うべきである。再ロード過程で
+@code{"general_operand"} を使っても、
+任意の非レジスタオペランドをレジスタにコピーするという処理を行うので
+大丈夫だが、そうすると GCC に余計な仕事をさせることになるし、
+ループからの不変オペランド(例えば定数)の除去や最適なレジスタ割り付け
+の妨げにもなる。
+RISC の場合には、述語としては、制約が許す範囲のオブジェクトのみを
+受け付けるようにするのが一般には最も効率が良い。
+
+@findex immediate_operand
+定数であるはずのオペランドの場合には、述語として @code{"immediate_operand"}
+を使うか、命令パターンの付加条件が定数を要求するようにするか、あるいは両方を
+行うようにする必要がある。制約を使えば同じことが出来るだろうと考えては
+いけない。
+制約の方が定数のみを許すようになっていても、述語がそれ以外のものを
+許しているなら、実際にそのケースが発生したときに
+GCC は落ちてしまうのである。
 
 @findex match_scratch
 @item (match_scratch:@var{m} @var{n} @var{constraint})
-This expression is also a placeholder for operand number @var{n}
-and indicates that operand must be a @code{scratch} or @code{reg}
-expression.
+この式もオペランド番号 @var{n} のプレースホルダであり、オペランドは
+@code{scratch} 式か @code{reg} 式でなければならないことを指定する。
 
-When matching patterns, this is equivalent to
+パターン照合の際には、これは、以下の式と等価である。
 
 @smallexample
-(match_operand:@var{m} @var{n} "scratch_operand" @var{constraint})
+(match_operand:@var{m} @var{n} "scratch_operand" @var{pred})
 @end smallexample
 
-but, when generating RTL, it produces a (@code{scratch}:@var{m})
-expression.
+しかし、RTL 生成フェーズでは、これは (@code{scratch}:@var{m}) という式を
+生成する。
 
-If the last few expressions in a @code{parallel} are @code{clobber}
-expressions whose operands are either a hard register or
-@code{match_scratch}, the combiner can add or delete them when
-necessary.  @xref{Side Effects}.
+@code{parallel} の中の最後の幾つかの式が @code{clobber} 式であり、
+その @code{clobber} 式のオペランドがハードレジスタか @code{match_scratch}
+なら、結合器(combiner) は必要なときにそういうオペランドを追加したり、
+削除したりすることができる。
 
 @findex match_dup
 @item (match_dup @var{n})
-This expression is also a placeholder for operand number @var{n}.
-It is used when the operand needs to appear more than once in the
-insn.
+この式もオペランド番号 @var{n} のプレースホルダーである。
+オペランドが insn の二箇所以上に現れる必要があるときに使われる。
 
-In construction, @code{match_dup} acts just like @code{match_operand}:
-the operand is substituted into the insn being constructed.  But in
-matching, @code{match_dup} behaves differently.  It assumes that operand
-number @var{n} has already been determined by a @code{match_operand}
-appearing earlier in the recognition template, and it matches only an
-identical-looking expression.
-
-Note that @code{match_dup} should not be used to tell the compiler that
-a particular register is being used for two operands (example:
-@code{add} that adds one register to another; the second register is
-both an input operand and the output operand).  Use a matching
-constraint (@pxref{Simple Constraints}) for those.  @code{match_dup} is for the cases where one
-operand is used in two places in the template, such as an instruction
-that computes both a quotient and a remainder, where the opcode takes
-two input operands but the RTL template has to refer to each of those
-twice; once for the quotient pattern and once for the remainder pattern.
+構築の際には、@code{match_dup} はちょうど @code{match_operand}
+と同様に動作する。オペランドは、構築されつつある insn に代入される。
+しかし、マッチングでは、@code{match_dup} の動作は異なる。
+オペランド番号 @var{n} は認識テンプレートに先に現れる @code{match_operand}
+により既に決まっており、見た目が同一の式にしかマッチしないということを
+想定している。
 
 @findex match_operator
 @item (match_operator:@var{m} @var{n} @var{predicate} [@var{operands}@dots{}])
-This pattern is a kind of placeholder for a variable RTL expression
-code.
+このパターンは、可変な RTL 式コードの一種のプレースホルダーである。
 
-When constructing an insn, it stands for an RTL expression whose
-expression code is taken from that of operand @var{n}, and whose
-operands are constructed from the patterns @var{operands}.
+insn 構築の際には、ある RTL 式を表す。
+この RTL 式の式コードは、オペランド @var{n} から取られ、
+オペランドはパターンの @var{operands} から構築される。
 
-When matching an expression, it matches an expression if the function
-@var{predicate} returns nonzero on that expression @emph{and} the
-patterns @var{operands} match the operands of the expression.
+式と照合する際は、関数 @var{predicate} がその式についてゼロでない
+値を返し、@emph{かつ} パターンの @var{operands} がその式のオペランドに
+マッチしたときに、その式にマッチする。
 
-Suppose that the function @code{commutative_operator} is defined as
-follows, to match any expression whose operator is one of the
-commutative arithmetic operators of RTL and whose mode is @var{mode}:
+関数 @code{commutative_operator} が以下のように定義されていると
+する。演算子が RTL の交換可能な算術演算子の一つで、モードが @var{mode}
+である任意の式にマッチするように定義されている。
 
 @smallexample
 int
-commutative_integer_operator (x, mode)
+commutative_operator (x, mode)
      rtx x;
-     machine_mode mode;
+     enum machine_mode mode;
 @{
   enum rtx_code code = GET_CODE (x);
   if (GET_MODE (x) != mode)
     return 0;
-  return (GET_RTX_CLASS (code) == RTX_COMM_ARITH
+  return (GET_RTX_CLASS (code) == 'c'
           || code == EQ || code == NE);
 @}
 @end smallexample
 
-Then the following pattern will match any RTL expression consisting
-of a commutative operator applied to two general operands:
+そうすると、以下のパターンは、二つの一般オペランドに適用される交換可能な
+演算子を含む任意の RTL 式にマッチする。
 
 @smallexample
 (match_operator:SI 3 "commutative_operator"
@@ -334,69 +350,67 @@ of a commutative operator applied to two general operands:
    (match_operand:SI 2 "general_operand" "g")])
 @end smallexample
 
-Here the vector @code{[@var{operands}@dots{}]} contains two patterns
-because the expressions to be matched all contain two operands.
+ここでベクトル @code{[@var{operands}@dots{}]} は、二つのパターンを
+含んでいる。なぜなら、マッチすべき式は全て二つのオペランドを
+含んでいるからである。
 
-When this pattern does match, the two operands of the commutative
-operator are recorded as operands 1 and 2 of the insn.  (This is done
-by the two instances of @code{match_operand}.)  Operand 3 of the insn
-will be the entire commutative expression: use @code{GET_CODE
-(operands[3])} to see which commutative operator was used.
+このパターンがマッチしたとき、交換可能な演算子の二つのオペランドは、
+この insn のオペランド 1 とオペランド 2 として記録される。
+(これは、二つの @code{match_operand} により行なわれる。)
+この insn のオペランド 3 は、交換可能な式全体である。
 
-The machine mode @var{m} of @code{match_operator} works like that of
-@code{match_operand}: it is passed as the second argument to the
-predicate function, and that function is solely responsible for
-deciding whether the expression to be matched ``has'' that mode.
+@code{match_operator} のマシンモード @var{m} は、@code{match_operand} の
+ものと同様に振る舞う。述語関数の二番目の引数として渡され、
+その関数だけが、マッチすべき式がそのモードを「持っているか」どうかを
+決定する責任がある。
 
-When constructing an insn, argument 3 of the gen-function will specify
-the operation (i.e.@: the expression code) for the expression to be
-made.  It should be an RTL expression, whose expression code is copied
-into a new expression whose operands are arguments 1 and 2 of the
-gen-function.  The subexpressions of argument 3 are not used;
-only its expression code matters.
+insn を構築する際には、生成関数の第三引数が、作成されるべき式の
+演算(すなわち式コード)を指定する。
+この引数は一個の RTL 式であるべきで、その式コードが、
+生成関数の引数 1 と 2 をオペランドとする新しい式にコピーされる。
+引数 3 のサブ式は使われない。式コードだけが問題になる。
 
-When @code{match_operator} is used in a pattern for matching an insn,
-it usually best if the operand number of the @code{match_operator}
-is higher than that of the actual operands of the insn.  This improves
-register allocation because the register allocator often looks at
-operands 1 and 2 of insns to see if it can do register tying.
+@code{match_operator} が、insn と照合されるパターンで使われているとき、
+その @code{match_operator} のオペランド番号が、その insn の
+実際のオペランド番号よりも大きいのが通常は最善である。
+これによりレジスタ割当が改良される。レジスタ割当では、
+insn のオペランド 1 と 2 を見て、レジスタの結び付けが可能かどうかを
+見るからである。
 
-There is no way to specify constraints in @code{match_operator}.  The
-operand of the insn which corresponds to the @code{match_operator}
-never has any constraints because it is never reloaded as a whole.
-However, if parts of its @var{operands} are matched by
-@code{match_operand} patterns, those parts may have constraints of
-their own.
+@code{match_operator} に制約を指定する方法はない。
+@code{match_operator} に対応する insn のオペランドは
+どんな制約も持つことはない。全体として再ロードされることがないからである。
+だが、その @var{operands} の一部が @code{match_operand} パターンに
+より照合が行なわれると、その一部はそれ自身の制約があって良い。
 
 @findex match_op_dup
 @item (match_op_dup:@var{m} @var{n}[@var{operands}@dots{}])
-Like @code{match_dup}, except that it applies to operators instead of
-operands.  When constructing an insn, operand number @var{n} will be
-substituted at this point.  But in matching, @code{match_op_dup} behaves
-differently.  It assumes that operand number @var{n} has already been
-determined by a @code{match_operator} appearing earlier in the
-recognition template, and it matches only an identical-looking
-expression.
+@code{match_dup} に似ているが、オペランドではなく演算子に適用される。
+insn を構築するときは、オペランド番号 @var{n} がここに代入される。
+しかし、マッチングの際には @code{match_op_dup} の動作は異なる。
+オペランド番号 @var{n} は認識テンプレートに先に現れる @code{match_operator}
+により既に決まっており、見た目が同一の式にしかマッチしないということを
+想定している。
 
 @findex match_parallel
 @item (match_parallel @var{n} @var{predicate} [@var{subpat}@dots{}])
-This pattern is a placeholder for an insn that consists of a
-@code{parallel} expression with a variable number of elements.  This
-expression should only appear at the top level of an insn pattern.
+このパターンは、可変数要素の @code{parallel} 式一個からなる insn の
+プレースホルダーである。
+この式は、insn パターンの最上位レベルにのみ現れるべきである。
 
-When constructing an insn, operand number @var{n} will be substituted at
-this point.  When matching an insn, it matches if the body of the insn
-is a @code{parallel} expression with at least as many elements as the
-vector of @var{subpat} expressions in the @code{match_parallel}, if each
-@var{subpat} matches the corresponding element of the @code{parallel},
-@emph{and} the function @var{predicate} returns nonzero on the
-@code{parallel} that is the body of the insn.  It is the responsibility
-of the predicate to validate elements of the @code{parallel} beyond
-those listed in the @code{match_parallel}.
+insn を構築する際には、オペランド番号 @var{n} がこの点で置き換えられる。
+insn との照合の際には、insn 本体が @code{parallel} 式であり、この
+@code{parallel} 式が、
+少なくとも @code{match_parallel} 中の @var{subpat} 式の insn ベクトルの
+要素数と同じ要素数を持つのであれば、各 @var{subpat} が @code{parallel} の
+対応する要素に一致し、@emph{かつ}、関数 @var{predicate} が insn の本体で
+ある @code{parallel} に対してゼロでない値を返すなら、一致が起きる。
+@code{match_parallel} に列挙されたもの以外の @code{parallel} の要素を
+確認するのは述語の役割である。@refill
 
-A typical use of @code{match_parallel} is to match load and store
-multiple expressions, which can contain a variable number of elements
-in a @code{parallel}.  For example,
+@code{match_parallel} の代表的な使い方は、ロードマルチプル式と
+ストアマルチプル式にマッチさせることである。
+例えば、
 
 @smallexample
 (define_insn ""
@@ -409,13 +423,13 @@ in a @code{parallel}.  For example,
   "loadm 0,0,%1,%2")
 @end smallexample
 
-This example comes from @file{a29k.md}.  The function
-@code{load_multiple_operation} is defined in @file{a29k.c} and checks
-that subsequent elements in the @code{parallel} are the same as the
-@code{set} in the pattern, except that they are referencing subsequent
-registers and memory locations.
+この例は、@file{a29k.md} から取ったものである。
+関数 @code{load_multiple_operations} は、@file{a29k.c} で
+定義されており、@code{parallel} 中の後続の要素が、このパターンの
+中の@code{set} と同じであるかどうかを検査している。
+その要素が、後続のレジスタとメモリ位置を参照している場合を除く。
 
-An insn that matches this pattern might look like:
+このパターンにマッチする insn は以下のような形式である。
 
 @smallexample
 (parallel
@@ -432,9 +446,51 @@ An insn that matches this pattern might look like:
 
 @findex match_par_dup
 @item (match_par_dup @var{n} [@var{subpat}@dots{}])
-Like @code{match_op_dup}, but for @code{match_parallel} instead of
-@code{match_operator}.
+@code{match_op_dup} と同様だが、@code{match_operator} ではなく
+@code{match_parallel} 用である。
 
+@findex match_insn
+@item (match_insn @var{predicate})
+完全な insn にマッチする。他の @code{match_*} 認識器とは異なり、
+@code{match_insn} はオペランド番号を取らない。
+
+@code{match_insn} のマシンモード @var{m} は、@code{match_operand}
+と同様の働きをする。述語関数の第二引数として渡され、
+マッチした式のモードがそのモードになっているかどうかを決定する
+責任はその関数にだけある。
+
+@findex match_insn2
+@item (match_insn2 @var{n} @var{predicate})
+完全な insn にマッチする。
+
+@code{match_insn2} のマシンモード @var{m} は、@code{match_operand}
+と同様の働きをする。述語関数の第二引数として渡され、
+マッチした式のモードがそのモードになっているかどうかを決定する
+責任はその関数にだけある。
+
+@findex address
+@item (address (match_operand:@var{m} @var{n} "address_operand" ""))
+この複雑な式は、「ロードアドレス」命令中のオペランド番号 @var{n} の
+プレースホルダーである。
+このオペランドは普通はメモリ位置を指定するが、実際のオペランド値
+として使われるのはその位置のアドレスであり、その位置の内容ではない。
+
+@code{address} 式は RTL コードには決して現れず、マシン記述でのみ
+使われる。そして、オペランド制約の機能を使わないマシン記述でしか
+使われることがない。
+オペランド制約が使われる場合は、制約の文字 @samp{p} がこの目的を
+果たす。
+
+@var{m} は、@emph{アドレスとなるメモリ位置}のマシンモードであり、
+アドレス自身のマシンモードではない。
+このモードは、ある与えられたターゲットマシン上では常に同じなので
+(@code{Pmode} で、これは普通は @code{SImode} である)、
+それをわざわざ明記する意味はない。
+つまり、@code{address} 式にはマシンモードは書かないのである。
+いつの日か、異なる種類のオブジェクトのアドレスが異なって見えたり、
+(PDP-10 のように)使い方が異なっていたりするマシンがサポートされたら、
+異なる形式はおそらく異なるマシンモードを必要とし、そのモードを
+@code{address} 式に書くことになるだろう。
 @end table
 
 @node Output Template
