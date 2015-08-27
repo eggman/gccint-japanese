@@ -5242,12 +5242,13 @@ RTX からなる。普通は一つだけである。その場合、
 @cindex insn attributes
 @cindex instruction attributes
 
-In addition to describing the instruction supported by the target machine,
-the @file{md} file also defines a group of @dfn{attributes} and a set of
-values for each.  Every generated insn is assigned a value for each attribute.
-One possible attribute would be the effect that the insn has on the machine's
-condition code.  This attribute can then be used by @code{NOTICE_UPDATE_CC}
-to track the condition codes.
+ターゲット機種でサポートされている命令の記述に加えて、
+@file{md} ファイルでは、@dfn{属性} のグループとそれぞれの属性の値を
+定義することも出来る。生成される各 insn には、属性毎に一つの値が
+割り当てられる。取る得る属性の一つとしては、insn がその機種の条件コード
+について持つ効果がある。
+そして、この属性を使って @code{NOTICE_UPDATE_CC} が条件コードを
+追跡することができる。
 
 @menu
 * Defining Attributes:: Specifying attributes and their values.
@@ -5269,193 +5270,115 @@ to track the condition codes.
 @cindex attributes, defining
 
 @findex define_attr
-The @code{define_attr} expression is used to define each attribute required
-by the target machine.  It looks like:
+@code{define_attr} 式を使って、ターゲットマシンで必要とされる
+各属性を定義する。以下のような形式になる。
 
 @smallexample
 (define_attr @var{name} @var{list-of-values} @var{default})
 @end smallexample
 
-@var{name} is a string specifying the name of the attribute being
-defined.  Some attributes are used in a special way by the rest of the
-compiler. The @code{enabled} attribute can be used to conditionally
-enable or disable insn alternatives (@pxref{Disable Insn
-Alternatives}). The @code{predicable} attribute, together with a
-suitable @code{define_cond_exec} , can
-be used to automatically generate conditional variants of instruction
-patterns. The @code{mnemonic} attribute can be used to check for the
-instruction mnemonic (@pxref{Mnemonic Attribute}).  The compiler
-internally uses the names @code{ce_enabled} and @code{nonce_enabled},
-so they should not be used elsewhere as alternative names.
+@var{name} は、定義しようとしている属性の名前を指定する文字列である。
 
-@var{list-of-values} is either a string that specifies a comma-separated
-list of values that can be assigned to the attribute, or a null string to
-indicate that the attribute takes numeric values.
+@var{list-of-values} は、属性に割り当てられる、コンマで区切った値のリスト
+を指定する文字列か、その属性が数値を取ることを示すヌル文字列のどちらかである。
 
-@var{default} is an attribute expression that gives the value of this
-attribute for insns that match patterns whose definition does not include
-an explicit value for this attribute.  @xref{Attr Example}, for more
-information on the handling of defaults.  @xref{Constant Attributes},
-for information on attributes that do not depend on any particular insn.
+@var{default} は、ある属性式であり、この属性に対する明示的な値を
+含まない定義を持つパターンにマッチする insn のこの属性の値を与える。
+デフォルトの扱いについてのもっと詳細な情報は、@xref{Attr Example}。
+特定の insn に依存しない属性についての情報は、@xref{Constant Attributes}。
 
 @findex insn-attr.h
-For each defined attribute, a number of definitions are written to the
-@file{insn-attr.h} file.  For cases where an explicit set of values is
-specified for an attribute, the following are defined:
+定義されている各属性毎に、たくさんの定義がファイル @file{insn-attr.h} に
+書き込まれる。属性に対して明示的な値の組が指定されている場合は、
+以下のように定義されている。
 
 @itemize @bullet
 @item
-A @samp{#define} is written for the symbol @samp{HAVE_ATTR_@var{name}}.
+@samp{#define} が、シンボル @samp{HAVE_ATTR_@var{name}} に対して
+書かれている。
 
 @item
-An enumerated class is defined for @samp{attr_@var{name}} with
-elements of the form @samp{@var{upper-name}_@var{upper-value}} where
-the attribute name and value are first converted to uppercase.
+ある列挙型クラスが @samp{attr_@var{name}} に対して定義される。
+この列挙型の要素は、@samp{@var{upper-name}_@var{upper-value}} という
+形になり、属性名と属性値はまず大文字に変換される。
 
 @item
-A function @samp{get_attr_@var{name}} is defined that is passed an insn and
-returns the attribute value for that insn.
+関数 @samp{get_attr_@var{name}} が定義されており、
+この関数は insn を一つ受取、その insn の属性値を返す。
 @end itemize
 
-For example, if the following is present in the @file{md} file:
+例えば、@file{md} ファイルに以下のように書いてあったとすると、
 
 @smallexample
 (define_attr "type" "branch,fp,load,store,arith" @dots{})
 @end smallexample
 
 @noindent
-the following lines will be written to the file @file{insn-attr.h}.
+ファイル @file{insn-attr.h} には以下のように出力される。
 
 @smallexample
-#define HAVE_ATTR_type 1
+#define HAVE_ATTR_type
 enum attr_type @{TYPE_BRANCH, TYPE_FP, TYPE_LOAD,
                  TYPE_STORE, TYPE_ARITH@};
 extern enum attr_type get_attr_type ();
 @end smallexample
 
-If the attribute takes numeric values, no @code{enum} type will be
-defined and the function to obtain the attribute's value will return
-@code{int}.
+属性が数値を取るなら、@code{enum} 型は定義されず、属性値を取得する
+関数は @code{int} を返す。
 
-There are attributes which are tied to a specific meaning.  These
-attributes are not free to use for other purposes:
-
-@table @code
-@item length
-The @code{length} attribute is used to calculate the length of emitted
-code chunks.  This is especially important when verifying branch
-distances. @xref{Insn Lengths}.
-
-@item enabled
-The @code{enabled} attribute can be defined to prevent certain
-alternatives of an insn definition from being used during code
-generation. @xref{Disable Insn Alternatives}.
-
-@item mnemonic
-The @code{mnemonic} attribute can be defined to implement instruction
-specific checks in e.g. the pipeline description.
-@xref{Mnemonic Attribute}.
-@end table
-
-For each of these special attributes, the corresponding
-@samp{HAVE_ATTR_@var{name}} @samp{#define} is also written when the
-attribute is not defined; in that case, it is defined as @samp{0}.
-
-@findex define_enum_attr
-@anchor{define_enum_attr}
-Another way of defining an attribute is to use:
-
-@smallexample
-(define_enum_attr "@var{attr}" "@var{enum}" @var{default})
-@end smallexample
-
-This works in just the same way as @code{define_attr}, except that
-the list of values is taken from a separate enumeration called
-@var{enum}.  This form allows you to use
-the same list of values for several attributes without having to
-repeat the list each time.  For example:
-
-@smallexample
-(define_enum "processor" [
-  model_a
-  model_b
-  @dots{}
-])
-(define_enum_attr "arch" "processor"
-  (const (symbol_ref "target_arch")))
-(define_enum_attr "tune" "processor"
-  (const (symbol_ref "target_tune")))
-@end smallexample
-
-defines the same attributes as:
-
-@smallexample
-(define_attr "arch" "model_a,model_b,@dots{}"
-  (const (symbol_ref "target_arch")))
-(define_attr "tune" "model_a,model_b,@dots{}"
-  (const (symbol_ref "target_tune")))
-@end smallexample
-
-but without duplicating the processor list.  The second example defines two
-separate C enums (@code{attr_arch} and @code{attr_tune}) whereas the first
-defines a single C enum (@code{processor}).
-@end ifset
 @ifset INTERNALS
 @node Expressions
 @subsection Attribute Expressions
 @cindex attribute expressions
 
-RTL expressions used to define attributes use the codes described above
-plus a few specific to attribute definitions, to be discussed below.
-Attribute value expressions must have one of the following forms:
+属性を定義するのに使われる RTL 式は、前出のコードに加えて、
+以下で議論する、属性定義に固有のコードを幾つか使っている。
+属性値式は、以下の形のどれか一つでなければならない。
 
 @table @code
 @cindex @code{const_int} and attributes
 @item (const_int @var{i})
-The integer @var{i} specifies the value of a numeric attribute.  @var{i}
-must be non-negative.
+整数 @var{i} が、数値属性の値を指定する。
+@var{i} は非負でなければならない。
 
-The value of a numeric attribute can be specified either with a
-@code{const_int}, or as an integer represented as a string in
-@code{const_string}, @code{eq_attr} (see below), @code{attr},
-@code{symbol_ref}, simple arithmetic expressions, and @code{set_attr}
-overrides on specific instructions (@pxref{Tagging Insns}).
+数値属性の値は、@code{const_int} か、@code{const_string} で文字列で
+表現した整数、@code{eq_attr}(以下参照)、@code{attr}、
+@code{symbol_ref}、単純算術式のどれかで指定することができ、
+@code{set_attr} は特定の命令を上書きする(@pxref{Tagging Insns})。
 
 @cindex @code{const_string} and attributes
 @item (const_string @var{value})
-The string @var{value} specifies a constant attribute value.
-If @var{value} is specified as @samp{"*"}, it means that the default value of
-the attribute is to be used for the insn containing this expression.
-@samp{"*"} obviously cannot be used in the @var{default} expression
-of a @code{define_attr}.
+文字列 @var{value} は、定数属性値を指定する。
+@var{value} が @samp{"*"} として指定されると、
+その属性のデフォルト値が、この式を含む insn に対して使われることを意味する。
+@samp{"*"} は、明らかに、@code{define_attr} の @var{default} 式で使うことは
+できない。@refill
 
-If the attribute whose value is being specified is numeric, @var{value}
-must be a string containing a non-negative integer (normally
-@code{const_int} would be used in this case).  Otherwise, it must
-contain one of the valid values for the attribute.
+値が指定されている属性が数値的なら、@var{value} は非負の整数
+(この場合、普通 @code{const_int})を含む文字列でなければならない。
+数値的でなければ、その属性に対して有効な値の一つを含んでいなければならない。
 
 @cindex @code{if_then_else} and attributes
 @item (if_then_else @var{test} @var{true-value} @var{false-value})
-@var{test} specifies an attribute test, whose format is defined below.
-The value of this expression is @var{true-value} if @var{test} is true,
-otherwise it is @var{false-value}.
+@var{test} は属性テストを指定する。その形式は以下で定義される。
+この式の値は、@var{test} が真であれば @var{true-value} であり、
+真でなければ @var{false-value} となる。
 
 @cindex @code{cond} and attributes
 @item (cond [@var{test1} @var{value1} @dots{}] @var{default})
-The first operand of this expression is a vector containing an even
-number of expressions and consisting of pairs of @var{test} and @var{value}
-expressions.  The value of the @code{cond} expression is that of the
-@var{value} corresponding to the first true @var{test} expression.  If
-none of the @var{test} expressions are true, the value of the @code{cond}
-expression is that of the @var{default} expression.
+この式の第一オペランドはあるベクトルであり、偶数個の式をもち、
+@var{test} 式と @var{value} 式の対からなる。@code{cond} 式の値は
+最初の真である @var{test} 式に対応する値のものである。真となる @var{test}
+式がない場合は、@code{cond} 式の値は @var{default} 式の値である。
 @end table
 
-@var{test} expressions can have one of the following forms:
+@var{test} 式は、以下の形のうちの一つを取る。
 
 @table @code
 @cindex @code{const_int} and attribute tests
 @item (const_int @var{i})
-This test is true if @var{i} is nonzero and false otherwise.
+このテストは、@var{i} がゼロでなければ真になり、さもなければ
+偽になる。
 
 @cindex @code{not} and attributes
 @cindex @code{ior} and attributes
@@ -5463,42 +5386,18 @@ This test is true if @var{i} is nonzero and false otherwise.
 @item (not @var{test})
 @itemx (ior @var{test1} @var{test2})
 @itemx (and @var{test1} @var{test2})
-These tests are true if the indicated logical function is true.
+これらのテストは、指定された論理関数が真になれば、真である。
 
 @cindex @code{match_operand} and attributes
 @item (match_operand:@var{m} @var{n} @var{pred} @var{constraints})
-This test is true if operand @var{n} of the insn whose attribute value
-is being determined has mode @var{m} (this part of the test is ignored
-if @var{m} is @code{VOIDmode}) and the function specified by the string
-@var{pred} returns a nonzero value when passed operand @var{n} and mode
-@var{m} (this part of the test is ignored if @var{pred} is the null
-string).
+このテストは、属性値が決定されようとしている insn のオペランド
+@var{n} のモードが @var{m} であり(テストのこの部分は、@var{m} が
+@code{VOIDmode} なら無視される)、かつ文字列 @var{pred} で指定される
+関数が、オペランド @var{n} とモード @var{m} を渡したときに
+ゼロでない値を返したときに、真になる(テストのこの部分は、
+@var{pred} がヌル文字列なら無視される)。
 
-The @var{constraints} operand is ignored and should be the null string.
-
-@cindex @code{match_test} and attributes
-@item (match_test @var{c-expr})
-The test is true if C expression @var{c-expr} is true.  In non-constant
-attributes, @var{c-expr} has access to the following variables:
-
-@table @var
-@item insn
-The rtl instruction under test.
-@item which_alternative
-The @code{define_insn} alternative that @var{insn} matches.
-@xref{Output Statement}.
-@item operands
-An array of @var{insn}'s rtl operands.
-@end table
-
-@var{c-expr} behaves like the condition in a C @code{if} statement,
-so there is no need to explicitly convert the expression into a boolean
-0 or 1 value.  For example, the following two tests are equivalent:
-
-@smallexample
-(match_test "x & 2")
-(match_test "(x & 2) != 0")
-@end smallexample
+オペランド @var{constraints} は無視されるので、ヌル文字列とすべきである。
 
 @cindex @code{le} and attributes
 @cindex @code{leu} and attributes
@@ -5529,78 +5428,85 @@ so there is no need to explicitly convert the expression into a boolean
 @itemx (geu @var{arith1} @var{arith2})
 @itemx (ne @var{arith1} @var{arith2})
 @itemx (eq @var{arith1} @var{arith2})
-These tests are true if the indicated comparison of the two arithmetic
-expressions is true.  Arithmetic expressions are formed with
-@code{plus}, @code{minus}, @code{mult}, @code{div}, @code{mod},
-@code{abs}, @code{neg}, @code{and}, @code{ior}, @code{xor}, @code{not},
-@code{ashift}, @code{lshiftrt}, and @code{ashiftrt} expressions.
+これらのテストは、二つの算術式について指定された比較の結果が真になれば、
+真となる。算術式は、
+@code{plus}、@code{minus}、@code{mult}、@code{div}、@code{mod}、
+@code{abs}、@code{neg}、@code{and}、@code{ior}、@code{xor}、@code{not}、
+@code{ashift}、@code{lshiftrt}、@code{ashiftrt} といった式から
+構成される。@refill
 
 @findex get_attr
-@code{const_int} and @code{symbol_ref} are always valid terms (@pxref{Insn
-Lengths},for additional forms).  @code{symbol_ref} is a string
-denoting a C expression that yields an @code{int} when evaluated by the
-@samp{get_attr_@dots{}} routine.  It should normally be a global
-variable.
+@code{const_int} と @code{symbol_ref} は常に有効な項である
+(追加の形式については @pxref{Insn Lengths})。
+@code{symbol_ref} は一個の文字列であり、一個の C の式を示す。
+この式は、@samp{get_attr_@dots{}} ルーチン
+で評価されたときに @code{int} を生じる。普通はグローバル変数に
+ならないといけない。@refill
 
 @findex eq_attr
 @item (eq_attr @var{name} @var{value})
-@var{name} is a string specifying the name of an attribute.
+@var{name} は、属性名を指定する文字列である。
 
-@var{value} is a string that is either a valid value for attribute
-@var{name}, a comma-separated list of values, or @samp{!} followed by a
-value or list.  If @var{value} does not begin with a @samp{!}, this
-test is true if the value of the @var{name} attribute of the current
-insn is in the list specified by @var{value}.  If @var{value} begins
-with a @samp{!}, this test is true if the attribute's value is
-@emph{not} in the specified list.
+@var{value} は文字列であり、属性 @var{name} の有効な値であるか、
+幾つかの値をカンマで区切ったリストか、あるいは @samp{!} の後に
+一個の値か値のリストを続けたものである。
+@var{value} が @samp{!} で始まっていなければ、このテストは、現在の insn の
+属性 @var{name} の値が @var{value} で指定されたリストの中に
+入っていれば、真となる。@var{value} が @samp{!} で始まっていると、
+このテストは属性値が指定されたリストに入って@emph{いない}時に真となる。
 
-For example,
+例えば
 
 @smallexample
 (eq_attr "type" "load,store")
 @end smallexample
 
 @noindent
-is equivalent to
+は、次の式に等価である。
 
 @smallexample
 (ior (eq_attr "type" "load") (eq_attr "type" "store"))
 @end smallexample
 
-If @var{name} specifies an attribute of @samp{alternative}, it refers to the
-value of the compiler variable @code{which_alternative}
-(@pxref{Output Statement}) and the values must be small integers.  For
-example,
+@var{name} が @samp{alternative} の属性を指定するものなら、それは
+GNU CC の変数 @code{which_alternative} の値を参照し
+(@pxref{Output Statement})、その値は小さな整数でなくてはならない。
+例えば、@refill
 
 @smallexample
 (eq_attr "alternative" "2,3")
 @end smallexample
 
 @noindent
-is equivalent to
+は、次の式に等価である。
 
 @smallexample
 (ior (eq (symbol_ref "which_alternative") (const_int 2))
      (eq (symbol_ref "which_alternative") (const_int 3)))
 @end smallexample
 
-Note that, for most attributes, an @code{eq_attr} test is simplified in cases
-where the value of the attribute being tested is known for all insns matching
-a particular pattern.  This is by far the most common case.
+ほとんどの属性に対して、テスト @code{eq_attr} は、
+テストされる属性の値が、ある特定のパターンにマッチする全ての insn に
+対して知られているなら、簡略化される。これは非常に良くあるケースである。@refill
 
 @findex attr_flag
 @item (attr_flag @var{name})
-The value of an @code{attr_flag} expression is true if the flag
-specified by @var{name} is true for the @code{insn} currently being
-scheduled.
+@code{attr_flag} 式の値は、@var{name} で指定されたフラグが
+現在スケジューリング中の @code{insn} に対して真になるなら、真となる。
 
-@var{name} is a string specifying one of a fixed set of flags to test.
-Test the flags @code{forward} and @code{backward} to determine the
-direction of a conditional branch.
+@var{name} はある文字列であり、テストすべきフラグの固定したセットを
+一つ指定する。フラグ @code{forward} と @code{backward} を
+テストして、条件分岐の方向を決定する。フラグ @code{very_likery}、
+@code{likely}、@code{very_unlikely}、@code{unlikely} をテストして、
+条件分岐が成立すると予想されるかどうかを決定する。
 
-This example describes a conditional branch delay slot which
-can be nullified for forward branches that are taken (annul-true) or
-for backward branches which are not taken (annul-false).
+フラグ @code{very_likely} が真なら、フラグ @code{likely} もまた
+真になる。@code{very_unlikely} と @code{unlikely} についても同様である。
+
+この例では、条件分岐の遅延スロットを記述している。
+このスロットは、分岐が成立する前方への分岐(真の無効化)か
+分岐が成立しない場合の後方への分岐(偽の無効化)が無効化される。
+
 
 @smallexample
 (define_delay (eq_attr "type" "cbranch")
@@ -5611,17 +5517,22 @@ for backward branches which are not taken (annul-false).
         (attr_flag "backward"))])
 @end smallexample
 
-The @code{forward} and @code{backward} flags are false if the current
-@code{insn} being scheduled is not a conditional branch.
+フラグ @code{forward} と @code{backward} は、現在スケジュールされつつある
+@code{insn} が条件分岐でなければ、偽になる。
 
-@code{attr_flag} is only used during delay slot scheduling and has no
-meaning to other passes of the compiler.
+フラグ @code{very_likely} と @code{likely} は、スケジュールされつつある
+@code{insn} が条件分岐でなければ、真になる。
+フラグ @code{very_unlikely} と @code{unlikely} は、スケジュールされつつある
+@code{insn} が条件分岐でなければ、偽になる。
+
+@code{attr_flag} は、遅延スロットスケジューリングの間でだけ使われ、
+他のパスには何の意味も持たない。
 
 @findex attr
 @item (attr @var{name})
-The value of another attribute is returned.  This is most useful
-for numeric attributes, as @code{eq_attr} and @code{attr_flag}
-produce more efficient code for non-numeric attributes.
+別の属性の値を返す。数値属性に対して最も役に立つが、
+同様に、非数値属性にたいしても @code{eq_attr} と @code{attr_flag} が
+より効率の良いコードを生成する助けとなる。
 @end table
 
 @end ifset
