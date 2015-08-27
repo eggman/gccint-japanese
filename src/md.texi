@@ -1068,18 +1068,18 @@ insn のパターンが、その制約に複数の選択肢を持つ場合は、
 @cindex register class preference constraints
 
 @cindex voting between constraint alternatives
-The operand constraints have another function: they enable the compiler
-to decide which kind of hardware register a pseudo register is best
-allocated to.  The compiler examines the constraints that apply to the
-insns that use the pseudo register, looking for the machine-dependent
-letters such as @samp{d} and @samp{a} that specify classes of registers.
-The pseudo register is put in whichever class gets the most ``votes''.
-The constraint letters @samp{g} and @samp{r} also vote: they vote in
-favor of a general register.  The machine description says which registers
-are considered general.
+オペランド制約にはもう一つの機能がある。
+コンパイラが、疑似レジスタを割り当てるのにどの種類のハードウェアレジスタが
+最適かを決定することを可能にする。
+コンパイラは疑似レジスタを使っている insn に適用される制約を調べ、
+レジスタクラスを指定する @samp{d} や @samp{a} のような機種依存文字を
+探す。疑似レジスタは、最も「得票」の多いクラスに置かれる。
+制約文字 @samp{g} と @samp{r} も投票する。汎用レジスタの好みについて
+投票するのである。マシン記述がどのレジスタが汎用と考えられるかを
+指定する。
 
-Of course, on some machines all registers are equivalent, and no register
-classes are defined.  Then none of this complexity is relevant.
+当然、機種によっては全てのレジスタが等価であり、レジスタクラスが定義されない
+場合もある。その場合には、上記のような複雑さは関係なくなる。
 @end ifset
 
 @node Modifiers
@@ -1088,69 +1088,55 @@ classes are defined.  Then none of this complexity is relevant.
 @cindex constraint modifier characters
 
 @c prevent bad page break with this line
-Here are constraint modifier characters.
+以下に制約の修飾子となる文字を示す。
 
 @table @samp
 @cindex @samp{=} in constraint
 @item =
-Means that this operand is written to by this instruction:
-the previous value is discarded and replaced by new data.
+オペランドが書き込み専用であることを意味する。このオペランドに
+以前保持されていた値は捨てられ、出力データで置き換えられる。
 
 @cindex @samp{+} in constraint
 @item +
-Means that this operand is both read and written by the instruction.
+オペランドが読み込みと書き込みの両方に使われることを意味する。
 
-When the compiler fixes up the operands to satisfy the constraints,
-it needs to know which operands are read by the instruction and
-which are written by it.  @samp{=} identifies an operand which is only
-written; @samp{+} identifies an operand that is both read and written; all
-other operands are assumed to only be read.
-
-If you specify @samp{=} or @samp{+} in a constraint, you put it in the
-first character of the constraint string.
+コンパイラが、オペランドを制約を満たすように修正する際に、
+どのオペランドが命令に対する入力で、どのオペランドが出力かを
+知っている必要がある。@samp{=} は、出力であることを示す。
+@samp{+} は、オペランドが入力と出力の両方に使われることを示す。
+それ以外のオペランドは入力専用と仮定される。
 
 @cindex @samp{&} in constraint
 @cindex earlyclobber operand
 @item &
-Means (in a particular alternative) that this operand is an
-@dfn{earlyclobber} operand, which is written before the instruction is
-finished using the input operands.  Therefore, this operand may not lie
-in a register that is read by the instruction or as part of any memory
-address.
+(ある特定の選択肢において)このオペランドが@dfn{早期破壊}
+オペランドであることを意味する。早期破壊オペランドとは、
+命令が入力オペランドを使い終わる前に変更されるオペランドである。
+このため、このオペランドは、入力オペランドや任意のメモリアドレスの一部
+として使われるレジスタには置かれない。
 
-@samp{&} applies only to the alternative in which it is written.  In
-constraints with multiple alternatives, sometimes one alternative
-requires @samp{&} while others do not.  See, for example, the
-@samp{movdf} insn of the 68000.
+@samp{&} は、記述されている選択肢に対してしか適用されない。
+複数の選択肢のある制約では、一つの選択肢は @samp{&} を必要とするが
+他の選択肢は必要としないということが時々ある。
+そういう例については、68000 の @samp{movdf} insn を参照のこと。
 
-A operand which is read by the instruction can be tied to an earlyclobber
-operand if its only use as an input occurs before the early result is
-written.  Adding alternatives of this form often allows GCC to produce
-better code when only some of the read operands can be affected by the
-earlyclobber. See, for example, the @samp{mulsi3} insn of the ARM@.
+入力オペランドは、それが入力として使われるのが以前の結果が書き込まれる
+前なら、早期破壊オペランドに結び付けることができる。
+この形式の選択肢を追加すると、入力の一部しか早期破壊により影響
+を受けない場合は、GCC の生成するコードが良くなることが多い。
+例えば、ARM の @samp{mulsi3} insn を参照のこと。
 
-Furthermore, if the @dfn{earlyclobber} operand is also a read/write
-operand, then that operand is written only after it's used.
-
-@samp{&} does not obviate the need to write @samp{=} or @samp{+}.  As
-@dfn{earlyclobber} operands are always written, a read-only
-@dfn{earlyclobber} operand is ill-formed and will be rejected by the
-compiler.
+@samp{&} があっても、@samp{=} を書く必要はなくならない。
 
 @cindex @samp{%} in constraint
 @item %
-Declares the instruction to be commutative for this operand and the
-following operand.  This means that the compiler may interchange the
-two operands if that is the cheapest way to make all operands fit the
-constraints.  @samp{%} applies to all alternatives and must appear as
-the first character in the constraint.  Only read-only operands can use
-@samp{%}.
-
+このオペランドと次のオペランドが交換可能であることを指示する。
+これは、コンパイラにとって、二つのオペランドを交換するのが
+全ての制約を満たすようにするには最もコストの低い方法であれば、
+その方法を取ることを可能にする。
 @ifset INTERNALS
-This is often used in patterns for addition instructions
-that really have only two operands: the result must go in one of the
-arguments.  Here for example, is how the 68000 halfword-add
-instruction is defined:
+この制約は、オペランドを二つしか取らない加算命令向けのパターンで
+良く使われる。以下に、68000 の半語の加算命令の定義例を示す。
 
 @smallexample
 (define_insn "addhi3"
@@ -1160,37 +1146,25 @@ instruction is defined:
   @dots{})
 @end smallexample
 @end ifset
-GCC can only handle one commutative pair in an asm; if you use more,
-the compiler may fail.  Note that you need not use the modifier if
-the two alternatives are strictly identical; this would only waste
-time in the reload pass.  The modifier is not operational after
-register allocation, so the result of @code{define_peephole2}
-and @code{define_split}s performed after reload cannot rely on
-@samp{%} to make the intended insn match.
 
 @cindex @samp{#} in constraint
 @item #
-Says that all following characters, up to the next comma, are to be
-ignored as a constraint.  They are significant only for choosing
-register preferences.
-
-@cindex @samp{*} in constraint
-@item *
-Says that the following character should be ignored when choosing
-register preferences.  @samp{*} has no effect on the meaning of the
-constraint as a constraint, and no effect on reloading.  For LRA
-@samp{*} additionally disparages slightly the alternative if the
-following character matches the operand.
+次に続く文字からコンマまでの全ての文字を制約としては使わないことを
+示す。それらの文字は、レジスタ選択でのみ意味を持つ。
 
 @ifset INTERNALS
-Here is an example: the 68000 has an instruction to sign-extend a
-halfword in a data register, and can also sign-extend a value by
-copying it into an address register.  While either kind of register is
-acceptable, the constraints on an address-register destination are
-less strict, so it is best if register allocation makes an address
-register its goal.  Therefore, @samp{*} is used so that the @samp{d}
-constraint letter (for data register) is ignored when computing
-register preferences.
+@cindex @samp{*} in constraint
+@item *
+次に続く文字がレジスタ選択の際には無視されることを示す。
+@samp{*} は、制約としての制限の意味と再ロードには影響を与えない。
+
+次に例を示す。68000 は、データ・レジスタ中の半語を符号拡張する命令を
+持っており、また、アドレス・レジスタにコピーすることで符号拡張を
+行なうことも出来る。どちらの種類のレジスタも受け入れ可能な場合、
+アドレスレジスタをコピー先とした場合の制約がより限定が緩いので、
+レジスタ割当がアドレスレジスタを最終目標とするのが最適である。
+このため、@samp{*} を使って、制約文字 @samp{d} (データレジスタ用)が
+好ましいレジスタを選択するときには無視されるようにする。
 
 @smallexample
 (define_insn "extendhisi2"
