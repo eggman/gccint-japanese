@@ -995,19 +995,19 @@ GNU CC が異常終了する。
 @subsection Multiple Alternative Constraints
 @cindex multiple alternative constraints
 
-Sometimes a single instruction has multiple alternative sets of possible
-operands.  For example, on the 68000, a logical-or instruction can combine
-register or an immediate value into memory, or it can combine any kind of
-operand into a register; but it cannot combine one memory location into
-another.
+一個の命令が可能なオペランドの複数の選択肢の組を持つことが時々ある。
+例えば、68000 では論理和命令はレジスタか即値をメモリと組み合わせることが
+できる。あるいは、任意の種類のオペランドをレジスタと組み合わせることができる。
+だが、一つのメモリ位置をもう一つのメモリ位置と組み合わせることはできない。
 
-These constraints are represented as multiple alternatives.  An alternative
-can be described by a series of letters for each operand.  The overall
-constraint for an operand is made from the letters for this operand
-from the first alternative, a comma, the letters for this operand from
-the second alternative, a comma, and so on until the last alternative.
+このような制約は複数の選択肢として表現される。ある選択肢は、
+各オペランド毎に、文字の連なりで記述される。あるオペランドに対する
+制約は全体としては、最初の選択肢に現れるこのオペランド用の文字、カンマ、
+第二の選択肢に現れるこのオペランド用の文字、カンマ、... が最後の選択肢
+まで続く。
 @ifset INTERNALS
-Here is how it is done for fullword logical-or on the 68000:
+これが、68000 の全ワードの論理和命令ではどのようになされているかを
+以下に示す。
 
 @smallexample
 (define_insn "iorsi3"
@@ -1017,58 +1017,48 @@ Here is how it is done for fullword logical-or on the 68000:
   @dots{})
 @end smallexample
 
-The first alternative has @samp{m} (memory) for operand 0, @samp{0} for
-operand 1 (meaning it must match operand 0), and @samp{dKs} for operand
-2.  The second alternative has @samp{d} (data register) for operand 0,
-@samp{0} for operand 1, and @samp{dmKs} for operand 2.  The @samp{=} and
-@samp{%} in the constraints apply to all the alternatives; their
-meaning is explained in the next section (@pxref{Class Preferences}).
+最初の選択肢は、オペランド0には @samp{m}(メモリ)、オペランド 1 には
+@samp{0}(これはオペランド 0 に一致しなければならないことを意味する)、
+オペランド 2 には @samp{dKs} となる。
+第二の選択肢は、オペランド0には @samp{d}(データ・レジスタ)、
+オペランド 1 には @samp{0}、オペランド 2 には @samp{dmKs} となる。
+制約中の @samp{=} と @samp{%} は全選択肢に適用される。
+それらの意味は次の節 (@pxref{Class Preferences})で説明する。
 @end ifset
 
 @c FIXME Is this ? and ! stuff of use in asm()?  If not, hide unless INTERNAL
-If all the operands fit any one alternative, the instruction is valid.
-Otherwise, for each alternative, the compiler counts how many instructions
-must be added to copy the operands so that that alternative applies.
-The alternative requiring the least copying is chosen.  If two alternatives
-need the same amount of copying, the one that comes first is chosen.
-These choices can be altered with the @samp{?} and @samp{!} characters:
+全てのオペランドがどれか一つの選択肢に収まれば、その命令は有効である。
+収まらない場合には、選択肢毎に、コンパイラが、選択肢を適用可能にするためには、
+オペランドをコピーするための命令を幾つ追加しなければならないかを数え上げる。
+最もコピーが少なくて済む選択肢が選ばれる。もし二つの選択肢のコピー数が
+同じなら、先に現れるものが選ばれる。この選択方法は文字 @samp{?} と
+@samp{1} を使って変えることが出来る。
 
 @table @code
 @cindex @samp{?} in constraint
 @cindex question mark
 @item ?
-Disparage slightly the alternative that the @samp{?} appears in,
-as a choice when no alternative applies exactly.  The compiler regards
-this alternative as one unit more costly for each @samp{?} that appears
-in it.
+どの選択肢も厳密には適用できないときの選択として、
+@samp{?} が現れる選択肢をちょっとだけ低く評価する。
+GNU CC は、この選択肢を、そこに現れる @samp{?} 毎に、一単位分コストが
+余計にかかるとみなす。
 
 @cindex @samp{!} in constraint
 @cindex exclamation point
 @item !
-Disparage severely the alternative that the @samp{!} appears in.
-This alternative can still be used if it fits without reloading,
-but if reloading is needed, some other alternative will be used.
-
-@cindex @samp{^} in constraint
-@cindex caret
-@item ^
-This constraint is analogous to @samp{?} but it disparages slightly
-the alternative only if the operand with the @samp{^} needs a reload.
-
-@cindex @samp{$} in constraint
-@cindex dollar sign
-@item $
-This constraint is analogous to @samp{!} but it disparages severely
-the alternative only if the operand with the @samp{$} needs a reload.
+@samp{!}が現れる選択肢を大幅に低く評価する。
+この選択肢は再ロードなしで収まる場合には依然として使うことができるが、
+再ロードが必要な場合は、何か他の選択肢が使われる。
 @end table
 
 @ifset INTERNALS
-When an insn pattern has multiple alternatives in its constraints, often
-the appearance of the assembler code is determined mostly by which
-alternative was matched.  When this is so, the C code for writing the
-assembler code can use the variable @code{which_alternative}, which is
-the ordinal number of the alternative that was actually satisfied (0 for
-the first, 1 for the second alternative, etc.).  @xref{Output Statement}.
+insn のパターンが、その制約に複数の選択肢を持つ場合は、
+アセンブラコードの見た目は、どの選択肢が一致したかによりほとんどの場合
+決まる。その場合は、アセンブラコードを書き出す C のコードで、
+変数 @code{which_alternative} を使うことが出来る。
+@code{which_alternative} は、何番目の選択肢が実際に満たされるかを
+示す番号である。第一の選択肢は 0、第二の選択肢は 1 といった具合である。
+@xref{Output Statement}。
 @end ifset
 
 @ifset INTERNALS
