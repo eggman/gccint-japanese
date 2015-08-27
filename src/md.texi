@@ -5326,6 +5326,7 @@ extern enum attr_type get_attr_type ();
 属性が数値を取るなら、@code{enum} 型は定義されず、属性値を取得する
 関数は @code{int} を返す。
 
+@end ifset
 @ifset INTERNALS
 @node Expressions
 @subsection Attribute Expressions
@@ -5542,66 +5543,60 @@ GNU CC の変数 @code{which_alternative} の値を参照し
 @cindex tagging insns
 @cindex assigning attribute values to insns
 
-The value assigned to an attribute of an insn is primarily determined by
-which pattern is matched by that insn (or which @code{define_peephole}
-generated it).  Every @code{define_insn} and @code{define_peephole} can
-have an optional last argument to specify the values of attributes for
-matching insns.  The value of any attribute not specified in a particular
-insn is set to the default value for that attribute, as specified in its
-@code{define_attr}.  Extensive use of default values for attributes
-permits the specification of the values for only one or two attributes
-in the definition of most insn patterns, as seen in the example in the
-next section.
+ある insn のある属性に割り当てられる値は、主に、その insn により照合される
+(あるいは @code{define_peephole} が生成する)パターンにより決定される。
+各 @code{define_insn} と @code{define_peephole} は、オプションの最後の
+引数を持つことができ、一致する insn の属性値を指定することができる。
+ある特定の insn において指定されていない属性値は全て、その属性の
+デフォルト値に設定される。このデフォルト値は、その属性の @code{define_attr} で
+指定される。属性のデフォルト値を多用すると、ほとんどの insn パターンの
+定義で一つか二つの属性値を指定するだけで済む。次の節の例を参照のこと。
 
-The optional last argument of @code{define_insn} and
-@code{define_peephole} is a vector of expressions, each of which defines
-the value for a single attribute.  The most general way of assigning an
-attribute's value is to use a @code{set} expression whose first operand is an
-@code{attr} expression giving the name of the attribute being set.  The
-second operand of the @code{set} is an attribute expression
-(@pxref{Expressions}) giving the value of the attribute.
+@code{define_insn} と @code{define_peephole} の最後のオプションの引数は、
+式のベクトルであり、それぞれの式がある一個の属性の値を定義する。
+属性値を割り当てる最も一般的な方法は、@code{set} 式を使い、その第一
+オペランドを設定する属性名を与える @code{attr} 式とすることである。
+この @code{set} 式の第二のオペランドは属性式(@pxref{Expressions})であり、
+属性の値を与える。@refill
 
-When the attribute value depends on the @samp{alternative} attribute
-(i.e., which is the applicable alternative in the constraint of the
-insn), the @code{set_attr_alternative} expression can be used.  It
-allows the specification of a vector of attribute expressions, one for
-each alternative.
+属性値が属性 @samp{alternaitve} に依存するとき(すなわち、それが、
+その insn の制約にある利用可能な選択肢である)は、
+@code{set_attr_alternative} 式を使うことができる。
+これは属性式のベクトルを指定することを許す。ベクトルの中の
+それぞれの式が各属性を表す。
 
 @findex set_attr
-When the generality of arbitrary attribute expressions is not required,
-the simpler @code{set_attr} expression can be used, which allows
-specifying a string giving either a single attribute value or a list
-of attribute values, one for each alternative.
+任意の属性式ほど一般的な機能が必要ない場合、もっと簡単な 
+@code{set_attr} 式を使うことができる。この式を使うと、
+一個の文字列を指定することで、一個の属性値か、あるいは各選択肢毎に
+一個の属性値を与えるリストを表すことができる。
 
-The form of each of the above specifications is shown below.  In each case,
-@var{name} is a string specifying the attribute to be set.
+上記の指定方法をそれぞれ以下に示す。
+どちらの場合も、@var{name} は、設定すべき属性を指定する文字列である。
 
 @table @code
 @item (set_attr @var{name} @var{value-string})
-@var{value-string} is either a string giving the desired attribute value,
-or a string containing a comma-separated list giving the values for
-succeeding alternatives.  The number of elements must match the number
-of alternatives in the constraint of the insn pattern.
+@var{value-string} は、希望の属性値を与える文字列か、あるいは
+一連の属性値をカンマで区切ったリストを表す文字列である。
+この要素数は、insn パターンの制約の選択肢数と一致しなければならない。
 
-Note that it may be useful to specify @samp{*} for some alternative, in
-which case the attribute will assume its default value for insns matching
-that alternative.
+選択肢のどれかに @samp{*} を指定することができる。
+その場合、属性値は、その選択肢にマッチする insn のデフォルト値になる。
 
 @findex set_attr_alternative
 @item (set_attr_alternative @var{name} [@var{value1} @var{value2} @dots{}])
-Depending on the alternative of the insn, the value will be one of the
-specified values.  This is a shorthand for using a @code{cond} with
-tests on the @samp{alternative} attribute.
+insn の選択肢により、この値は指定された値のうちの一つになる。
+これは、属性 @samp{alternative} の @code{cond} を使ってのテストの
+省略形である。
 
 @findex attr
 @item (set (attr @var{name}) @var{value})
-The first operand of this @code{set} must be the special RTL expression
-@code{attr}, whose sole operand is a string giving the name of the
-attribute being set.  @var{value} is the value of the attribute.
+この @code{set} の第一オペランドは、特別な RTL 式 である @code{attr} 式で
+なければならない。この式の唯一のオペランドは、設定する属性の名前を
+指定する文字列である。@var{value} は、その属性の値である。
 @end table
 
-The following shows three different ways of representing the same
-attribute value specification:
+以下に同じ属性値の指定を表す、三つの異なる方法を示す。
 
 @smallexample
 (set_attr "type" "load,store,arith")
@@ -5618,29 +5613,29 @@ attribute value specification:
 
 @need 1000
 @findex define_asm_attributes
-The @code{define_asm_attributes} expression provides a mechanism to
-specify the attributes assigned to insns produced from an @code{asm}
-statement.  It has the form:
+@code{define_asm_attributes} 式は、@code{asm} 文から生成された
+insn に割り当てられた属性を指定する方法を提供する。
+次の形を取る。
 
 @smallexample
 (define_asm_attributes [@var{attr-sets}])
 @end smallexample
 
 @noindent
-where @var{attr-sets} is specified the same as for both the
-@code{define_insn} and the @code{define_peephole} expressions.
+ここで、@var{atr-sets} は、@code{define_insn} や @code{define_peephole} 式
+両方に指定するのと同じものである。
 
-These values will typically be the ``worst case'' attribute values.  For
-example, they might indicate that the condition code will be clobbered.
+これらの値は、普通はその属性値の「最悪の場合」になる。
+例えば、条件コードが破壊されることを示したりする。
 
-A specification for a @code{length} attribute is handled specially.  The
-way to compute the length of an @code{asm} insn is to multiply the
-length specified in the expression @code{define_asm_attributes} by the
-number of machine instructions specified in the @code{asm} statement,
-determined by counting the number of semicolons and newlines in the
-string.  Therefore, the value of the @code{length} attribute specified
-in a @code{define_asm_attributes} should be the maximum possible length
-of a single machine instruction.
+@code{length} 属性の指定は特別に扱われる。
+一個の @code{asm} insn の長さを計算するには、
+式 @code{define_asm_attributes} で指定された長さに、
+@code{asm} 文に指定されている機械命令の数を掛けたものになる。
+@code{asm} 文中の機械命令数は、命令文字列中のセミコロンと改行の
+数で決まる。このため、@code{define_asm_attributes} で指定される
+@code{length} 属性の値は、一個の機械命令の可能な最大長にしなくては
+ならない
 
 @end ifset
 @ifset INTERNALS
@@ -5649,25 +5644,25 @@ of a single machine instruction.
 @cindex attribute specifications example
 @cindex attribute specifications
 
-The judicious use of defaulting is important in the efficient use of
-insn attributes.  Typically, insns are divided into @dfn{types} and an
-attribute, customarily called @code{type}, is used to represent this
-value.  This attribute is normally used only to define the default value
-for other attributes.  An example will clarify this usage.
+デフォルトをうまく使うのが、insn の属性を効率良く使うには重要である。
+通常、insn は @dfn{types} と、@code{type} と呼ばれている属性に分けられる。
+@code{type} は、このデフォルト値を表すのに使われる。
+この属性は、普通は他の属性のデフォルト値を定義するのにしか使われない。
+例を使ってこの属性の使い方を説明する。
 
-Assume we have a RISC machine with a condition code and in which only
-full-word operations are performed in registers.  Let us assume that we
-can divide all insns into loads, stores, (integer) arithmetic
-operations, floating point operations, and branches.
+ある RISC マシンを考えよう。このマシンには条件コードがあり、
+レジスタで実行されるのは全語の演算だけである。
+全ての命令をロード、ストア、(整数)算術演算、浮動小数点演算、分岐に
+分割できるとしよう。
 
-Here we will concern ourselves with determining the effect of an insn on
-the condition code and will limit ourselves to the following possible
-effects:  The condition code can be set unpredictably (clobbered), not
-be changed, be set to agree with the results of the operation, or only
-changed if the item previously set into the condition code has been
-modified.
+ここでは、ある insn の条件コードに対する効果を決定することに
+注意を集中することにし、さらに可能な効果として次のものに限定する。
+条件コードは、予測できない形で設定され得る(破壊される)、
+変更されない、演算結果に一致するように設定される、
+以前に条件コードに設定した項目が修正されたときにのみ
+変更される。
 
-Here is part of a sample @file{md} file for such a machine:
+そういう機種用の @file{md} ファイルの例の一部を示す
 
 @smallexample
 (define_attr "type" "load,store,arith,fp,branch" (const_string "arith"))
@@ -5694,10 +5689,9 @@ Here is part of a sample @file{md} file for such a machine:
   [(set_attr "type" "arith,load,store")])
 @end smallexample
 
-Note that we assume in the above example that arithmetic operations
-performed on quantities smaller than a machine word clobber the condition
-code since they will set the condition code to a value corresponding to the
-full-word result.
+上の例で我々は、マシンワードより小さな量について算術演算を実行すると、
+それにより条件コードに全ワードの結果に対応する値を設定するので、
+条件コードが破壊されると仮定していることに注意。
 
 @end ifset
 @ifset INTERNALS
