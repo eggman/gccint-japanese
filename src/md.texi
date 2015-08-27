@@ -4866,35 +4866,35 @@ GCC に問題が起きるのを回避する。
 @cindex instruction splitting
 @cindex splitting instructions
 
-There are two cases where you should specify how to split a pattern
-into multiple insns.  On machines that have instructions requiring
-delay slots (@pxref{Delay Slots}) or that have instructions whose
-output is not available for multiple cycles (@pxref{Processor pipeline
-description}), the compiler phases that optimize these cases need to
-be able to move insns into one-instruction delay slots.  However, some
-insns may generate more than one machine instruction.  These insns
-cannot be placed into a delay slot.
+あるパターンを複数の insn に分割する方法を指定しなければならない場合が
+二つある。遅延スロット(@pxref{Delay Slots})を必要とする命令や
+出力が複数サイクルの間利用できない命令(@pxref{Function Units})を
+持つ機種では、これらのケースを最適化するコンパイラフェーズでは、
+insn を一つの命令の遅延スロットに移動できる必要がある。しかし、
+insn の中には複数の機械命令を生成するものもある。そういう insn は
+遅延スロットに置くことはできない。
 
-Often you can rewrite the single insn as a list of individual insns,
-each corresponding to one machine instruction.  The disadvantage of
-doing so is that it will cause the compilation to be slower and require
-more space.  If the resulting insns are too complex, it may also
-suppress some optimizations.  The compiler splits the insn if there is a
-reason to believe that it might improve instruction or delay slot
-scheduling.
+一個の insn を個々の insn のリストに書き直せることが多い。
+この場合、個々の insn はそれぞれ一個の機械命令に対応する。
+こうすると不利な点は、コンパイルが遅くなり、必要とするメモリスペースが
+多くなることである。書き換え後の insn が複雑過ぎると、そのために
+いくつかの最適化を妨げることにもなる。命令スケジューリングまたは
+遅延スロットスケジューリングが改善されると信じる根拠がある場合は、
+コンパイラは insn を分割する。
 
-The insn combiner phase also splits putative insns.  If three insns are
-merged into one insn with a complex expression that cannot be matched by
-some @code{define_insn} pattern, the combiner phase attempts to split
-the complex pattern into two insns that are recognized.  Usually it can
-break the complex pattern into two patterns by splitting out some
-subexpression.  However, in some other cases, such as performing an
-addition of a large constant in two insns on a RISC machine, the way to
-split the addition into two insns is machine-dependent.
+insn の組合せフェーズでは、交換可能な insn の分割も行なう。
+三つの insn が複雑な式の一つの insn に統合されたものの、
+なんらかの @code{define_insn} パターンにマッチすることが
+不可能になった場合、組合せフェーズは複雑なパターンを認識できる
+二つの insn に分割しようとする。普通は、複雑なパターンを
+いくつかの部分式に分割することで二つのパターンに分ける。
+だが、場合によっては、RISC 機種で、ある大きな定数の加算を二つの insn で
+行なうような場合、その加算を二つの insn に分割する方法は
+機種依存である。
 
-@findex define_split
-The @code{define_split} definition tells the compiler how to split a
-complex insn into several simpler insns.  It looks like this:
+@cindex define_split
+@code{define_split} の定義で、GNU CC に対し、複雑な insn をいくつかの
+もっと単純な insn に分割する方法を指定する。
 
 @smallexample
 (define_split
@@ -4903,37 +4903,38 @@ complex insn into several simpler insns.  It looks like this:
   [@var{new-insn-pattern-1}
    @var{new-insn-pattern-2}
    @dots{}]
-  "@var{preparation-statements}")
+  "@var{preparation statements}")
 @end smallexample
 
-@var{insn-pattern} is a pattern that needs to be split and
-@var{condition} is the final condition to be tested, as in a
-@code{define_insn}.  When an insn matching @var{insn-pattern} and
-satisfying @var{condition} is found, it is replaced in the insn list
-with the insns given by @var{new-insn-pattern-1},
-@var{new-insn-pattern-2}, etc.
+@var{insn-pattern} は、分割する必要のあるパターンであり、
+@var{condtion} は @code{define_insn} の場合と同様、
+最後にテストされる条件である。@var{insn-pattern} にマッチし、
+@var{condition} を満たす insn が見つかると、
+その insn は、insn のリストの中で、@var{new-insn-pattern-1}、
+@var{new-insn-pattern-2} 等で与えられるinsn に置き換えられる。
 
-The @var{preparation-statements} are similar to those statements that
-are specified for @code{define_expand} (@pxref{Expander Definitions})
-and are executed before the new RTL is generated to prepare for the
-generated code or emit some insns whose pattern is not fixed.  Unlike
-those in @code{define_expand}, however, these statements must not
-generate any new pseudo-registers.  Once reload has completed, they also
-must not allocate any space in the stack frame.
+@var{preparation statements} は、@code{define_expand} (
+@pxref{Expander Definitions})で指定される文と同様のもので、
+生成されるコードの準備をしたり、パターンが固定していない insn を
+いくつか生成したりするために、新しい RTL が生成される前に実行される。
+ただし、@code{define_expand} にあるものと違って、これらの文は
+疑似レジスタを新たに生成してはならない。
+また、再ロードが一度完了したら、スタックフレームからスペースを
+割り当ててはならない。
 
-Patterns are matched against @var{insn-pattern} in two different
-circumstances.  If an insn needs to be split for delay slot scheduling
-or insn scheduling, the insn is already known to be valid, which means
-that it must have been matched by some @code{define_insn} and, if
-@code{reload_completed} is nonzero, is known to satisfy the constraints
-of that @code{define_insn}.  In that case, the new insn patterns must
-also be insns that are matched by some @code{define_insn} and, if
-@code{reload_completed} is nonzero, must also satisfy the constraints
-of those definitions.
+パターンが @var{insn-pattern} とマッチするのには、二つの異なる状況がある。
+ある insn が遅延スロットスケジューリングや命令スケジューリング向けに
+分割する必要がある場合は、その insn は有効であることが既に知られている。
+この事は、何かの @code{define_insn} にマッチしていなければならず、
+@code{reload_completed} がゼロでなければ、その @code{define_insn} の
+制約を満たすことが知られているということを意味する。その場合、
+新しい insn パターンも何かの @code{define_insn} にマッチしなければならず、
+@code{reload_completed} がゼロでなければ、その定義の制約を満たさなければ
+ならない。
 
-As an example of this usage of @code{define_split}, consider the following
-example from @file{a29k.md}, which splits a @code{sign_extend} from
-@code{HImode} to @code{SImode} into a pair of shift insns:
+この @code{define_split} の使い方の例として、@file{a29k.md} から
+取った以下の例を考えてみる。この例では、@code{HImode} から @code{SImode}
+への @code{sign_extend} を二つのシフト insn の対に分割している。
 
 @smallexample
 (define_split
@@ -4950,19 +4951,21 @@ example from @file{a29k.md}, which splits a @code{sign_extend} from
 @{ operands[1] = gen_lowpart (SImode, operands[1]); @}")
 @end smallexample
 
-When the combiner phase tries to split an insn pattern, it is always the
-case that the pattern is @emph{not} matched by any @code{define_insn}.
-The combiner pass first tries to split a single @code{set} expression
-and then the same @code{set} expression inside a @code{parallel}, but
-followed by a @code{clobber} of a pseudo-reg to use as a scratch
-register.  In these cases, the combiner expects exactly two new insn
-patterns to be generated.  It will verify that these patterns match some
-@code{define_insn} definitions, so you need not do this test in the
-@code{define_split} (of course, there is no point in writing a
-@code{define_split} that will never produce insns that match).
+命令組合せ過程が insn パターンを分割しようとするのは、いつでも、
+そのパターンがどの @code{define_insn} にもマッチ@emph{しない}場合
+である。組合せ過程は、最初に一個の @code{set} 式を分割しようとし、
+次に @code{parallel} の中にあるが、スクラッチレジスタとして使うための
+疑似レジスタの @code{clobber} が後ろに続くような、同じ @code{set} 式を
+分割する。
+これらの場合、組合せ過程は、新しい insn パターンがちょうど二つ
+生成されることを想定する。組合せ過程がこれらのパターンが
+なんらかの @code{define_insn} による定義にマッチするかどうかを
+検査するので、読者が自分で @code{define_split} の中でこの検査を
+行なう必要はない(当たり前だが、マッチする insn を決して
+生成しないように @code{define_split} を書くのは意味がない)。
 
-Here is an example of this use of @code{define_split}, taken from
-@file{rs6000.md}:
+以下に @code{define_split} のこの使い方の例を示す。@file{rs6000.md}
+から取ったものである。
 
 @smallexample
 (define_split
@@ -4985,13 +4988,13 @@ Here is an example of this use of @code{define_split}, taken from
 @}")
 @end smallexample
 
-Here the predicate @code{non_add_cint_operand} matches any
-@code{const_int} that is @emph{not} a valid operand of a single add
-insn.  The add with the smaller displacement is written so that it
-can be substituted into the address of a subsequent operation.
+ここで述語 @code{non_add_cint_operand} は、一個の加算 insn の有効な
+オペランド@emph{ではない} @code{const_int} にマッチする。
+小さな変位付きの加算は、次の演算のアドレスに代入できるように
+書かれる。
 
-An example that uses a scratch register, from the same file, generates
-an equality comparison of a register and a large constant:
+同じファイルから、スクラッチレジスタの使い方の例を見てみる。
+この例では、レジスタと大きな定数の等値性比較を生成している。
 
 @smallexample
 (define_split
@@ -5019,79 +5022,10 @@ an equality comparison of a register and a large constant:
 @}")
 @end smallexample
 
-To avoid confusion, don't write a single @code{define_split} that
-accepts some insns that match some @code{define_insn} as well as some
-insns that don't.  Instead, write two separate @code{define_split}
-definitions, one for the insns that are valid and one for the insns that
-are not valid.
-
-The splitter is allowed to split jump instructions into sequence of
-jumps or create new jumps in while splitting non-jump instructions.  As
-the central flowgraph and branch prediction information needs to be updated,
-several restriction apply.
-
-Splitting of jump instruction into sequence that over by another jump
-instruction is always valid, as compiler expect identical behavior of new
-jump.  When new sequence contains multiple jump instructions or new labels,
-more assistance is needed.  Splitter is required to create only unconditional
-jumps, or simple conditional jump instructions.  Additionally it must attach a
-@code{REG_BR_PROB} note to each conditional jump.  A global variable
-@code{split_branch_probability} holds the probability of the original branch in case
-it was a simple conditional jump, @minus{}1 otherwise.  To simplify
-recomputing of edge frequencies, the new sequence is required to have only
-forward jumps to the newly created labels.
-
-@findex define_insn_and_split
-For the common case where the pattern of a define_split exactly matches the
-pattern of a define_insn, use @code{define_insn_and_split}.  It looks like
-this:
-
-@smallexample
-(define_insn_and_split
-  [@var{insn-pattern}]
-  "@var{condition}"
-  "@var{output-template}"
-  "@var{split-condition}"
-  [@var{new-insn-pattern-1}
-   @var{new-insn-pattern-2}
-   @dots{}]
-  "@var{preparation-statements}"
-  [@var{insn-attributes}])
-
-@end smallexample
-
-@var{insn-pattern}, @var{condition}, @var{output-template}, and
-@var{insn-attributes} are used as in @code{define_insn}.  The
-@var{new-insn-pattern} vector and the @var{preparation-statements} are used as
-in a @code{define_split}.  The @var{split-condition} is also used as in
-@code{define_split}, with the additional behavior that if the condition starts
-with @samp{&&}, the condition used for the split will be the constructed as a
-logical ``and'' of the split condition with the insn condition.  For example,
-from i386.md:
-
-@smallexample
-(define_insn_and_split "zero_extendhisi2_and"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-     (zero_extend:SI (match_operand:HI 1 "register_operand" "0")))
-   (clobber (reg:CC 17))]
-  "TARGET_ZERO_EXTEND_WITH_AND && !optimize_size"
-  "#"
-  "&& reload_completed"
-  [(parallel [(set (match_dup 0)
-                   (and:SI (match_dup 0) (const_int 65535)))
-              (clobber (reg:CC 17))])]
-  ""
-  [(set_attr "type" "alu1")])
-
-@end smallexample
-
-In this case, the actual split condition will be
-@samp{TARGET_ZERO_EXTEND_WITH_AND && !optimize_size && reload_completed}.
-
-The @code{define_insn_and_split} construction provides exactly the same
-functionality as two separate @code{define_insn} and @code{define_split}
-patterns.  It exists for compactness, and as a maintenance tool to prevent
-having to ensure the two patterns' templates match.
+混乱を避けるために、一個の @code{define_split} を、ある @code{define_insn}
+にマッチする insn とマッチしない insn を同じように受け付けるように
+書いてはならない。代わりに、二つの @code{define_split} を
+別々に書いて、一つを有効な insn 用とし他方を有効でない insn 用とすること。
 
 @end ifset
 @ifset INTERNALS
