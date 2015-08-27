@@ -4666,133 +4666,107 @@ SPARC での @code{SELECT_CC_MODE} マクロは、引数が @code{plus} であ�
 @cindex code generation RTL sequences
 @cindex defining RTL sequences for code generation
 
-On some target machines, some standard pattern names for RTL generation
-cannot be handled with single insn, but a sequence of RTL insns can
-represent them.  For these target machines, you can write a
-@code{define_expand} to specify how to generate the sequence of RTL@.
+機種によっては、RTL 生成用の標準のパターン名を一個の insn では
+扱えないが、RTL insn の列なら表現できるという場合がある。
+そのようなターゲット機種の場合は、@code{define_expand} を
+書くことでその RTL 列を生成する方法を指定することができる。
 
 @findex define_expand
-A @code{define_expand} is an RTL expression that looks almost like a
-@code{define_insn}; but, unlike the latter, a @code{define_expand} is used
-only for RTL generation and it can produce more than one RTL insn.
+@code{define_expand} は、ある一個の RTL 式であり、
+ほぼ @code{define_insn} と同じである。
+しかし、@code{define_expand} は、@code{define_insn} と違って、
+RTL 生成にのみ使われ、一個以上の RTL insn を生成することができる。
 
-A @code{define_expand} RTX has four operands:
+@code{define_expand} RTX にはオペランドが4つある。
 
 @itemize @bullet
 @item
-The name.  Each @code{define_expand} must have a name, since the only
-use for it is to refer to it by name.
+名前。各 @code{define_expand} には名前がなければならない。
+何故なら、名前で参照するのが唯一の使い方だからである。
+
+@findex define_peephole
+@item
+RTL テンプレート。これは、ちょうど @code{define_peephole} の
+RTL テンプレートと同じであり、それぞれが一個の insn である
+RTL 式のベクトルになっている。
 
 @item
-The RTL template.  This is a vector of RTL expressions representing
-a sequence of separate instructions.  Unlike @code{define_insn}, there
-is no implicit surrounding @code{PARALLEL}.
+条件。C の式を一個含む一個の文字列である。
+この式を使って、このパターンの利用可能性がどのようにターゲット機種の
+サブクラスに依存するかを表す。このサブクラスは、GNU CC の実行時に
+コマンド行オプションにより選択されるものである。
+これは、標準名を持つ @code{define_insn} の条件と同じである。
+このため、条件がもしあるなら、一致する insn 中のデータに
+依存してはならない。ターゲット機種タイプのフラグにしか依存しては
+ならないのである。GNU CC は、初期化を行なっている際にこれらの
+条件をテストする必要がある。これは、コンパイラの一回実行する毎に、
+名前付き命令で利用可能なものはどれかを正確に知る必要があるからである。
 
 @item
-The condition, a string containing a C expression.  This expression is
-used to express how the availability of this pattern depends on
-subclasses of target machine, selected by command-line options when GCC
-is run.  This is just like the condition of a @code{define_insn} that
-has a standard name.  Therefore, the condition (if present) may not
-depend on the data in the insn being matched, but only the
-target-machine-type flags.  The compiler needs to test these conditions
-during initialization in order to learn exactly which named instructions
-are available in a particular run.
+準備文。一個の文字列であり、ゼロ個以上の C の文を含む。
+これらの文は、RTL テンプレートから RTL コードが生成される前に
+実行される。
 
-@item
-The preparation statements, a string containing zero or more C
-statements which are to be executed before RTL code is generated from
-the RTL template.
-
-Usually these statements prepare temporary registers for use as
-internal operands in the RTL template, but they can also generate RTL
-insns directly by calling routines such as @code{emit_insn}, etc.
-Any such insns precede the ones that come from the RTL template.
-
-@item
-Optionally, a vector containing the values of attributes. @xref{Insn
-Attributes}.
+普通これらの文は、RTL テンプレート中の内部的なオペランドとして
+使われる一時レジスタを用意するが、@code{emit_insn} 等のルーチンを
+呼び出すことで RTL insn を直接生成することもできる。
+そうやって生成した insn は、RTL テンプレートから来る insn の前に
+置かなければならない。
 @end itemize
 
-Every RTL insn emitted by a @code{define_expand} must match some
-@code{define_insn} in the machine description.  Otherwise, the compiler
-will crash when trying to generate code for the insn or trying to optimize
-it.
+@code{define_expand} により生成されるRTL insn はどれも、マシン記述中の
+@code{define_insn} のどれかにマッチしなければならない。
+どれにもマッチしない場合、その insn 用のコードを生成しようとしたり、
+最適化しようとしたときに異常終了してしまう。
 
-The RTL template, in addition to controlling generation of RTL insns,
-also describes the operands that need to be specified when this pattern
-is used.  In particular, it gives a predicate for each operand.
+RTL テンプレートは、RTL insn の生成を制御することに加えて、
+このパターンが使われるときに指定する必要があるオペランドをも
+記述する。
+特に、各オペランドに述語を与える。
 
-A true operand, which needs to be specified in order to generate RTL from
-the pattern, should be described with a @code{match_operand} in its first
-occurrence in the RTL template.  This enters information on the operand's
-predicate into the tables that record such things.  GCC uses the
-information to preload the operand into a register if that is required for
-valid RTL code.  If the operand is referred to more than once, subsequent
-references should use @code{match_dup}.
+真のオペランドは、パターンから RTL を生成するために指定する必要があり、
+RTL テンプレートの先頭に現れる @code{match_operand} で記述する
+必要がある。これにより、オペランドの述語についての情報が、その手の情報を
+記録する表に入力される。GNU CC はこの情報を使って、正しい RTL コードとして
+必要なら、オペランドをレジスタに事前ロードする。
+このオペランドが複数回参照されているなら、それ以降で参照するときは
+@code{match_dup} を使う必要がある。
 
-The RTL template may also refer to internal ``operands'' which are
-temporary registers or labels used only within the sequence made by the
-@code{define_expand}.  Internal operands are substituted into the RTL
-template with @code{match_dup}, never with @code{match_operand}.  The
-values of the internal operands are not passed in as arguments by the
-compiler when it requests use of this pattern.  Instead, they are computed
-within the pattern, in the preparation statements.  These statements
-compute the values and store them into the appropriate elements of
-@code{operands} so that @code{match_dup} can find them.
+RTL テンプレートは、内部「オペランド」も参照する。
+内部オペランドとは、一時レジスタやラベルであり、@code{define_expand} で
+作られる列の中でしか使われない。内部オペランドは、@code{match_dup} に
+より RTL テンプレートに代入される。@code{match_operand} で代入される
+ことはない。内部オペランドの値は、GNU CC がこのパターンを使う必要が
+あるときに引数として渡されることはない。代わりに、
+準備文により、パターン内で計算が行なわれる。準備文は、
+値を計算し、@code{operands} の適切な要素に格納するので、
+@code{match_dup} がそれを見つけられるようになる。
 
-There are two special macros defined for use in the preparation statements:
-@code{DONE} and @code{FAIL}.  Use them with a following semicolon,
-as a statement.
+準備文の中で使う特別なマクロが二つ定義されている。
+@code{DONE} と @code{FAIL} である。これらは後ろにセミコロンを付けて
+文として使うこと。
 
 @table @code
 
 @findex DONE
 @item DONE
-Use the @code{DONE} macro to end RTL generation for the pattern.  The
-only RTL insns resulting from the pattern on this occasion will be
-those already emitted by explicit calls to @code{emit_insn} within the
-preparation statements; the RTL template will not be generated.
+マクロ @code{DONE} を使って、このパターンに対する RTL 生成を終了させる。
+この時にパターンから作られる RTL insn は、準備文の中で @code{emit_insn}
+を明示的に呼び出すことによって既に出力済みのものだけになる。
+RTL テンプレートは生成されない。
 
 @findex FAIL
 @item FAIL
-Make the pattern fail on this occasion.  When a pattern fails, it means
-that the pattern was not truly available.  The calling routines in the
-compiler will try other strategies for code generation using other patterns.
+パターンに対する照合を失敗させる。あるパターンが照合に失敗すると、
+そのパターンが利用できないことを意味する。
+GNU CC の呼びだし側ルーチンは、他のパターンを使って、コード生成の
+別の戦略を試す。
 
-Failure is currently supported only for binary (addition, multiplication,
-shifting, etc.) and bit-field (@code{extv}, @code{extzv}, and @code{insv})
-operations.
+失敗は、現在、二項演算(加算、乗算、シフト等)とビットフィールド演算
+(@code{extv}、@code{extzv}、@code{insv})でのみ使える。
 @end table
 
-If the preparation falls through (invokes neither @code{DONE} nor
-@code{FAIL}), then the @code{define_expand} acts like a
-@code{define_insn} in that the RTL template is used to generate the
-insn.
-
-The RTL template is not used for matching, only for generating the
-initial insn list.  If the preparation statement always invokes
-@code{DONE} or @code{FAIL}, the RTL template may be reduced to a simple
-list of operands, such as this example:
-
-@smallexample
-@group
-(define_expand "addsi3"
-  [(match_operand:SI 0 "register_operand" "")
-   (match_operand:SI 1 "register_operand" "")
-   (match_operand:SI 2 "register_operand" "")]
-@end group
-@group
-  ""
-  "
-@{
-  handle_add (operands[0], operands[1], operands[2]);
-  DONE;
-@}")
-@end group
-@end smallexample
-
-Here is an example, the definition of left-shift for the SPUR chip:
+次の例は、SPUR チップの左シフトの定義である。
 
 @smallexample
 @group
@@ -4819,16 +4793,17 @@ Here is an example, the definition of left-shift for the SPUR chip:
 @end smallexample
 
 @noindent
-This example uses @code{define_expand} so that it can generate an RTL insn
-for shifting when the shift-count is in the supported range of 0 to 3 but
-fail in other cases where machine insns aren't available.  When it fails,
-the compiler tries another strategy using different patterns (such as, a
-library call).
+この例では、@code{define_expand} を使って、
+シフト量がサポート範囲の 0 から 3 の間に収まっていればシフトを行なう
+RTL insn を生成することができるようにしているが、機械命令が使えない
+ようなそれ以外の場合には失敗するようにしている。
+失敗した場合には、別のパターン(例えば、ライブラリ呼びだしなど)を使った
+別の戦略を試みる。
 
-If the compiler were able to handle nontrivial condition-strings in
-patterns with names, then it would be possible to use a
-@code{define_insn} in that case.  Here is another case (zero-extension
-on the 68000) which makes more use of the power of @code{define_expand}:
+GNU CC が、名前付きパターンの自明でない条件文字列を扱うことが
+出来たなら、@code{define_insn} をその場合に使うことができる。
+以下に、@code{define_expand} の威力をさらに利用する別の例(68000 での
+ゼロ拡張である)を示す。
 
 @smallexample
 (define_expand "zero_extendhisi2"
@@ -4845,20 +4820,23 @@ on the 68000) which makes more use of the power of @code{define_expand}:
 
 @noindent
 @findex make_safe_from
-Here two RTL insns are generated, one to clear the entire output operand
-and the other to copy the input operand into its low half.  This sequence
-is incorrect if the input operand refers to [the old value of] the output
-operand, so the preparation statement makes sure this isn't so.  The
-function @code{make_safe_from} copies the @code{operands[1]} into a
-temporary register if it refers to @code{operands[0]}.  It does this
-by emitting another RTL insn.
+ここでは二つの RTL insn が生成される。一つは出力オペランド全体を
+クリアし、もう一つは入力オペランドを出力オペランドの下位半分に
+コピーする。この insn 列は、入力オペランドが出力オペランド(の
+古い値)を参照している場合は、正しくなくなる。
+そのため、準備文でそうならないことを保証している。
+関数 @code{make_safe_from} は、@code{operands[1]} が
+@code{operands[0]} を参照していれば、@code{operands[1]} を
+一時レジスタにコピーする。そのコピーは、もう一つの RTL insn を
+生成することにより行なう。
 
-Finally, a third example shows the use of an internal operand.
-Zero-extension on the SPUR chip is done by @code{and}-ing the result
-against a halfword mask.  But this mask cannot be represented by a
-@code{const_int} because the constant value is too large to be legitimate
-on this machine.  So it must be copied into a register with
-@code{force_reg} and then the register used in the @code{and}.
+最後に、三番目の例で内部オペランドの使い方を説明する。
+SPUR チップのゼロ拡張は、結果を半語のマスクとの @code{and} を取ることで
+行なわれる。
+だが、このマスクは、定数値としては、この機種で正しいものになるには大きすぎて、
+@code{const_int} では表現できない。このため、@code{force_reg} で
+レジスタにコピーして、そのレジスタを @code{and} の中で使わなければ
+ならない。
 
 @smallexample
 (define_expand "zero_extendhisi2"
@@ -4872,14 +4850,13 @@ on this machine.  So it must be copied into a register with
      = force_reg (SImode, GEN_INT (65535)); ")
 @end smallexample
 
-@emph{Note:} If the @code{define_expand} is used to serve a
-standard binary or unary arithmetic operation or a bit-field operation,
-then the last insn it generates must not be a @code{code_label},
-@code{barrier} or @code{note}.  It must be an @code{insn},
-@code{jump_insn} or @code{call_insn}.  If you don't need a real insn
-at the end, emit an insn to copy the result of the operation into
-itself.  Such an insn will generate no code, but it can avoid problems
-in the compiler.
+@strong{注意:} @code{define_expand} を標準的な二項演算や単項演算、
+あるいはビットフィールド演算に使うときは、それが最後に生成する insn は、
+@code{code_label} や @code{barrier} や @code{note} であってはならない。
+@code{insn} か @code{jump_insn} か @code{call_insn} でなくてはならない。
+最後に実際の insn を置く必要がなければ、演算の結果を自分自身にコピーする
+insn を生成する。そういう insn はコードはなんら生成しないが、
+GCC に問題が起きるのを回避する。
 
 @end ifset
 @ifset INTERNALS
