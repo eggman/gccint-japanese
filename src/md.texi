@@ -498,207 +498,91 @@ insn との照合の際には、insn 本体が @code{parallel} 式であり、�
 @cindex output templates
 @cindex operand substitution
 
-@cindex @samp{%} in template
-@cindex percent sign
-The @dfn{output template} is a string which specifies how to output the
-assembler code for an instruction pattern.  Most of the template is a
-fixed string which is output literally.  The character @samp{%} is used
-to specify where to substitute an operand; it can also be used to
-identify places where different variants of the assembler require
-different syntax.
+@dfn{出力テンプレート}は文字列であり、
+ある命令パターンに対するアセンブラコードを
+どのように出力するかを指定する。
+テンプレートのほとんどの部分は、固定文字列であり、そのまま出力される。
+文字 @samp{%} を使って、オペランドが代入される位置を指定する。
+また、アセンブラに変種があるために異なる構文を必要とする場所を
+特定するのにも使われる。
 
-In the simplest case, a @samp{%} followed by a digit @var{n} says to output
-operand @var{n} at that point in the string.
+一番単純な場合では、@samp{%} の数字 @var{n} が続いた場合は、
+文字列のその部分にオペランド @var{n} を出力することを示す。
 
-@samp{%} followed by a letter and a digit says to output an operand in an
-alternate fashion.  Four letters have standard, built-in meanings described
-below.  The machine description macro @code{PRINT_OPERAND} can define
-additional letters with nonstandard meanings.
+@samp{%} の直後に英字1文字と数字1文字が続くと、オペランドの出力形式を
+別のものに変えることを意味する。
+英字としては四つの文字が標準で組み込み済の意味を持っており、
+以下で解説する。マシン記述マクロ @code{PRINT_OPERAND} を
+使って、標準ではない意味を持つ文字を追加定義することができる。
 
-@samp{%c@var{digit}} can be used to substitute an operand that is a
-constant value without the syntax that normally indicates an immediate
-operand.
+@samp{%c@var{digit}} を使うと、
+通常は即値オペランドである事を示す構文を使わなくても、
+定数値であるオペランドを置き換えることができる。
 
-@samp{%n@var{digit}} is like @samp{%c@var{digit}} except that the value of
-the constant is negated before printing.
+@samp{%n@var{digit}} は、表示前に定数値が否定を取られることを
+除けば @samp{%c@var{digit}} に同じである。
 
-@samp{%a@var{digit}} can be used to substitute an operand as if it were a
-memory reference, with the actual operand treated as the address.  This may
-be useful when outputting a ``load address'' instruction, because often the
-assembler syntax for such an instruction requires you to write the operand
-as if it were a memory reference.
+@samp{%a@var{digit}} を使ってそれがあたかもメモリ参照であるかのように、
+あるオペランドをアドレスとして扱われる実際のオペランドと置き換えることが
+できる。これは、「ロードアドレス」命令を出力する際に役に立つ。
+そういう命令のアセンブラ構文では、オペランドをあたかもメモリ参照で
+あるかのように書くことを要求することが多いからである。
 
-@samp{%l@var{digit}} is used to substitute a @code{label_ref} into a jump
-instruction.
+@samp{%l@var{digit}} は、ジャンプ命令に @code{label_ref} を代入するのに
+使われる。
 
-@samp{%=} outputs a number which is unique to each instruction in the
-entire compilation.  This is useful for making local labels to be
-referred to more than once in a single template that generates multiple
-assembler instructions.
+@samp{%=} は、各命令に対し、コンパイルの全過程で一意的な番号を出力する。
+これは、複数のアセンブラ命令を生成する一個のテンプレート中で
+二回以上参照されるローカルラベルを作るときに便利である。
 
-@samp{%} followed by a punctuation character specifies a substitution that
-does not use an operand.  Only one case is standard: @samp{%%} outputs a
-@samp{%} into the assembler code.  Other nonstandard cases can be
-defined in the @code{PRINT_OPERAND} macro.  You must also define
-which punctuation characters are valid with the
-@code{PRINT_OPERAND_PUNCT_VALID_P} macro.
+@samp{%} の後ろに区切り文字が続くと、オペランドを使わない置き換えである
+ことを指定する。標準的な使い方は一個だけである。
+@samp{%%} とするとアセンブラコードに @samp{%} を出力する。
+その他の非標準的な場合は、マクロ @code{PRINT_OPERAND} で定義することが
+できる。
+また、どの区切り文字が有効かをマクロ @code{PRINT_OPERAND_PUNCT_VALID_P} で
+定義しなければならない。
 
 @cindex \
 @cindex backslash
-The template may generate multiple assembler instructions.  Write the text
-for the instructions, with @samp{\;} between them.
+テンプレートは複数のアセンブラ命令を生成して良い。
+その場合には、各命令を @samp{\;} で区切って書く。
 
 @cindex matching operands
-When the RTL contains two operands which are required by constraint to match
-each other, the output template must refer only to the lower-numbered operand.
-Matching operands are not always identical, and the rest of the compiler
-arranges to put the proper RTL expression for printing into the lower-numbered
-operand.
+RTL にオペランドが二つあり、制約によりその二つが互いに一致することが
+要求されている場合には、出力テンプレートでは、数字の小さい方のオペランド
+しか参照してはならない。一致したオペランドはいつも同じではなく、
+コンパイラの残りの部分で、数字の小さい方のオペランドに出力する
+適切な RTL 式を置くように調整する。
 
-One use of nonstandard letters or punctuation following @samp{%} is to
-distinguish between different assembler languages for the same machine; for
-example, Motorola syntax versus MIT syntax for the 68000.  Motorola syntax
-requires periods in most opcode names, while MIT syntax does not.  For
-example, the opcode @samp{movel} in MIT syntax is @samp{move.l} in Motorola
-syntax.  The same file of patterns is used for both kinds of output syntax,
-but the character sequence @samp{%.} is used in each place where Motorola
-syntax wants a period.  The @code{PRINT_OPERAND} macro for Motorola syntax
-defines the sequence to output a period; the macro for MIT syntax defines
-it to do nothing.
+@samp{%} の後ろに標準でない英文字や区切り文字を置く使い方の一つに、
+同一のマシンに対する異なるアセンブラ言語を区別することがある。
+例えば、68000 には Motorola 形式と MIT 形式がある。
+Motorola 形式では、ほとんどのオペコード名にピリオドを使うのに対し、
+MIT 形式では使わない。例えば、MIT 形式で @samp{movel} と書くオペコードは、
+Motorola 形式では @samp{move.l} となる。
+両方の出力形式に対して同じパターンファイルを使用するが、
+Motorola 形式でピリオドが必要な場所には文字シーケンス @samp{%.} を
+使うようにする。
+マクロ @code{PRINT_OPERAND} は、Motorola 形式では、ピリオドを
+出力するシーケンスを定義し、MIT 形式向けには何もしないマクロとして
+定義する。
 
 @cindex @code{#} in template
-As a special case, a template consisting of the single character @code{#}
-instructs the compiler to first split the insn, and then output the
-resulting instructions separately.  This helps eliminate redundancy in the
-output templates.   If you have a @code{define_insn} that needs to emit
-multiple assembler instructions, and there is a matching @code{define_split}
-already defined, then you can simply use @code{#} as the output template
-instead of writing an output template that emits the multiple assembler
-instructions.
+特別な場合として、テンプレートが一個の文字 @code{#} から成っていると
+コンパイラに対し、最初に insn を分割し、次にその結果の命令を別々に
+出力することを指示する。
+これは、出力テンプレートの冗長性を消去するのに役立つ。
+複数のアセンブラ命令を出力する必要がある @code{define_insn} があり、
+マッチする @code{define_split} が既に定義されているなら、
+出力テンプレートとして単に @code{#} を使うことができ、
+複数のアセンブラ命令を出力する出力テンプレートを書く必要はない。
 
-If the macro @code{ASSEMBLER_DIALECT} is defined, you can use construct
-of the form @samp{@{option0|option1|option2@}} in the templates.  These
-describe multiple variants of assembler language syntax.
+マクロ @code{ASSEMBLER_DIALECT} が定義されていれば、
+テンプレートで @samp{@{option0|option1|option2@}}という形式の
+構文を使うことができる。
+アセンブラ言語の文法の複数の方言を記述する。
 @xref{Instruction Output}.
-
-@node Output Statement
-@section C Statements for Assembler Output
-@cindex output statements
-@cindex C statements for assembler output
-@cindex generating assembler output
-
-Often a single fixed template string cannot produce correct and efficient
-assembler code for all the cases that are recognized by a single
-instruction pattern.  For example, the opcodes may depend on the kinds of
-operands; or some unfortunate combinations of operands may require extra
-machine instructions.
-
-If the output control string starts with a @samp{@@}, then it is actually
-a series of templates, each on a separate line.  (Blank lines and
-leading spaces and tabs are ignored.)  The templates correspond to the
-pattern's constraint alternatives (@pxref{Multi-Alternative}).  For example,
-if a target machine has a two-address add instruction @samp{addr} to add
-into a register and another @samp{addm} to add a register to memory, you
-might write this pattern:
-
-@smallexample
-(define_insn "addsi3"
-  [(set (match_operand:SI 0 "general_operand" "=r,m")
-        (plus:SI (match_operand:SI 1 "general_operand" "0,0")
-                 (match_operand:SI 2 "general_operand" "g,r")))]
-  ""
-  "@@
-   addr %2,%0
-   addm %2,%0")
-@end smallexample
-
-@cindex @code{*} in template
-@cindex asterisk in template
-If the output control string starts with a @samp{*}, then it is not an
-output template but rather a piece of C program that should compute a
-template.  It should execute a @code{return} statement to return the
-template-string you want.  Most such templates use C string literals, which
-require doublequote characters to delimit them.  To include these
-doublequote characters in the string, prefix each one with @samp{\}.
-
-If the output control string is written as a brace block instead of a
-double-quoted string, it is automatically assumed to be C code.  In that
-case, it is not necessary to put in a leading asterisk, or to escape the
-doublequotes surrounding C string literals.
-
-The operands may be found in the array @code{operands}, whose C data type
-is @code{rtx []}.
-
-It is very common to select different ways of generating assembler code
-based on whether an immediate operand is within a certain range.  Be
-careful when doing this, because the result of @code{INTVAL} is an
-integer on the host machine.  If the host machine has more bits in an
-@code{int} than the target machine has in the mode in which the constant
-will be used, then some of the bits you get from @code{INTVAL} will be
-superfluous.  For proper results, you must carefully disregard the
-values of those bits.
-
-@findex output_asm_insn
-It is possible to output an assembler instruction and then go on to output
-or compute more of them, using the subroutine @code{output_asm_insn}.  This
-receives two arguments: a template-string and a vector of operands.  The
-vector may be @code{operands}, or it may be another array of @code{rtx}
-that you declare locally and initialize yourself.
-
-@findex which_alternative
-When an insn pattern has multiple alternatives in its constraints, often
-the appearance of the assembler code is determined mostly by which alternative
-was matched.  When this is so, the C code can test the variable
-@code{which_alternative}, which is the ordinal number of the alternative
-that was actually satisfied (0 for the first, 1 for the second alternative,
-etc.).
-
-For example, suppose there are two opcodes for storing zero, @samp{clrreg}
-for registers and @samp{clrmem} for memory locations.  Here is how
-a pattern could use @code{which_alternative} to choose between them:
-
-@smallexample
-(define_insn ""
-  [(set (match_operand:SI 0 "general_operand" "=r,m")
-        (const_int 0))]
-  ""
-  @{
-  return (which_alternative == 0
-          ? "clrreg %0" : "clrmem %0");
-  @})
-@end smallexample
-
-The example above, where the assembler code to generate was
-@emph{solely} determined by the alternative, could also have been specified
-as follows, having the output control string start with a @samp{@@}:
-
-@smallexample
-@group
-(define_insn ""
-  [(set (match_operand:SI 0 "general_operand" "=r,m")
-        (const_int 0))]
-  ""
-  "@@
-   clrreg %0
-   clrmem %0")
-@end group
-@end smallexample
-
-If you just need a little bit of C code in one (or a few) alternatives,
-you can use @samp{*} inside of a @samp{@@} multi-alternative template:
-
-@smallexample
-@group
-(define_insn ""
-  [(set (match_operand:SI 0 "general_operand" "=r,<,m")
-        (const_int 0))]
-  ""
-  "@@
-   clrreg %0
-   * return stack_mem_p (operands[0]) ? \"push 0\" : \"clrmem %0\";
-   clrmem %0")
-@end group
-@end smallexample
 
 @node Predicates
 @section Predicates
