@@ -4554,83 +4554,59 @@ SPARC での @code{SELECT_CC_MODE} マクロは、引数が @code{plus} であ�
 @cindex canonicalization of instructions
 @cindex insn canonicalization
 
-There are often cases where multiple RTL expressions could represent an
-operation performed by a single machine instruction.  This situation is
-most commonly encountered with logical, branch, and multiply-accumulate
-instructions.  In such cases, the compiler attempts to convert these
-multiple RTL expressions into a single canonical form to reduce the
-number of insn patterns required.
+複数の RTL 式がある一個の機械命令で実行される演算を表す場合が良くある。
+これは、論理命令、分岐命令、積和命令で良くあることである。
+そういう場合、コンパイラは複数の RTL 式を一個の正規形に変換して、
+必要とする insn パターンの数を減らそうとする。
 
-In addition to algebraic simplifications, following canonicalizations
-are performed:
+代数的な単純化に加えて、以下の正規化が行なわれる。
 
 @itemize @bullet
 @item
-For commutative and comparison operators, a constant is always made the
-second operand.  If a machine only supports a constant as the second
-operand, only patterns that match a constant in the second operand need
-be supplied.
+交換可能な比較演算の場合、定数は常に第二オペランドとなる。
+定数を第二オペランドでしか使えない機種では、第二オペランドに定数が
+くるパターンだけを提供すれば良い。
 
-@item
-For associative operators, a sequence of operators will always chain
-to the left; for instance, only the left operand of an integer @code{plus}
-can itself be a @code{plus}.  @code{and}, @code{ior}, @code{xor},
-@code{plus}, @code{mult}, @code{smin}, @code{smax}, @code{umin}, and
-@code{umax} are associative when applied to integers, and sometimes to
-floating-point.
-
-@item
 @cindex @code{neg}, canonicalization of
 @cindex @code{not}, canonicalization of
 @cindex @code{mult}, canonicalization of
 @cindex @code{plus}, canonicalization of
 @cindex @code{minus}, canonicalization of
-For these operators, if only one operand is a @code{neg}, @code{not},
-@code{mult}, @code{plus}, or @code{minus} expression, it will be the
-first operand.
-
-@item
-In combinations of @code{neg}, @code{mult}, @code{plus}, and
-@code{minus}, the @code{neg} operations (if any) will be moved inside
-the operations as far as possible.  For instance,
-@code{(neg (mult A B))} is canonicalized as @code{(mult (neg A) B)}, but
-@code{(plus (mult (neg B) C) A)} is canonicalized as
-@code{(minus A (mult B C))}.
+以下の演算については、一方のオペランドだけが @code{neg}、@code{not}、
+@code{mult}、@code{plus}、@code{minus} 式の場合、それは第一の
+オペランドになる。
 
 @cindex @code{compare}, canonicalization of
 @item
-For the @code{compare} operator, a constant is always the second operand
-if the first argument is a condition code register or @code{(cc0)}.
+@code{compare} 演算子の場合、@code{cc0} が使われる機種(@pxref{Jump Patterns})
+では、定数は常に第二オペランドになる。それ以外の機種では、定数を
+第一オペランドとする @code{compare} をコンパイラが作ろうとする
+場合が希にある。だが、そういう場合は、実際にそういう機械命令が
+ない限り、第一オペランドとして定数にマッチするパターンを用意する
+価値があるほど多くはない。
+
+@code{neg}、@code{not}、@code{mult}、@code{plus}、
+@code{minus} のオペランドは、上と同じ条件下で第一オペランドになる。
 
 @item
-An operand of @code{neg}, @code{not}, @code{mult}, @code{plus}, or
-@code{minus} is made the first operand under the same conditions as
-above.
+@code{(minus @var{x} (const_int @var{n}))} は
+@code{(plus @var{x} (const_int @var{-n}))} に変換される。
 
 @item
-@code{(ltu (plus @var{a} @var{b}) @var{b})} is converted to
-@code{(ltu (plus @var{a} @var{b}) @var{a})}. Likewise with @code{geu} instead
-of @code{ltu}.
-
-@item
-@code{(minus @var{x} (const_int @var{n}))} is converted to
-@code{(plus @var{x} (const_int @var{-n}))}.
-
-@item
-Within address computations (i.e., inside @code{mem}), a left shift is
-converted into the appropriate multiplication by a power of two.
+アドレスの計算の中で(すなわち、@code{mem} の中で)、左シフトは
+適当な 2 の冪乗の乗算に変換される。
 
 @cindex @code{ior}, canonicalization of
 @cindex @code{and}, canonicalization of
 @cindex De Morgan's law
 @item
-De Morgan's Law is used to move bitwise negation inside a bitwise
-logical-and or logical-or operation.  If this results in only one
-operand being a @code{not} expression, it will be the first one.
+ド・モルガンの法則を使って、ビット毎の論理積や論理和の中にある
+ビット毎の否定を移動する。この結果、一個のオペランドだけが
+@code{not} 式になった場合、それが先頭のオペランドになる。
 
-A machine that has an instruction that performs a bitwise logical-and of one
-operand with the bitwise negation of the other should specify the pattern
-for that instruction as
+一つのオペランドと、もう一方のオペランドのビット毎の否定のビット毎の論理積を
+実行する命令がある機種では、その命令用のパターンは以下のように指定すべき
+である。
 
 @smallexample
 (define_insn ""
@@ -4642,7 +4618,7 @@ for that instruction as
 @end smallexample
 
 @noindent
-Similarly, a pattern for a ``NAND'' instruction should be written
+同様に、``NAND'' 命令用のパターンは以下のように書くべきである。
 
 @smallexample
 (define_insn ""
@@ -4653,52 +4629,35 @@ Similarly, a pattern for a ``NAND'' instruction should be written
   "@dots{}")
 @end smallexample
 
-In both cases, it is not necessary to include patterns for the many
-logically equivalent RTL expressions.
+どちらの場合にも、たくさんある論理的に等価な RTL 式に対するパターンを
+含める必要はない。
 
 @cindex @code{xor}, canonicalization of
 @item
-The only possible RTL expressions involving both bitwise exclusive-or
-and bitwise negation are @code{(xor:@var{m} @var{x} @var{y})}
-and @code{(not:@var{m} (xor:@var{m} @var{x} @var{y}))}.
+ビット毎の排他的論理和とビット毎の否定を両方含む RTL 式で
+可能なものは、@code{(xor:@var{m} @var{x} @var{y})} と
+@code{(not:@var{m} (xor:@var{m} @var{x} @var{y}))}
+だけである。@refill
 
 @item
-The sum of three items, one of which is a constant, will only appear in
-the form
+三項の和で、その一つが定数であるものは、次の形にしか現れない。
 
 @smallexample
 (plus:@var{m} (plus:@var{m} @var{x} @var{y}) @var{constant})
 @end smallexample
 
+@item
+@code{cc0} を使わない機種では、@code{(compare @var{x} (const_int 0))} は
+@var{x} に変換される。@refill
+
 @cindex @code{zero_extract}, canonicalization of
 @cindex @code{sign_extract}, canonicalization of
 @item
-Equality comparisons of a group of bits (usually a single bit) with zero
-will be written using @code{zero_extract} rather than the equivalent
-@code{and} or @code{sign_extract} operations.
-
-@cindex @code{mult}, canonicalization of
-@item
-@code{(sign_extend:@var{m1} (mult:@var{m2} (sign_extend:@var{m2} @var{x})
-(sign_extend:@var{m2} @var{y})))} is converted to @code{(mult:@var{m1}
-(sign_extend:@var{m1} @var{x}) (sign_extend:@var{m1} @var{y}))}, and likewise
-for @code{zero_extend}.
-
-@item
-@code{(sign_extend:@var{m1} (mult:@var{m2} (ashiftrt:@var{m2}
-@var{x} @var{s}) (sign_extend:@var{m2} @var{y})))} is converted
-to @code{(mult:@var{m1} (sign_extend:@var{m1} (ashiftrt:@var{m2}
-@var{x} @var{s})) (sign_extend:@var{m1} @var{y}))}, and likewise for
-patterns using @code{zero_extend} and @code{lshiftrt}.  If the second
-operand of @code{mult} is also a shift, then that is extended also.
-This transformation is only applied when it can be proven that the
-original operation had sufficient precision to prevent overflow.
+あるグループのビット(普通は一個のビット)がゼロに等しいかどうかの
+比較は、等価な @code{and} や @code{sign_extract} 演算ではなくて、
+@code{zero_extract} を使って書かれる。
 
 @end itemize
-
-Further canonicalization rules are defined in the function
-@code{commutative_operand_precedence} in @file{gcc/rtlanal.c}.
-
 @end ifset
 @ifset INTERNALS
 @node Expander Definitions
