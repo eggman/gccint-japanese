@@ -5034,36 +5034,16 @@ insn の組合せフェーズでは、交換可能な insn の分割も行なう
 @cindex peephole optimizer definitions
 @cindex defining peephole optimizers
 
-In addition to instruction patterns the @file{md} file may contain
-definitions of machine-specific peephole optimizations.
+命令パターンに加えて、ファイル @file{md} には、
+機種固有の覗き穴最適化の定義を書いても良い。
 
-The combiner does not notice certain peephole optimizations when the data
-flow in the program does not suggest that it should try them.  For example,
-sometimes two consecutive insns related in purpose can be combined even
-though the second one does not appear to use a register computed in the
-first one.  A machine-specific peephole optimizer can detect such
-opportunities.
-
-There are two forms of peephole definitions that may be used.  The
-original @code{define_peephole} is run at assembly output time to
-match insns and substitute assembly text.  Use of @code{define_peephole}
-is deprecated.
-
-A newer @code{define_peephole2} matches insns and substitutes new
-insns.  The @code{peephole2} pass is run after register allocation
-but before scheduling, which may result in much better code for
-targets that do scheduling.
-
-@menu
-* define_peephole::     RTL to Text Peephole Optimizers
-* define_peephole2::    RTL to RTL Peephole Optimizers
-@end menu
-
-@end ifset
-@ifset INTERNALS
-@node define_peephole
-@subsection RTL to Text Peephole Optimizers
-@findex define_peephole
+組合せフェーズが、特定の覗き穴最適化に気付かないときがある。
+それはどういう時かというと、プログラムのデータの流れを見ても、
+その覗き穴最適化を試すべきであるということが判らない時である。
+例えば、二つの連続する insn の目的が関係している場合は、
+二番目の insn が最初の insn で計算したレジスタを使わないように
+見える場合でも、組合せが行なえることがある。
+機種固有の覗き穴最適化器はそのような機会を検出する。
 
 @need 1000
 A definition looks like this:
@@ -5079,82 +5059,83 @@ A definition looks like this:
 @end smallexample
 
 @noindent
-The last string operand may be omitted if you are not using any
-machine-specific information in this machine description.  If present,
-it must obey the same rules as in a @code{define_insn}.
+最後の文字列オペランドは、マシン記述で機種固有の情報をなんら使っていない
+のなら、省略可能である。省略しない場合は、@code{define_insn} と
+同じ規則に従わなければならない。
 
-In this skeleton, @var{insn-pattern-1} and so on are patterns to match
-consecutive insns.  The optimization applies to a sequence of insns when
-@var{insn-pattern-1} matches the first one, @var{insn-pattern-2} matches
-the next, and so on.
+このスケルトンでは、@var{insn-pattern-1} 等は連続する insn のマッチすべき
+パターンである。@var{insn-pattern-1} が insn 列の先頭のものに、
+@var{insn-pattern-2} がその次に、という具合にマッチするなら、
+その insn 列に最適化が適用される。
 
-Each of the insns matched by a peephole must also match a
-@code{define_insn}.  Peepholes are checked only at the last stage just
-before code generation, and only optionally.  Therefore, any insn which
-would match a peephole but no @code{define_insn} will cause a crash in code
-generation in an unoptimized compilation, or at various optimization
-stages.
+覗き穴によりマッチする各 insn は @code{define_insn} にもマッチしなければ
+ならない。覗き穴はコード生成の直前の最終段階でしか検査されない。
+このため、覗き穴にはマッチするものの @code{define_insn} にはマッチしない
+insn は、最適化を行なわないコンパイルの場合のコード生成で、あるいは
+色々な最適化の段階で、異常終了を引き起こす。
 
-The operands of the insns are matched with @code{match_operands},
-@code{match_operator}, and @code{match_dup}, as usual.  What is not
-usual is that the operand numbers apply to all the insn patterns in the
-definition.  So, you can check for identical operands in two insns by
-using @code{match_operand} in one insn and @code{match_dup} in the
-other.
+insn のオペランドは、通常同様、@code{match_operands} や
+ @code{match_operator}、@code{match_dup} にマッチする。
+通常と違うのは、オペランド番号が定義の中にある全ての insn パターンに
+適用されるという点である。このため、二つの insn にある同じオペランドを
+検査するのに、片方の insn では @code{match_operand} を、もう一方では
+@code{match_dup} を使うことができる。
 
-The operand constraints used in @code{match_operand} patterns do not have
-any direct effect on the applicability of the peephole, but they will
-be validated afterward, so make sure your constraints are general enough
-to apply whenever the peephole matches.  If the peephole matches
-but the constraints are not satisfied, the compiler will crash.
+@code{match_operand} パターンで使われるオペランド制約は、
+覗き穴が適用されるかどうかについては、なんら直接的な効果は持たない。
+だが、後で検証されるので、この制約は、覗き穴がマッチするときは
+いつでも適用できるぐらい一般的なものになっていることを確認して欲しい。
+覗き穴にはマッチするが、制約が満たされない場合は、コンパイラが落ちるだろう。
 
-It is safe to omit constraints in all the operands of the peephole; or
-you can write constraints which serve as a double-check on the criteria
-previously tested.
+覗き穴最適化の場合は、全てのオペランドの制約を省略しても安全である。
+あるいは、制約を書いて、既にテスト済みの規準を二重に検査することにしても
+良い。
 
-Once a sequence of insns matches the patterns, the @var{condition} is
-checked.  This is a C expression which makes the final decision whether to
-perform the optimization (we do so if the expression is nonzero).  If
-@var{condition} is omitted (in other words, the string is empty) then the
-optimization is applied to every sequence of insns that matches the
-patterns.
+ある insn の列がそのパターンに一度一致すると、@var{condition} が
+検査される。@var{condition} は一個の C の式であり、この最適化を
+実行するかどうかを最終的に決定する(この式がゼロでなければ最適化を
+行なう)。@var{condition} が指定されていないと(言い換えると、文字列が
+空の場合)、この最適化はそのパターンに一致する、あらゆる insn の列に
+適用される。
 
-The defined peephole optimizations are applied after register allocation
-is complete.  Therefore, the peephole definition can check which
-operands have ended up in which kinds of registers, just by looking at
-the operands.
+定義された覗き穴最適化はレジスタ割当が完了した後に適用される。
+このため、このため、覗き穴最適化の定義では、どのオペランドが最終的に
+どの種類のレジスタに割り当てられたかを、単にそのオペランドを見ることで
+調べることができる。
 
 @findex prev_active_insn
-The way to refer to the operands in @var{condition} is to write
-@code{operands[@var{i}]} for operand number @var{i} (as matched by
-@code{(match_operand @var{i} @dots{})}).  Use the variable @code{insn}
-to refer to the last of the insns being matched; use
-@code{prev_active_insn} to find the preceding insns.
+@var{condition} でオペランドを参照するには、オペランド番号が @var{i}
+なら @code{operands[@var{i}]} と書く(@code{(match_operand @var{i} @dots{})}
+によりマッチする)。マッチしつつある insn 群の最後のものを参照するには
+変数 @code{insn} を使う。先行する insn 群を見つけるには
+@code{prev_active_insn} を使う。
 
 @findex dead_or_set_p
-When optimizing computations with intermediate results, you can use
-@var{condition} to match only when the intermediate results are not used
-elsewhere.  Use the C expression @code{dead_or_set_p (@var{insn},
-@var{op})}, where @var{insn} is the insn in which you expect the value
-to be used for the last time (from the value of @code{insn}, together
-with use of @code{prev_nonnote_insn}), and @var{op} is the intermediate
-value (from @code{operands[@var{i}]}).
+中間結果の計算を最適化するときは、@var{condition} を使って、
+その中間結果が他の場所で使われない時にのみ一致させることができる。
+C の式 @code{dead_or_set_p (@var{insn}, @var{op})} を使うこと。
+ここで、@var{insn} は、最後に使われると想定している値が入っている insn
+である(@code{insn} の値から、@code{prev_nonnote_insn} を組み合わせて
+得られる)。@var{op} は、中間結果である(@code{operands[@var{i}]} から
+得られる)。@refill
 
-Applying the optimization means replacing the sequence of insns with one
-new insn.  The @var{template} controls ultimate output of assembler code
-for this combined insn.  It works exactly like the template of a
-@code{define_insn}.  Operand numbers in this template are the same ones
-used in matching the original sequence of insns.
+最適化を適用するということは、insn 列を一個の新たな insn で
+置き換えるということを意味する。@var{template} が、この組み合わされた
+insn のアセンブラコードの最終的な出力を制御する。
+@var{template} は、@code{define_insn} のテンプレートと全く同じように
+動作する。このテンプレートのオペランド番号は、元の insn 列とマッチするのに
+使われたのと同じ番号である。
 
-The result of a defined peephole optimizer does not need to match any of
-the insn patterns in the machine description; it does not even have an
-opportunity to match them.  The peephole optimizer definition itself serves
-as the insn pattern to control how the insn is output.
+定義した覗き穴最適化の結果は、マシン記述の insn パターンのどれにも
+マッチする必要はない。実は一致する機会すらないのである。
+覗き穴最適化の定義は、それ自身が insn がどのように出力されるかを
+制御する insn のパターンとして働く。
 
-Defined peephole optimizers are run as assembler code is being output,
-so the insns they produce are never combined or rearranged in any way.
+定義された覗き穴最適化はアセンブラコードが出力されるときに
+実行されるので、生成される insn はどんな方法でも組み合わされたり、
+並べ替えられたりすることはない。
 
-Here is an example, taken from the 68000 machine description:
+以下の例は、68000 のマシン記述から取ったものである。
 
 @smallexample
 (define_peephole
@@ -5162,23 +5143,25 @@ Here is an example, taken from the 68000 machine description:
    (set (match_operand:DF 0 "register_operand" "=f")
         (match_operand:DF 1 "register_operand" "ad"))]
   "FP_REG_P (operands[0]) && ! FP_REG_P (operands[1])"
+  "*
 @{
   rtx xoperands[2];
-  xoperands[1] = gen_rtx_REG (SImode, REGNO (operands[1]) + 1);
+  xoperands[1] = gen_rtx (REG, SImode, REGNO (operands[1]) + 1);
 #ifdef MOTOROLA
-  output_asm_insn ("move.l %1,(sp)", xoperands);
-  output_asm_insn ("move.l %1,-(sp)", operands);
-  return "fmove.d (sp)+,%0";
+  output_asm_insn (\"move.l %1,(sp)\", xoperands);
+  output_asm_insn (\"move.l %1,-(sp)\", operands);
+  return \"fmove.d (sp)+,%0\";
 #else
-  output_asm_insn ("movel %1,sp@@", xoperands);
-  output_asm_insn ("movel %1,sp@@-", operands);
-  return "fmoved sp@@+,%0";
+  output_asm_insn (\"movel %1,sp@@\", xoperands);
+  output_asm_insn (\"movel %1,sp@@-\", operands);
+  return \"fmoved sp@@+,%0\";
 #endif
-@})
+@}
+")
 @end smallexample
 
 @need 1000
-The effect of this optimization is to change
+この最適化により
 
 @smallexample
 @group
@@ -5191,7 +5174,7 @@ fmoved sp@@+,fp0
 @end smallexample
 
 @noindent
-into
+が、以下のようになる。
 
 @smallexample
 @group
@@ -5215,15 +5198,15 @@ and in this C code check the condition code status flags and change the
 assembler code as appropriate.
 @end ignore
 
-@var{insn-pattern-1} and so on look @emph{almost} like the second
-operand of @code{define_insn}.  There is one important difference: the
-second operand of @code{define_insn} consists of one or more RTX's
-enclosed in square brackets.  Usually, there is only one: then the same
-action can be written as an element of a @code{define_peephole}.  But
-when there are multiple actions in a @code{define_insn}, they are
-implicitly enclosed in a @code{parallel}.  Then you must explicitly
-write the @code{parallel}, and the square brackets within it, in the
-@code{define_peephole}.  Thus, if an insn pattern looks like this,
+@var{insn-pattern-1} 等は、@emph{ほぼ} @code{define_insn} の
+第二オペランドに同じである。重要な違いが一つある。
+@code{define_insn} の第二オペランドは、鍵括弧で囲まれた一つ以上の
+RTX からなる。普通は一つだけである。その場合、
+同じ動作を @code{define_peephole} の要素として書くことができる。
+しかし、@code{define_insn} に複数の動作があるときは、暗黙のうちに
+@code{parallel} で囲まれる。その場合、@code{define_peephole} では、
+@code{parallel} とその中に鍵括弧を明示的に書かなければならない。
+こうして、ある insn パターンが
 
 @smallexample
 (define_insn "divmodsi4"
@@ -5237,7 +5220,7 @@ write the @code{parallel}, and the square brackets within it, in the
 @end smallexample
 
 @noindent
-then the way to mention this insn in a peephole is as follows:
+のようになていたとすると、この insn を覗き穴に書くには以下のようにする。
 
 @smallexample
 (define_peephole
@@ -5251,93 +5234,6 @@ then the way to mention this insn in a peephole is as follows:
    @dots{}]
   @dots{})
 @end smallexample
-
-@end ifset
-@ifset INTERNALS
-@node define_peephole2
-@subsection RTL to RTL Peephole Optimizers
-@findex define_peephole2
-
-The @code{define_peephole2} definition tells the compiler how to
-substitute one sequence of instructions for another sequence,
-what additional scratch registers may be needed and what their
-lifetimes must be.
-
-@smallexample
-(define_peephole2
-  [@var{insn-pattern-1}
-   @var{insn-pattern-2}
-   @dots{}]
-  "@var{condition}"
-  [@var{new-insn-pattern-1}
-   @var{new-insn-pattern-2}
-   @dots{}]
-  "@var{preparation-statements}")
-@end smallexample
-
-The definition is almost identical to @code{define_split}
-(@pxref{Insn Splitting}) except that the pattern to match is not a
-single instruction, but a sequence of instructions.
-
-It is possible to request additional scratch registers for use in the
-output template.  If appropriate registers are not free, the pattern
-will simply not match.
-
-@findex match_scratch
-@findex match_dup
-Scratch registers are requested with a @code{match_scratch} pattern at
-the top level of the input pattern.  The allocated register (initially) will
-be dead at the point requested within the original sequence.  If the scratch
-is used at more than a single point, a @code{match_dup} pattern at the
-top level of the input pattern marks the last position in the input sequence
-at which the register must be available.
-
-Here is an example from the IA-32 machine description:
-
-@smallexample
-(define_peephole2
-  [(match_scratch:SI 2 "r")
-   (parallel [(set (match_operand:SI 0 "register_operand" "")
-                   (match_operator:SI 3 "arith_or_logical_operator"
-                     [(match_dup 0)
-                      (match_operand:SI 1 "memory_operand" "")]))
-              (clobber (reg:CC 17))])]
-  "! optimize_size && ! TARGET_READ_MODIFY"
-  [(set (match_dup 2) (match_dup 1))
-   (parallel [(set (match_dup 0)
-                   (match_op_dup 3 [(match_dup 0) (match_dup 2)]))
-              (clobber (reg:CC 17))])]
-  "")
-@end smallexample
-
-@noindent
-This pattern tries to split a load from its use in the hopes that we'll be
-able to schedule around the memory load latency.  It allocates a single
-@code{SImode} register of class @code{GENERAL_REGS} (@code{"r"}) that needs
-to be live only at the point just before the arithmetic.
-
-A real example requiring extended scratch lifetimes is harder to come by,
-so here's a silly made-up example:
-
-@smallexample
-(define_peephole2
-  [(match_scratch:SI 4 "r")
-   (set (match_operand:SI 0 "" "") (match_operand:SI 1 "" ""))
-   (set (match_operand:SI 2 "" "") (match_dup 1))
-   (match_dup 4)
-   (set (match_operand:SI 3 "" "") (match_dup 1))]
-  "/* @r{determine 1 does not overlap 0 and 2} */"
-  [(set (match_dup 4) (match_dup 1))
-   (set (match_dup 0) (match_dup 4))
-   (set (match_dup 2) (match_dup 4))
-   (set (match_dup 3) (match_dup 4))]
-  "")
-@end smallexample
-
-@noindent
-If we had not added the @code{(match_dup 4)} in the middle of the input
-sequence, it might have been the case that the register we chose at the
-beginning of the sequence is killed by the first or second @code{set}.
 
 @end ifset
 @ifset INTERNALS
