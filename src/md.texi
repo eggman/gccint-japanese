@@ -5700,89 +5700,89 @@ insn に割り当てられた属性を指定する方法を提供する。
 @cindex insn lengths, computing
 @cindex computing the length of an insn
 
-For many machines, multiple types of branch instructions are provided, each
-for different length branch displacements.  In most cases, the assembler
-will choose the correct instruction to use.  However, when the assembler
-cannot do so, GCC can when a special attribute, the @code{length}
-attribute, is defined.  This attribute must be defined to have numeric
-values by specifying a null string in its @code{define_attr}.
+多くの機種では、複数のタイプの分岐命令が提供されており、
+それぞれ分岐の変位の長さが異なる。
+大部分の場合は、アセンブラが正しい命令を選ぶ。
+だが、アセンブラが不可能な場合は、特別な属性、@samp{length} 属性が
+定義されているときは GCC が行なうことができる。
+この属性は、@code{define_attr} でヌル文字列を指定することで
+数値を持つように定義しなければならない。
 
-In the case of the @code{length} attribute, two additional forms of
-arithmetic terms are allowed in test expressions:
+@samp{length} 属性の場合は、さらに算術項の二つの形式があり、
+テスト式で使うことができる。
 
 @table @code
 @cindex @code{match_dup} and attributes
 @item (match_dup @var{n})
-This refers to the address of operand @var{n} of the current insn, which
-must be a @code{label_ref}.
+これは、現在の insn のオペランド @var{n} のアドレスを参照している。
+このアドレスは @code{label_ref} でなければならない。
 
 @cindex @code{pc} and attributes
 @item (pc)
-For non-branch instructions and backward branch instructions, this refers
-to the address of the current insn.  But for forward branch instructions,
-this refers to the address of the next insn, because the length of the
-current insn is to be computed.
+@emph{現在の} insn のアドレスを参照する。
+これを@emph{次の} insn のアドレスとする使い方の方がより一貫性が
+保てるのだろうが、そうすると現在の insn の長さを計算するときに
+混乱する可能性がある。
 @end table
 
 @cindex @code{addr_vec}, length of
 @cindex @code{addr_diff_vec}, length of
-For normal insns, the length will be determined by value of the
-@code{length} attribute.  In the case of @code{addr_vec} and
-@code{addr_diff_vec} insn patterns, the length is computed as
-the number of vectors multiplied by the size of each vector.
+通常の insn については、長さは @samp{length} 属性の値により
+決まる。@code{addr_vec} と @code{addr_diff_vec} の insn パターンの
+場合は、長さはベクトル数に各ベクトルの大きさを掛けたものとして
+計算される。
 
-Lengths are measured in addressable storage units (bytes).
+長さは、アドレス可能な記憶域の単位(バイト)で測る。
 
-Note that it is possible to call functions via the @code{symbol_ref}
-mechanism to compute the length of an insn.  However, if you use this
-mechanism you must provide dummy clauses to express the maximum length
-without using the function call.  You can an example of this in the
-@code{pa} machine description for the @code{call_symref} pattern.
-
-The following macros can be used to refine the length computation:
+以下のマクロを使って長さの計算を洗練されたものにすることができる。
 
 @table @code
+@findex FIRST_INSN_ADDRESS
+@item FIRST_INSN_ADDRESS
+insn の @code{length} 属性が使われているとき、このマクロは
+ある関数の先頭の insn のアドレスに代入されるべき値を指定する。
+これが指定されていないと、0 が使われる。
+
 @findex ADJUST_INSN_LENGTH
 @item ADJUST_INSN_LENGTH (@var{insn}, @var{length})
-If defined, modifies the length assigned to instruction @var{insn} as a
-function of the context in which it is used.  @var{length} is an lvalue
-that contains the initially computed length of the insn and should be
-updated with the correct length of the insn.
+定義されていると、命令 @var{insn} に、それが使われている文脈の
+関数として割り当てられている長さを修正する。
+@var{length} は左辺値であり、最初に計算した insn の長さが入っている。
+これは、その insn の正しい長さに更新する必要がある。
 
-This macro will normally not be required.  A case in which it is
-required is the ROMP@.  On this machine, the size of an @code{addr_vec}
-insn must be increased by two to compensate for the fact that alignment
-may be required.
+このマクロは通常は必要とされない。
+必要となる場合の一つは、ROMP である。
+この機種では、@code{addr_vec} insn の大きさは、アラインメントが
+必要とされるかも知れないという事実を補償するために、2 づつ増加しなければ
+ならない。
 @end table
 
 @findex get_attr_length
-The routine that returns @code{get_attr_length} (the value of the
-@code{length} attribute) can be used by the output routine to
-determine the form of the branch instruction to be written, as the
-example below illustrates.
+@code{get_attr_length}(@code{length} 属性の値)を返すルーチンを
+出力ルーチンの中で使うと、以下の例が示すように、
+書き出すべき分岐命令の形を決めることができる。
 
-As an example of the specification of variable-length branches, consider
-the IBM 360.  If we adopt the convention that a register will be set to
-the starting address of a function, we can jump to labels within 4k of
-the start using a four-byte instruction.  Otherwise, we need a six-byte
-sequence to load the address from memory and then branch to it.
+可変長分岐の指定の例として、IBM 360 を考える。
+あるレジスタに、ある関数の開始アドレスが設定されるという規約を採用したと
+すると、その開始点から 4k バイト以内のラベルには一個の 4 バイト命令で
+ジャンプすることが出来る。それ以外の場合は、6バイトの命令列を使って、
+メモリからアドレスをロードし、次にそのアドレスに分岐する必要がある。
 
-On such a machine, a pattern for a branch instruction might be specified
-as follows:
+こういう機種では、分岐命令のパターンは以下のような指定になる。
 
 @smallexample
 (define_insn "jump"
   [(set (pc)
         (label_ref (match_operand 0 "" "")))]
   ""
+  "*
 @{
    return (get_attr_length (insn) == 4
-           ? "b %l0" : "l r15,=a(%l0); br r15");
-@}
-  [(set (attr "length")
-        (if_then_else (lt (match_dup 0) (const_int 4096))
-                      (const_int 4)
-                      (const_int 6)))])
+           ? \"b %l0\" : \"l r15,=a(%l0); br r15\");
+@}"
+  [(set (attr "length") (if_then_else (lt (match_dup 0) (const_int 4096))
+                                      (const_int 4)
+                                      (const_int 6)))])
 @end smallexample
 
 @end ifset
@@ -5791,10 +5791,10 @@ as follows:
 @subsection Constant Attributes
 @cindex constant attributes
 
-A special form of @code{define_attr}, where the expression for the
-default value is a @code{const} expression, indicates an attribute that
-is constant for a given run of the compiler.  Constant attributes may be
-used to specify which variety of processor is used.  For example,
+@code{define_attr} の特別な形式、つまり、デフォルト値の式が @code{const} 式
+の場合、ある特定のコンパイラの実行については定数である属性を示す。
+定数属性は、どの種類のプロセッサが使われるかを指定するのに使われる。
+例えば、以下のようになる。
 
 @smallexample
 (define_attr "cpu" "m88100,m88110,m88000"
@@ -5810,11 +5810,10 @@ used to specify which variety of processor is used.  For example,
                 (const_string "slow"))))
 @end smallexample
 
-The routine generated for constant attributes has no parameters as it
-does not depend on any particular insn.  RTL expressions used to define
-the value of a constant attribute may use the @code{symbol_ref} form,
-but may not use either the @code{match_operand} form or @code{eq_attr}
-forms involving insn attributes.
+定数属性用に生成されたルーチンには、どの特定の insn にも依存しないので、
+パラメータはない。定数属性の値を定義するのに使われる RTL 式は、
+@code{symbol_ref} 形式を使っても良いが、insn の属性を含む、
+@code{match_operand} 形式や @code{eq_attr} 形式は使ってならない。
 
 @end ifset
 @ifset INTERNALS
@@ -5863,28 +5862,31 @@ additional insn attributes.
 @subsection Delay Slot Scheduling
 @cindex delay slots, defining
 
-The insn attribute mechanism can be used to specify the requirements for
-delay slots, if any, on a target machine.  An instruction is said to
-require a @dfn{delay slot} if some instructions that are physically
-after the instruction are executed as if they were located before it.
-Classic examples are branch and call instructions, which often execute
-the following instruction before the branch or call is performed.
+insn の属性の機構を使うと、ターゲットマシンに遅延スロットがもしあれば、
+遅延スロットを必要であると指定することができる。
+ある命令は、物理的にその直後に置かれている命令群が、その命令の前に
+置かれているかのように実行されるとき、@dfn{遅延スロット}を必要とする
+と言われる。
+古典的な例では、分岐命令と呼び出し命令が該当し、
+分岐や呼び出しが実行される前に後続の命令を実行することがある。
 
-On some machines, conditional branch instructions can optionally
-@dfn{annul} instructions in the delay slot.  This means that the
-instruction will not be executed for certain branch outcomes.  Both
-instructions that annul if the branch is true and instructions that
-annul if the branch is false are supported.
+機種によっては、条件分岐命令が、遅延スロットに置かれている
+命令を選択的に@dfn{無効化}することができる。
+これは、遅延スロットにある命令が、分岐の結果によっては実行されないという
+ことを意味する。
+分岐が真のときに無効化を行なう命令と分岐が偽の時に無効化を行なう命令の
+両方がサポートされている。
 
-Delay slot scheduling differs from instruction scheduling in that
-determining whether an instruction needs a delay slot is dependent only
-on the type of instruction being generated, not on data flow between the
-instructions.  See the next section for a discussion of data-dependent
-instruction scheduling.
+遅延スロット空けジューリングが命令スケジューリングと異なるのは、
+ある命令が遅延スロットを必要とするかどうかを決めるには、生成される
+命令の型にだけ依存し、命令間のデータ流には依存しないという点にある。
+データ依存の命令スケジューリングに関する議論については次の節を
+参照のこと。
 
 @findex define_delay
-The requirement of an insn needing one or more delay slots is indicated
-via the @code{define_delay} expression.  It has the following form:
+ある insn が一個以上の遅延スロットを必要とするという要件は、
+@code{define_delay} 式により指示される。
+@code{define_delay} 式は以下の形式を取る。
 
 @smallexample
 (define_delay @var{test}
@@ -5893,34 +5895,36 @@ via the @code{define_delay} expression.  It has the following form:
                @dots{}])
 @end smallexample
 
-@var{test} is an attribute test that indicates whether this
-@code{define_delay} applies to a particular insn.  If so, the number of
-required delay slots is determined by the length of the vector specified
-as the second argument.  An insn placed in delay slot @var{n} must
-satisfy attribute test @var{delay-n}.  @var{annul-true-n} is an
-attribute test that specifies which insns may be annulled if the branch
-is true.  Similarly, @var{annul-false-n} specifies which insns in the
-delay slot may be annulled if the branch is false.  If annulling is not
-supported for that delay slot, @code{(nil)} should be coded.
+@var{test} は、属性のテストであり、この @code{define_delay} がある特定の
+insn に適用されるかどうかを指示する。
+もし適用されるのであれば、必要な遅延スロットの数が
+二番目の引数として指定されるベクターの長さにより決定される。
+遅延スロット @var{n} に置かれている insn は、属性テスト @var{delay-n} を
+満足しなければならない。@var{annul-true-n} は属性テストであり、
+分岐が真の時にどの insn が無効化されるかを指定する。
+同様に、@var{annul-false-n} は分岐が偽の時に、
+遅延スロットにあるうちのどの insn が無効化されるかを指定する。
+遅延スロットの無効化がサポートされていないなら、@code{(nil)} を
+指定すること。@refill
 
-For example, in the common case where branch and call insns require
-a single delay slot, which may contain any insn other than a branch or
-call, the following would be placed in the @file{md} file:
+例えば、良くある場合として分岐 insn と呼び出し insn が一個の遅延スロット
+を必要とし、そのスロットには分岐あるいは呼び出し以外の任意の insn を
+置くことができる場合、以下のコードを @file{md} ファイルに置くことになる。
 
 @smallexample
 (define_delay (eq_attr "type" "branch,call")
               [(eq_attr "type" "!branch,call") (nil) (nil)])
 @end smallexample
 
-Multiple @code{define_delay} expressions may be specified.  In this
-case, each such expression specifies different delay slot requirements
-and there must be no insn for which tests in two @code{define_delay}
-expressions are both true.
+@code{define_delay} 式は複数指定することができる。
+その場合、各 @code{define_delay} 式は、別々の遅延スロット要件を
+指定し、二つの @code{define_delay} 式のテストで両方真になる insn が
+あってはならない。
 
-For example, if we have a machine that requires one delay slot for branches
-but two for calls,  no delay slot can contain a branch or call insn,
-and any valid insn in the delay slot for the branch can be annulled if the
-branch is true, we might represent this as follows:
+例えば、分岐には一個の遅延スロットを必要とするが、呼び出しには二つ
+の遅延スロットが必要で、遅延スロットには分岐 insn も呼び出し insn も
+置くことができず、分岐用の遅延スロットに有効な任意の insn が
+分岐が真の場合には無効化可能であるという機種では、以下のように表現する。
 
 @smallexample
 (define_delay (eq_attr "type" "branch")
@@ -6453,6 +6457,128 @@ construction
                          "(i0_pipeline | i1_pipeline), finish")
 @end smallexample
 
-
 @end ifset
+
+@node Function Units,  , Delay Slots, Insn Attributes
+@subsection Specifying Function Units
+@cindex function units, for scheduling
+
+多くの RISC マシンでは、特定のサイクル数またないとその結果が得られない
+ような命令が存在する。良く見られるのは、メモリからデータをロード
+する命令である。多くのマシンでは、ロード命令の後、あまり早くロード
+されるデータを参照すると、パイプラインがストールする。
+
+さらに、最近の多くのマイクロプロセッサは、複数の機能ユニット、普通は
+一個の整数向けのユニットと一個の浮動小数点ユニットを持っており、
+そのため、必要とされる結果が用意できていないときに良くパイプラインが
+ストールする。
+
+この節では、ある命令の実行から、その結果が使えるようになるまでにどれだけの
+時間が経過する必要があるかを指定する方法を説明する。
+また、ある命令の実行することにより、機能ユニットの競合にのために、
+同種の命令の実行を遅らせることがあるのはどういう場合かを指定する方法に
+ついても説明する。
+
+この節で説明する指定方法のために、マシンを機能ユニットに分割し、
+各機能ユニットは特定の種類の命令を first-in-first-out 順に
+実行するものとする。
+各サイクル毎に一つの命令を受付、続く命令でその結果が利用できる
+(フォワーディングによることが多い)機能ユニットについては、
+指定を行う必要がない。
+古典的な RISC マイクロプロセッサは、通常機能ユニットは一つしかなく、
+それを@samp{メモリ} と呼ぶことが出来る。最近のスーパースカラ・プロセッサ
+は、浮動小数点演算用の機能ユニットを複数持つことが多い。少なくとも、
+一個の浮動小数点加算器と乗算器を持つのが普通である。
+
+@findex define_function_unit
+ある insn のクラスによるある機能ユニットの使用方法は、
+@code{define_function_unit} 式で指定される。それは以下のようになる。
+
+@smallexample
+(define_function_unit @var{name} @var{multiplicity} @var{simultaneity}
+                      @var{test} @var{ready-delay} @var{issue-delay}
+                     [@var{conflict-list}])
+@end smallexample
+
+@var{name} は、機能ユニット名を指定する文字列である。
+
+@var{multiplicity} は整数であり、プロセッサの持つ同等のユニット数を
+指定する。二個以上のユニットが指定された場合は、各ユニットは
+独立にスケジュールされる。
+本当に独立なユニット数を指定すべきである。パイプライン化されたユニットは
+一個のユニットとして指定すべきである。(一個の命令クラスに対し
+複数の機能ユニットがあり、それらが真に独立しており、パイプライン化
+されていない機種の良く知られている例としては、CDC 6600 の二つの
+乗算ユニットと二つの増分ユニットがあるのみである。)
+
+@var{simultaneity} は、各機能ユニットの実態で同時に実行できる命令の
+最大数か、機能ユニットがパイプライン化されていて制限がないのであれば
+ゼロを指定する。
+
+機能ユニット @var{name} を参照している、全ての
+ @code{define_function_unit} の定義は、@var{multiplicity} と
+@var{simultaneity} について同じ名前と値を持たなければならない。
+
+@var{test} は属性テストであり、この定義において記述しようとしている
+insn を選択する。一個の insn は、複数の機能ユニットを使っても良く、
+一個の機能ユニットは複数の @code{define_function_unit} で指定されて
+いても良いということに注意して欲しい。
+
+@var{ready-delay} はある整数であり、ストールなしで命令の結果が
+使えるようになるまでのサイクル数を指定する。
+
+@var{issue-delay} はある整数であり、@var{test} 式に一致した命令が
+この機能ユニットを使い始めてから、後続の命令が使い始められるまでの
+サイクル数を指定する。コストが @var{N} だと @var{N-1} サイクルの遅延を
+表す。後続の命令は、以前の命令がより大きな値の @var{ready-delay} を
+持っている場合にも遅延する可能性がある。このブロックの効果は、
+@var{simultaneity}、@var{ready-delay}、@var{issue-delay}、
+@var{conflict-list} といった項から計算される。
+普通のパイプライン化されていない機能ユニットについては、
+@var{simultaneity} は 1 であり、このユニットは、実行している命令の
+@var{ready-delay} サイクルの間ブロックされる。より小さな値の
+@var{issue-delay} は無視される。
+
+@var{conflict-list} はオプションのリストであり、この機能ユニットの
+衝突の詳細なコストを与える。指定されていると、条件のテスト式の
+リストになっており、その式は、@var{name} で実行されるように選ばれた
+insn に適用される。その insn の後に、既に @var{name} で実行中の
+@var{test} にマッチする特定の insn が続く。
+リストのそれぞれの insn に対し、@var{issue-delay} が
+衝突のコストを指定する。リストに無い insn については、コストはゼロである。
+指定されていない場合は、@var{conflict-list} は、
+機能ユニットを使う全ての命令がデフォルトになる。
+
+このベクトルが使われる典型的な場合としては、
+浮動小数点機能ユニットが単精度演算か倍精度演算のどちらかは
+パイプライン化できるが両方は出来ない場合や、メモリユニットが
+ロード命令はパイプライン化できるがストア命令はできない場合等がある。
+
+例として古典的な RISC マシンを考えてみよう。ロード命令の結果は
+二サイクルの間利用できず(一個の「遅延」命令が必要)、ロード命令は
+同時には一個しか実行できないとする。これは以下のように指定できる。
+
+@smallexample
+(define_function_unit "memory" 1 1 (eq_attr "type" "load") 2 0)
+@end smallexample
+
+浮動小数点機能ユニットが単精度か倍精度のどちらかはパイプライン処理できるが、
+両方はできないという場合、以下のように指定することができる。
+
+@smallexample
+(define_function_unit
+   "fp" 1 0 (eq_attr "type" "sp_fp") 4 4 [(eq_attr "type" "dp_fp")])
+(define_function_unit
+   "fp" 1 0 (eq_attr "type" "dp_fp") 4 4 [(eq_attr "type" "sp_fp")])
+@end smallexample
+
+@strong{注意:} スケジューラは、機能ユニットの衝突を避け、
+@code{define_function_unit} の全ての指定を使おうとする。
+我々は最近、これらの指定では、
+複数のパイプラインユニットを使う命令を持つ、いくつかの新しめの
+「スーパスカラ」プロセッサをモデル化できないということに気が付いた。
+これらの命令は、第二の機能ユニットがそれらの命令を実行するのに使われている
+間に潜在的な衝突を起こす可能性があり、その衝突を表現する方法がないのである。
+このようなプロセッサの機能ユニットの衝突の仕組みの例や、その表現方法に
+ついて提案があれば、知らせて欲しい。
 
