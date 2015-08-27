@@ -32,9 +32,9 @@ C のヘッダファイルについては、次章を見ていただきたい
 * Dependent Patterns::  一つのパターンが別のパターンを必要とするとき
 * Jump Patterns::       ジャンプ命令のパターンに関する特別な注意
 * Insn Canonicalizations::命令の正規化
-* Peephole Definitions::機種固有のピープホール最適化の定義方法
 * Expander Definitions::標準の演算向けの各種 RTL insn 列の生成
 * Insn Splitting::    複数命令への分割
+* Peephole Definitions::機種固有のピープホール最適化の定義方法
 * Insn Attributes::     生成された insn の属性値を指定する
 @end menu
 
@@ -584,6 +584,110 @@ Motorola 形式でピリオドが必要な場所には文字シーケンス @sam
 アセンブラ言語の文法の複数の方言を記述する。
 @xref{Instruction Output}.
 
+@node Output Statement, Constraints, Output Template, Machine Desc
+@section C Statements for Assembler Output
+@cindex output statements
+@cindex C statements for assembler output
+@cindex generating assembler output
+
+全てのケースに対して、正確で効率の良いアセンブラコードを生成するのが
+難しいということが良くある。
+例えば、オペコードはオペランドの種類に依存することがある。
+あるいは、オペランドの組合せが悪いと余分の機械命令が必要なこともある。
+
+そういうときは、出力制御文字列を @samp{@@} で開始すると、
+一行に一個ずつ置いたテンプレートの列とすることが出来る。
+(空行や行頭の空白、タブは無視される。)
+このテンプレート群は、命令パターン中の制約の選択肢に対応する
+(@pxref{Multi-Alternative})。
+例えば、ターゲットの機種が、アドレスを二つ取る加算命令として、
+レジスタに加算する命令 @samp{addr} とレジスタの値をメモリ中に加算する命令
+@samp{addm} の二つの命令を持っている場合、以下のようにパターンを書くこと
+ができる。
+
+@smallexample
+(define_insn "addsi3"
+  [(set (match_operand:SI 0 "general_operand" "=r,m")
+        (plus:SI (match_operand:SI 1 "general_operand" "0,0")
+                 (match_operand:SI 2 "general_operand" "g,r")))]
+  ""
+  "@@
+   addr %2,%0
+   addm %2,%0")
+@end smallexample
+
+@cindex @code{*} in template
+@cindex asterisk in template
+出力制御文字列が @samp{*} で始まっている場合は、出力テンプレートそのもの
+ではなくて、テンプレートを生成する C のコード断片であることを示す。
+この C コード断片は、@code{return} 文を使って、テンプレート文字列を
+返す必要がある。このテンプレートは C の文字列リテラルを使う場合が多い。
+文字列リテラルの場合は区切り記号として二重引用符が必要である。
+テンプレート文字列に二重引用符を含めるには、@samp{\} でエスケープする
+必要がある。
+
+オペランドは、@code{operands} という、@code{rtx []} 型の配列に
+収められている。
+
+即値オペランドが、ある一定の範囲内におさまるかどうかによって、
+異なるアセンブラコードの生成方法を選択するのは非常に良く
+行なわれる。
+しかし、その場合には注意が必要である。
+とうのは、@code{INTVAL} の結果はホストマシンでの整数になるからである。
+ホストマシンの @code{int} のビット数が、ターゲットマシンの定数で
+使われるモードのビット数より大きければ、@code{INTVAL} から得られるビットの
+いくつかは余計なものである。
+正しい結果を得るためには、この余分なビットによる値を注意深く
+取り除かなければならない。
+
+@findex output_asm_insn
+サブルーチン @code{output_asm_insn} を使って、
+あるアセンブラ命令を出力し、その後出力を続けたり、さらに計算を行なうことが
+可能である。
+この関数は引数を二つ取る。テンプレート文字列とオペランドのベクトル
+である。ベクトルは @code{operands} であっても良いし、
+あるいは読者がローカルに宣言し、自分で初期化した、別の @code{rtx} の
+配列でも良い。
+
+@findex which_alternative
+ある insn のパターンで、制約に複数の選択肢がある場合は、
+アセンブラコードの見かけはどの選択肢にマッチしたかでほとんど決まる
+ことが多い。その場合、C のコードでは、変数 @code{which_alternative} を
+テストすることができる。この変数は、実際に条件にあった
+選択肢の順番を表す数(先頭の選択肢は 0で、二番目は 1、等々)である。
+
+例えば、ゼロを格納する命令には、二つのオペコードがあるとしよう。
+レジスタの場合には@samp{clrreg}、メモリ位置の場合は @samp{clrmem} である。
+以下に、あるパターンでどのように @code{which_alternative} を
+使って、オペコードを選択するかを示す。
+
+@smallexample
+(define_insn ""
+  [(set (match_operand:SI 0 "general_operand" "=r,m")
+        (const_int 0))]
+  ""
+  "*
+  return (which_alternative == 0
+          ? \"clrreg %0\" : \"clrmem %0\");
+  ")
+@end smallexample
+
+この例は、生成すべきアセンブラコードが選択肢@emph{だけで}決まるなら、
+出力制御文字を @samp{@@} で始めるようにすれば、以下のように指定する
+こともできる。
+
+@smallexample
+@group
+(define_insn ""
+  [(set (match_operand:SI 0 "general_operand" "=r,m")
+        (const_int 0))]
+  ""
+  "@@
+   clrreg %0
+   clrmem %0")
+@end group
+@end smallexample
+
 @c Most of this node appears by itself (in a different place) even
 @c when the INTERNALS flag is clear.  Passages that require the internals
 @c manual's context are conditionalized to appear only in the internals manual.
@@ -624,9 +728,6 @@ Motorola 形式でピリオドが必要な場所には文字シーケンス @sam
 * Class Preferences::   Constraints guide which hard register to put things in.
 * Modifiers::           More precise control over effects of constraints.
 * Machine Constraints:: Existing constraints for some particular machines.
-* Disable Insn Alternatives:: Disable insn alternatives using attributes.
-* Define Constraints::  How to define machine-specific constraints.
-* C Constraint Interface:: How to test constraints from C code.
 @end menu
 @end ifset
 
@@ -3485,15 +3586,14 @@ RTX からなる。普通は一つだけである。その場合、
 追跡することができる。
 
 @menu
-* Defining Attributes:: Specifying attributes and their values.
-* Expressions::         Valid expressions for attribute values.
-* Tagging Insns::       Assigning attribute values to insns.
-* Attr Example::        An example of assigning attributes.
-* Insn Lengths::        Computing the length of insns.
-* Constant Attributes:: Defining attributes that are constant.
-* Mnemonic Attribute::  Obtain the instruction mnemonic as attribute value.
-* Delay Slots::         Defining delay slots required for a machine.
-* Processor pipeline description:: Specifying information for insn scheduling.
+* Defining Attributes:: 属性とその値の指定方法
+* Expressions::         属性値として使用可能な式
+* Tagging Insns::       属性値の insn への割り当て
+* Attr Example::        属性割り当ての例
+* Insn Lengths::        insn の長さの計算
+* Constant Attributes:: 定数である属性の定義
+* Delay Slots::         遅延スロットの定義
+* Function Units::      insn スケジューリングに必要な情報の指定
 @end menu
 
 @end ifset
