@@ -593,10 +593,8 @@ Motorola 形式でピリオドが必要な場所には文字シーケンス @sam
 @cindex operand constraints
 @cindex constraints
 
-Each @code{match_operand} in an instruction pattern can specify
-constraints for the operands allowed.  The constraints allow you to
-fine-tune matching within the set of operands allowed by the
-predicate.
+ある命令パターンにおいて、@code{match_operand} のそれぞれに、
+許されるオペランドの型についての制約を指定することができる。
 
 @end ifset
 @ifclear INTERNALS
@@ -606,18 +604,18 @@ predicate.
 @cindex constraints, @code{asm}
 @cindex @code{asm} constraints
 
-Here are specific details on what constraint letters you can use with
+以下に、@code{asm} オペランドでどんな制約文字が使用可能かの詳細を
+示す。
+
 @code{asm} operands.
 @end ifclear
-Constraints can say whether
-an operand may be in a register, and which kinds of register; whether the
-operand can be a memory reference, and which kinds of address; whether the
-operand may be an immediate constant, and which possible values it may
-have.  Constraints can also require two operands to match.
-Side-effects aren't allowed in operands of inline @code{asm}, unless
-@samp{<} or @samp{>} constraints are used, because there is no guarantee
-that the side-effects will happen exactly once in an instruction that can update
-the addressing register.
+制約により、次のような指定が可能である。
+あるオペランドがレジスタに置かれているかどうか、置かれているなら
+どの種類のレジスタか。
+オペランドとしてメモリ参照が可能かどうか、可能ならどの種類の
+アドレスか。オペランドとして即値が可能かどうか、可能ならどういう
+値が可能か。
+制約は二つのオペランドが一致することを要求することもできる。
 
 @ifset INTERNALS
 @menu
@@ -645,200 +643,184 @@ the addressing register.
 @subsection Simple Constraints
 @cindex simple constraints
 
-The simplest kind of constraint is a string full of letters, each of
-which describes one kind of operand that is permitted.  Here are
-the letters that are allowed:
+最も単純な種類の制約は全部が英文字からなる文字列である。
+その一つ一つの文字が、許されるオペランドの一つの種類を記述する。
+以下に許される英文字を示す。
 
 @table @asis
-@item whitespace
-Whitespace characters are ignored and can be inserted at any position
-except the first.  This enables each alternative for different operands to
-be visually aligned in the machine description even if they have different
-number of constraints and modifiers.
-
 @cindex @samp{m} in constraint
 @cindex memory references in constraints
 @item @samp{m}
-A memory operand is allowed, with any kind of address that the machine
-supports in general.
-Note that the letter used for the general memory constraint can be
-re-defined by a back end using the @code{TARGET_MEM_CONSTRAINT} macro.
+メモリオペランドを指定する。その機種が一般にサポートしている
+アドレスならどれでも良い。
 
 @cindex offsettable address
 @cindex @samp{o} in constraint
 @item @samp{o}
-A memory operand is allowed, but only if the address is
-@dfn{offsettable}.  This means that adding a small integer (actually,
-the width in bytes of the operand, as determined by its machine mode)
-may be added to the address and the result is also a valid memory
-address.
+メモリオペランドを指定する。ただし、許されるアドレスは「オフセット指定可能な」
+アドレスだけである。
+つまり、そのアドレスに小さな整数(実際には、マシンモードにより決まる、
+バイト数で表したオペランドの幅に収まる数)を加算した結果も
+また有効なメモリアドレスとなる。
 
 @cindex autoincrement/decrement addressing
-For example, an address which is constant is offsettable; so is an
-address that is the sum of a register and a constant (as long as a
-slightly larger constant is also within the range of address-offsets
-supported by the machine); but an autoincrement or autodecrement
-address is not offsettable.  More complicated indirect/indexed
-addresses may or may not be offsettable depending on the other
-addressing modes that the machine supports.
+例えば、アドレスが定数であれば、それはオフセット指定可能である。
+一個のレジスタと一個の定数(ちょっと大きめの定数もその機種で
+サポートされている範囲のアドレスのオフセットになっている限り)
+の和もオフセット指定可能である。
+しかし、自動インクリメント、自動デクリメントのアドレスは
+オフセット指定可能でない。
+もっと複雑な間接／インデックス修飾アドレスがオフセット指定可能か
+どうかは、その機種がサポートする他のアドレッシングモードに
+依存する。
 
-Note that in an output operand which can be matched by another
-operand, the constraint letter @samp{o} is valid only when accompanied
-by both @samp{<} (if the target machine has predecrement addressing)
-and @samp{>} (if the target machine has preincrement addressing).
+別のオペランドにマッチ可能な出力オペランドにおいては、
+制約文字 @samp{o}は、@samp{<}(ターゲット機種に事前デクリメントアドレッシング
+があれば)と@samp{>}(ターゲット機種に事前インクリメントアドレッシングが
+あれば)の両方を伴う場合にのみ有効である。
 
 @cindex @samp{V} in constraint
 @item @samp{V}
-A memory operand that is not offsettable.  In other words, anything that
-would fit the @samp{m} constraint but not the @samp{o} constraint.
+オフセット指定可能でないメモリオペランドを指定する。
+言い換えると、制約 @samp{m} には収まるが、@samp{o} には収まらないものは
+何でもここに入る。
 
 @cindex @samp{<} in constraint
 @item @samp{<}
-A memory operand with autodecrement addressing (either predecrement or
-postdecrement) is allowed.  In inline @code{asm} this constraint is only
-allowed if the operand is used exactly once in an instruction that can
-handle the side-effects.  Not using an operand with @samp{<} in constraint
-string in the inline @code{asm} pattern at all or using it in multiple
-instructions isn't valid, because the side-effects wouldn't be performed
-or would be performed more than once.  Furthermore, on some targets
-the operand with @samp{<} in constraint string must be accompanied by
-special instruction suffixes like @code{%U0} instruction suffix on PowerPC
-or @code{%P0} on IA-64.
+自動デクリメントのアドレスのメモリオペランドを指定する。
+プリデクリメントでもポストデクリメントのどちらでも良い。
 
 @cindex @samp{>} in constraint
 @item @samp{>}
-A memory operand with autoincrement addressing (either preincrement or
-postincrement) is allowed.  In inline @code{asm} the same restrictions
-as for @samp{<} apply.
+自動インクリメントのアドレスのメモリオペランドを指定する。
+プリインクリメントでもポストインクリメントのどちらでも良い。
 
 @cindex @samp{r} in constraint
 @cindex registers in constraints
 @item @samp{r}
-A register operand is allowed provided that it is in a general
-register.
+レジスタオペランドが許される。ただし、レジスタは汎用レジスタである。
+
+@cindex @samp{d} in constraint
+@item @samp{d}, @samp{a}, @samp{f}, @dots{}
+他の文字は、機種依存の方法で、特定のレジスタクラスを表すように
+定義することができる。
+68000/68020 では、@samp{d}、@samp{a}、@samp{f} が
+定義されており、それぞれ、データレジスタ、アドレスレジスタ、
+浮動小数点レジスタを表す。
 
 @cindex constants in constraints
 @cindex @samp{i} in constraint
 @item @samp{i}
-An immediate integer operand (one with constant value) is allowed.
-This includes symbolic constants whose values will be known only at
-assembly time or later.
+整数の即値オペランド(定数値のもの)が許される。
+これには、値がアセンブル時にならないとわからないシンボリックな定数も
+含まれる。
 
 @cindex @samp{n} in constraint
 @item @samp{n}
-An immediate integer operand with a known numeric value is allowed.
-Many systems cannot support assembly-time constants for operands less
-than a word wide.  Constraints for these operands should use @samp{n}
-rather than @samp{i}.
+既知の数値を持つ整数即値のオペランドが許される。
+多くのシステムでは、語長よりも小さいオペランドにはアセンブル時の定数は
+使えない。そのようなオペランドの制約には @samp{i} ではなく @samp{n} を
+使うべきである。
 
 @cindex @samp{I} in constraint
 @item @samp{I}, @samp{J}, @samp{K}, @dots{} @samp{P}
-Other letters in the range @samp{I} through @samp{P} may be defined in
-a machine-dependent fashion to permit immediate integer operands with
-explicit integer values in specified ranges.  For example, on the
-68000, @samp{I} is defined to stand for the range of values 1 to 8.
-This is the range permitted as a shift count in the shift
-instructions.
+他の、@samp{I} と @samp{P} の間にある文字は、機種依存の方法で、
+指定された範囲の明示された整数値を持つ整数の即値オペランドを許すように
+定義することができる。
+例えば、68000 では、@samp{I} は、1 〜 8 の範囲の値を表すと
+定義されている。これは、シフト命令で許されているシフト幅の範囲である。
 
 @cindex @samp{E} in constraint
 @item @samp{E}
-An immediate floating operand (expression code @code{const_double}) is
-allowed, but only if the target floating point format is the same as
-that of the host machine (on which the compiler is running).
+浮動小数点の即値オペランド(式コードは @code{const_double})が
+許される。ただし、ターゲットの浮動小数点形式がホストマシン(コンパイラが
+動作するマシン)のものと同じ場合に限られる。
 
 @cindex @samp{F} in constraint
 @item @samp{F}
-An immediate floating operand (expression code @code{const_double} or
-@code{const_vector}) is allowed.
+浮動小数点の即値オペランド(式コードは @code{const_double})が
+許される。
 
 @cindex @samp{G} in constraint
 @cindex @samp{H} in constraint
 @item @samp{G}, @samp{H}
-@samp{G} and @samp{H} may be defined in a machine-dependent fashion to
-permit immediate floating operands in particular ranges of values.
+@samp{G} と @samp{H} は、機種依存の方法で、特定の範囲の値の
+浮動小数点即値オペランドを許すように定義することができる。
 
 @cindex @samp{s} in constraint
 @item @samp{s}
-An immediate integer operand whose value is not an explicit integer is
-allowed.
+値が明示的な整数ではない、整数即値オペランドが許される。
 
-This might appear strange; if an insn allows a constant operand with a
-value not known at compile time, it certainly must allow any known
-value.  So why use @samp{s} instead of @samp{i}?  Sometimes it allows
-better code to be generated.
+これは奇異に聞こえるかもしれない。
+もし、ある insn がコンパイル時には決まっていない値をもつ定数オペランドを
+許すなら、当然、どんな既知の値でも許さなければならないはずだ。
+どうして、@samp{i} の代わりに @samp{s} を使うのか?
+その方が、良いコードが生成されることがあるからなのだ。
 
-For example, on the 68000 in a fullword instruction it is possible to
-use an immediate operand; but if the immediate value is between @minus{}128
-and 127, better code results from loading the value into a register and
-using the register.  This is because the load into the register can be
-done with a @samp{moveq} instruction.  We arrange for this to happen
-by defining the letter @samp{K} to mean ``any integer outside the
-range @minus{}128 to 127'', and then specifying @samp{Ks} in the operand
-constraints.
+例えば、68000 の全ワードの命令では即値オペランドを使うことができる。
+しかし、即値の範囲が -128 と 127 の間にあるなら、その値をレジスタに
+ロードして、そのレジスタを使った方が良いコードになるのである。
+これは、レジスタへのロードが @samp{moveq} 命令で行なえるからである。
+我々はこれが起きるように、文字 @samp{K} が「-128 と 127 の範囲の
+外側の整数」という意味を持つように定義し、オペランドの制約に
+@samp{Ks} と指定している。
 
 @cindex @samp{g} in constraint
 @item @samp{g}
-Any register, memory or immediate integer operand is allowed, except for
-registers that are not general registers.
+任意のレジスタ、メモリ、整数の即値のオペランドが許される。
+ただし、汎用レジスタでないレジスタは除く。
 
 @cindex @samp{X} in constraint
 @item @samp{X}
 @ifset INTERNALS
-Any operand whatsoever is allowed, even if it does not satisfy
-@code{general_operand}.  This is normally used in the constraint of
-a @code{match_scratch} when certain alternatives will not actually
-require a scratch register.
+どんなオペランドでも、たとえ @code{general_operand} を満たさないもので
+あっても許される。
+これは、通常、特定の選択肢が実際にはスクラッチレジスタを必要としないときに、
+@code{match_scratch} の制約で使われる。
 @end ifset
 @ifclear INTERNALS
-Any operand whatsoever is allowed.
+どんなオペランドでも許される。
 @end ifclear
 
 @cindex @samp{0} in constraint
 @cindex digits in constraint
 @item @samp{0}, @samp{1}, @samp{2}, @dots{} @samp{9}
-An operand that matches the specified operand number is allowed.  If a
-digit is used together with letters within the same alternative, the
-digit should come last.
-
-This number is allowed to be more than a single digit.  If multiple
-digits are encountered consecutively, they are interpreted as a single
-decimal integer.  There is scant chance for ambiguity, since to-date
-it has never been desirable that @samp{10} be interpreted as matching
-either operand 1 @emph{or} operand 0.  Should this be desired, one
-can use multiple alternatives instead.
+指定したオペランド番号にマッチするオペランドが許される。
+数字を同じ選択肢の中で英文字と組み合わせて使うなら、数字は
+最後に書くこと。
 
 @cindex matching constraint
 @cindex constraint, matching
-This is called a @dfn{matching constraint} and what it really means is
-that the assembler has only a single operand that fills two roles
+これは、@dfn{照合制約}と呼ばれており、それが実際に意味することは、
+アセンブラには二つの役割を果たす一個のオペランドしかないということである。
 @ifset INTERNALS
-considered separate in the RTL insn.  For example, an add insn has two
-input operands and one output operand in the RTL, but on most CISC
+この二つの役割は RTL insn で別のものと考えられている。
+例えば、add insn は RTL には、二つの入力オペランドと一つのオペランドを
+持っているが、多くの CISC
 @end ifset
 @ifclear INTERNALS
-which @code{asm} distinguishes.  For example, an add instruction uses
-two input operands and an output operand, but on most CISC
+@code{asm} は二つの役割を区別する。例えば、add 命令は二つの
+入力オペランドと出力オペランドを使うが、多くの CISC
 @end ifclear
-machines an add instruction really has only two operands, one of them an
-input-output operand:
+マシンでは、add 命令にはオペランドが二つしかなく、その一つは
+入力と出力兼用オペランドである。
 
 @smallexample
 addl #35,r12
 @end smallexample
 
-Matching constraints are used in these circumstances.
-More precisely, the two operands that match must include one input-only
-operand and one output-only operand.  Moreover, the digit must be a
-smaller number than the number of the operand that uses it in the
-constraint.
+照合制約は以下の状況で使われる。
+もっと正確に言えば、マッチする二つのオペランドのうち、一つは入力専用で、
+もう一つは出力専用でなければならない。さらに、数字は制約で使われている
+オペランド数より小さな数でなければならない。
 
 @ifset INTERNALS
-For operands to match in a particular case usually means that they
-are identical-looking RTL expressions.  But in a few special cases
-specific kinds of dissimilarity are allowed.  For example, @code{*x}
-as an input operand will match @code{*x++} as an output operand.
-For proper results in such cases, the output template should always
-use the output-operand's number when printing the operand.
+ある特定の場合にマッチするオペランドは普通それらが見かけが同じである
+RTL 式になっているということを意味する。しかし、2,3の特別な場合には
+特定の種類の違いは許される。例えば、入力オペランドとしての @code{*x} は
+出力オペランドとしての @code{*x++} にマッチする。
+このような場合に正しい結果を得るには、出力テンプレートでは
+オペランドを出力するさいに常に出力オペランドの番号を使う必要がある。
 @end ifset
 
 @cindex load address instruction
@@ -846,32 +828,42 @@ use the output-operand's number when printing the operand.
 @cindex address constraints
 @cindex @samp{p} in constraint
 @item @samp{p}
-An operand that is a valid memory address is allowed.  This is
-for ``load address'' and ``push address'' instructions.
+有効なメモリアドレスであるオペランドが許される。
+これは、「ロード・アドレス」命令と「プッシュ・アドレス」命令向けである。
 
 @findex address_operand
-@samp{p} in the constraint must be accompanied by @code{address_operand}
-as the predicate in the @code{match_operand}.  This predicate interprets
-the mode specified in the @code{match_operand} as the mode of the memory
-reference for which the address would be valid.
+制約の中の @samp{p} には、@code{match_operand} の述語のように、
+@code{address_operand} が付随しなければならない。
+この述語は、@code{match_operand} で指定されたモードを、
+アドレスが有効であるメモリ参照のモードとして解釈する。
 
-@cindex other register constraints
 @cindex extensible constraints
-@item @var{other-letters}
-Other letters can be defined in machine-dependent fashion to stand for
-particular classes of registers or other arbitrary operand types.
-@samp{d}, @samp{a} and @samp{f} are defined on the 68000/68020 to stand
-for data, address and floating point registers.
+@cindex @samp{Q}, in constraint
+@item @samp{Q}, @samp{R}, @samp{S}, @dots{} @samp{U}
+@samp{Q} から @samp{U} の範囲の文字は、機種依存の形式で
+定義して、任意のオペランド型を表すのに使える。
+@ifset INTERNALS
+マシン記述マクロ @code{EXTRA_CONSTRAINT} には、一番目の引数として
+そのオペランドが、二番目の引数として制約文字が渡される。
+
+これの典型的な使い方は、他の insn のオペランドに影響する
+メモリ参照の一定の型を区別することである。
+
+これらの制約文字は、レジスタ選択(@code{reg})を受け付けるようには
+定義しないこと。再ロードパスが想定していないことであり、正しく扱え
+ないだろう。
+@end ifset
 @end table
 
 @ifset INTERNALS
-In order to have valid assembler code, each operand must satisfy
-its constraint.  But a failure to do so does not prevent the pattern
-from applying to an insn.  Instead, it directs the compiler to modify
-the code so that the constraint will be satisfied.  Usually this is
-done by copying an operand into a register.
+アセンブラコードを正しいものにするために、各オペランドはその制約を
+満たさなければならない。
+しかし、制約を満たさなくても、そのパターンがある insn に適用されるのを
+妨げるものではない。
+代わりに、コンパイラがコードを修正して、制約が満足されるようにする。
+通常これはオペランドをレジスタにコピーすることにより行なわれる。
 
-Contrast, therefore, the two instruction patterns that follow:
+このため、以下の二つの命令パターンを比べてみよう。
 
 @smallexample
 (define_insn ""
@@ -883,7 +875,8 @@ Contrast, therefore, the two instruction patterns that follow:
 @end smallexample
 
 @noindent
-which has two operands, one of which must appear in two places, and
+これにはオペランドが二つあり、そのうちの一つは二箇所に現れなければならない。
+そして、
 
 @smallexample
 (define_insn ""
@@ -895,8 +888,8 @@ which has two operands, one of which must appear in two places, and
 @end smallexample
 
 @noindent
-which has three operands, two of which are required by a constraint to be
-identical.  If we are considering an insn of the form
+こちらは、オペランドが三つあり、そのうちの二つは制約により等しいことが
+要求される。以下の形の insn を考えてみると、
 
 @smallexample
 (insn @var{n} @var{prev} @var{next}
@@ -906,13 +899,15 @@ identical.  If we are considering an insn of the form
 @end smallexample
 
 @noindent
-the first pattern would not apply at all, because this insn does not
-contain two identical subexpressions in the right place.  The pattern would
-say, ``That does not look like an add instruction; try other patterns''.
-The second pattern would say, ``Yes, that's an add instruction, but there
-is something wrong with it''.  It would direct the reload pass of the
-compiler to generate additional insns to make the constraint true.  The
-results might look like this:
+最初のパターンは全く適合しない。この insn には、正しい場所に二つの
+同じ部分式がないからである。
+最初のパターンは、「加算命令には見えないので、他のパターンを試してね。」
+と言うだろう。
+一方、二番目のパターンは、「うん、これは加算命令だ。だけどちょっと
+間違ってるな。」と言うだろう。
+コンパイラの再ロードパスに対して insn を追加で生成させ、制約が
+満たされるようにすることを指示する。
+その結果は以下のようになるだろう。
 
 @smallexample
 (insn @var{n2} @var{prev} @var{n}
@@ -925,71 +920,75 @@ results might look like this:
   @dots{})
 @end smallexample
 
-It is up to you to make sure that each operand, in each pattern, has
-constraints that can handle any RTL expression that could be present for
-that operand.  (When multiple alternatives are in use, each pattern must,
-for each possible combination of operand expressions, have at least one
-alternative which can handle that combination of operands.)  The
-constraints don't need to @emph{allow} any possible operand---when this is
-the case, they do not constrain---but they must at least point the way to
-reloading any possible operand so that it will fit.
+各パターンの各オペランドが、それぞれのオペランド向けに存在
+しうる、どんな RTL 式も扱えるような制約を持つことを保証するのは
+読者の責任である。
+(複数の選択肢が使われている場合は、各パターンは、オペランド式の
+可能な組合せ毎に、その組合せを扱うことが出来る選択肢を少なくとも
+一つ持たなければならない。)
+その制約は可能なオペランドをなんでも許す必要はない。なんでも許すのであれば
+それは制約ではない。だが、その制約は少なくとも、それに適するような
+何らかの可能なオペランドを再ロードする方法を指し示す必要がある。
 
 @itemize @bullet
 @item
-If the constraint accepts whatever operands the predicate permits,
-there is no problem: reloading is never necessary for this operand.
+もし制約が、述語が許すオペランドなら何でも受け付けるなら何の問題も
+ない。このオペランドは再ロードを全く必要としない。
 
-For example, an operand whose constraints permit everything except
-registers is safe provided its predicate rejects registers.
+例えば、レジスタ以外のあらゆるものを許す制約を持つオペランドは、
+その述語がレジスタを拒絶するなら安全である。
 
-An operand whose predicate accepts only constant values is safe
-provided its constraints include the letter @samp{i}.  If any possible
-constant value is accepted, then nothing less than @samp{i} will do;
-if the predicate is more selective, then the constraints may also be
-more selective.
+定数値だけを受け付ける述語を持つオペランドは、その制約に文字 @samp{i} が
+入っていれば安全である。
+任意の可能な定数値を受け付けたなら、@samp{i} がするであろう以上のことは
+なにもしない。もし述語がもっと選択的なら、制約もまたもっと
+選択的にして良い。
 
 @item
-Any operand expression can be reloaded by copying it into a register.
-So if an operand's constraints allow some kind of register, it is
-certain to be safe.  It need not permit all classes of registers; the
-compiler knows how to copy a register into another register of the
-proper class in order to make an instruction valid.
+任意のオペランド式は、レジスタにコピーすることにより再ロード可能である。
+そのため、オペランドの制約がどの種類かのレジスタを許していれば、
+間違いなく安全である。全てのクラスのレジスタを許す必要はない。
+コンパイラは、命令を正しいものにするために、
+あるレジスタを別の適切なクラスのレジスタにコピーする方法を知っている。
 
 @cindex nonoffsettable memory reference
 @cindex memory reference, nonoffsettable
 @item
-A nonoffsettable memory reference can be reloaded by copying the
-address into a register.  So if the constraint uses the letter
-@samp{o}, all memory references are taken care of.
+オフセット可能でないメモリ参照は、そのアドレスをレジスタにコピーすることで
+再ロード可能である。そのため、制約が文字 @samp{o} を使っていれば、
+全てのメモリ参照の面倒を見てくれる。
 
 @item
-A constant operand can be reloaded by allocating space in memory to
-hold it as preinitialized data.  Then the memory reference can be used
-in place of the constant.  So if the constraint uses the letters
-@samp{o} or @samp{m}, constant operands are not a problem.
+定数オペランドは、それを事前に初期化されたデータとして保持するために、
+メモリスペースを獲得することで、再ロード可能である。
+そうすると、定数の代わりにメモリ参照が使える。
+そのため、制約が文字 @samp{o} や @samp{m} を使っていれば、
+定数オペランドは問題ではない。
 
 @item
-If the constraint permits a constant and a pseudo register used in an insn
-was not allocated to a hard register and is equivalent to a constant,
-the register will be replaced with the constant.  If the predicate does
-not permit a constant and the insn is re-recognized for some reason, the
-compiler will crash.  Thus the predicate must always recognize any
-objects allowed by the constraint.
+制約が一個の定数とある insn で使われている一個の疑似レジスタを
+許しているものとする。
+このとき、その疑似レジスタがハードレジスタに割り当てられておらず、
+定数に等価であるなら、そのレジスタは定数に置き換えられる。
+述語が一個の定数と何らかの理由により再認識される insn を認めていなければ、
+GNU CC が異常終了する。
+すなわち、述語は、制約により許されるオブジェクトはどんなものであれ
+常に認識しなければならない。
+
 @end itemize
 
-If the operand's predicate can recognize registers, but the constraint does
-not permit them, it can make the compiler crash.  When this operand happens
-to be a register, the reload pass will be stymied, because it does not know
-how to copy a register temporarily into memory.
+オペランドの述語はレジスタを認識できるが、制約の方はレジスタを許さない場合は
+コンパイラが落ちる可能性がある。
+このオペランドがレジスタになったとき、再ロードパスがうまくいかなくなる。
+レジスタを一時的にメモリにコピーする方法が分からないためである。
 
-If the predicate accepts a unary operator, the constraint applies to the
-operand.  For example, the MIPS processor at ISA level 3 supports an
-instruction which adds two registers in @code{SImode} to produce a
-@code{DImode} result, but only if the registers are correctly sign
-extended.  This predicate for the input operands accepts a
-@code{sign_extend} of an @code{SImode} register.  Write the constraint
-to indicate the type of register that is required for the operand of the
-@code{sign_extend}.
+述語が単項演算子を受け付けるなら、制約はそのオペランドに適用される。
+例えば、ISA レベル 3 の MIPS プロセッサは、@code{SImode} の二つの
+レジスタを加算して、@code{DImode} の結果を生成する命令をサポートしているが、
+これはレジスタが正しく符号拡張される場合だけである。
+入力オペランドに対するこの述語は、ある @code{SImode} のレジスタの
+@code{sign_extend} を受け付ける。@code{sign_extend} の
+オペランドとして必要なレジスタのタイプを示すように制約を書くこと。
 @end ifset
 
 @node Multi-Alternative
@@ -5341,47 +5340,6 @@ insn の @code{length} 属性が使われているとき、このマクロは
 パラメータはない。定数属性の値を定義するのに使われる RTL 式は、
 @code{symbol_ref} 形式を使っても良いが、insn の属性を含む、
 @code{match_operand} 形式や @code{eq_attr} 形式は使ってならない。
-
-@end ifset
-@ifset INTERNALS
-@node Mnemonic Attribute
-@subsection Mnemonic Attribute
-@cindex mnemonic attribute
-
-The @code{mnemonic} attribute is a string type attribute holding the
-instruction mnemonic for an insn alternative.  The attribute values
-will automatically be generated by the machine description parser if
-there is an attribute definition in the md file:
-
-@smallexample
-(define_attr "mnemonic" "unknown" (const_string "unknown"))
-@end smallexample
-
-The default value can be freely chosen as long as it does not collide
-with any of the instruction mnemonics.  This value will be used
-whenever the machine description parser is not able to determine the
-mnemonic string.  This might be the case for output templates
-containing more than a single instruction as in
-@code{"mvcle\t%0,%1,0\;jo\t.-4"}.
-
-The @code{mnemonic} attribute set is not generated automatically if the
-instruction string is generated via C code.
-
-An existing @code{mnemonic} attribute set in an insn definition will not
-be overriden by the md file parser.  That way it is possible to
-manually set the instruction mnemonics for the cases where the md file
-parser fails to determine it automatically.
-
-The @code{mnemonic} attribute is useful for dealing with instruction
-specific properties in the pipeline description without defining
-additional insn attributes.
-
-@smallexample
-(define_attr "ooo_expanded" ""
-  (cond [(eq_attr "mnemonic" "dlr,dsgr,d,dsgf,stam,dsgfr,dlgr")
-         (const_int 1)]
-        (const_int 0)))
-@end smallexample
 
 @end ifset
 @ifset INTERNALS
