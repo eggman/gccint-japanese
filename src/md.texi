@@ -1623,1428 +1623,601 @@ System V Release 4 の小データ領域の参照
 @cindex pattern names
 @cindex names, pattern
 
-Here is a table of the instruction names that are meaningful in the RTL
-generation pass of the compiler.  Giving one of these names to an
-instruction pattern tells the RTL generation pass that it can use the
-pattern to accomplish a certain task.
+以下に、RTL 生成パスで意味を持つ命令パターン名の一覧を示す。
+ある命令パターンに以下の名前の一つを与えると、RTL 生成パスは、
+ある一定の仕事を達成するためにそのパターンを使って良いという
+ことがわかる。
 
 @table @asis
 @cindex @code{mov@var{m}} instruction pattern
 @item @samp{mov@var{m}}
-Here @var{m} stands for a two-letter machine mode name, in lowercase.
-This instruction pattern moves data with that machine mode from operand
-1 to operand 0.  For example, @samp{movsi} moves full-word data.
+ここで @var{m} は、二文字からなるマシンモード名を小文字で表したもの
+である。この命令パターンは、指定されたマシンモードのデータを
+オペランド 1 からオペランド 0 に移動する。
+例えば、@samp{movsi} は全ワードのデータを移動する。
 
-If operand 0 is a @code{subreg} with mode @var{m} of a register whose
-own mode is wider than @var{m}, the effect of this instruction is
-to store the specified value in the part of the register that corresponds
-to mode @var{m}.  Bits outside of @var{m}, but which are within the
-same target word as the @code{subreg} are undefined.  Bits which are
-outside the target word are left unchanged.
+オペランド 0 が、モードが @var{m} より広いレジスタの、モード @var{m} の
+@code{subreg} であるなら、この命令の効果はモード @var{m} に対応する
+レジスタの一部に指定された値を格納することである。
+レジスタの他の部分に対する効果は未定義である。
 
-This class of patterns is special in several ways.  First of all, each
-of these names up to and including full word size @emph{must} be defined,
-because there is no other way to copy a datum from one place to another.
-If there are patterns accepting operands in larger modes,
-@samp{mov@var{m}} must be defined for integer modes of those sizes.
+このクラスのパターンは色々な点で特殊である。
+まず第一に、これらの名前はそれぞれ定義されなくてはならない。
+なぜなら、データをある場所から他の場所にコピーする方法が
+他にはないからである。
 
-Second, these patterns are not used solely in the RTL generation pass.
-Even the reload pass can generate move insns to copy values from stack
-slots into temporary registers.  When it does so, one of the operands is
-a hard register and the other is an operand that can need to be reloaded
-into a register.
+第二に、これらのパターンは RTL 生成パスだけで使われるのではない。
+再ロードパスにおいても、値をスタックスロットから一時レジスタにコピーする
+move insn を生成する可能性がある。
+その時、オペランドの一つはハードレジスタであり、他の一つは、
+レジスタに再ロードされる必要となる可能性があるオペランドである。
 
 @findex force_reg
-Therefore, when given such a pair of operands, the pattern must generate
-RTL which needs no reloading and needs no temporary registers---no
-registers other than the operands.  For example, if you support the
-pattern with a @code{define_expand}, then in such a case the
-@code{define_expand} mustn't call @code{force_reg} or any other such
-function which might generate new pseudo registers.
+このため、このようなオペランドの対が与えられたとき、
+このパターンは再ロードを必要とせず、一時レジスタ--オペランド以外のレジスタを
+必要としない RTL を生成しなければならない。
+例えば、@code{define_expand} でそのパターンをサポートするなら、
+その場合、@code{define_expand} は @code{force_reg} や
+新しい疑似レジスタを生成するような他の関数は呼び出してはならない
 
-This requirement exists even for subword modes on a RISC machine where
-fetching those modes from memory normally requires several insns and
-some temporary registers.
+RISCマシンのサブワードモードについても、その機種で
+メモリからサブワードモードを取り出すのに複数の命令と一時レジスタが
+必要なら、この要求は存在する。
+この要求を満たすにはどうすれば良いかは @file{spur.md} を参照のこと。
 
 @findex change_address
-During reload a memory reference with an invalid address may be passed
-as an operand.  Such an address will be replaced with a valid address
-later in the reload pass.  In this case, nothing may be done with the
-address except to use it as it stands.  If it is copied, it will not be
-replaced with a valid address.  No attempt should be made to make such
-an address into a valid address and no routine (such as
-@code{change_address}) that will do so may be called.  Note that
-@code{general_operand} will fail when applied to such an address.
+再ロードの最中、無効なアドレスのメモリ参照がオペランドとして渡される
+可能性がある。そういうアドレスは、再ロードパスの後の方で有効なアドレスに
+置き換えられる。この場合、そのままでは、そのアドレスに対してはそれを
+使うという以外には何も行なわれない。
+もしそれがコピーされたとすると、有効なアドレスには置き換えられない。
+そういうアドレスを有効なアドレスに変えようとする試みは全く行なわれず、
+(@code{change_address} のような)そういう処理をする関数も呼ばれない。
+@code{general_operand} をそのようなアドレスに適用すると失敗することに
+注意。
 
 @findex reload_in_progress
-The global variable @code{reload_in_progress} (which must be explicitly
-declared if required) can be used to determine whether such special
-handling is required.
+グローバル変数 @code{reload_in_progress}(これは必要なら明示的に宣言
+しなければならない)を使って、そのような特別な取扱いが必要かどうかを
+決定することができる。
 
-The variety of operands that have reloads depends on the rest of the
-machine description, but typically on a RISC machine these can only be
-pseudo registers that did not get hard registers, while on other
-machines explicit memory references will get optional reloads.
+再ロードされるオペランドの種類は、マシン記述のその他の部分に依存するが、
+RISC 機種では普通はハードレジスタを割り当てることの出来なかった
+疑似レジスタに限られる。一方、それ以外の機種では明示的なメモリ参照は
+再ロードされる可能性がある。
 
-If a scratch register is required to move an object to or from memory,
-it can be allocated using @code{gen_reg_rtx} prior to life analysis.
+あるオブジェクトをメモリへ、あるいはメモリから移動するのに、
+スクラッチレジスタが必要な場合は、生死解析に先だって @code{gen_reg_rtx}
+を使って割り当てることができる。
 
-If there are cases which need scratch registers during or after reload,
-you must provide an appropriate secondary_reload target hook.
+再ロード後にスクラッチレジスタが必要になる場合が
+あるなら、@code{SECONDARY_INPUT_RELOAD_CLASS} を定義しなければならない。
+また、それらを検出するためにおそらく @code{SECONDARY_OUTPUT_RELOAD_CLASS}
+も定義しなければならない。それから、それらに対する取扱いのために、
+@samp{reload_in@var{m}} パターンか @samp{reload_out@var{m}} パターンを
+定義しなければならない。@xref{Register Classes}。
 
-@findex can_create_pseudo_p
-The macro @code{can_create_pseudo_p} can be used to determine if it
-is unsafe to create new pseudo registers.  If this variable is nonzero, then
-it is unsafe to call @code{gen_reg_rtx} to allocate a new pseudo.
+@findex no_new_pseudos
+グローバル変数 @code{no_new_pseudos} を使って、新しい疑似レジスタを
+作るのが危険かどうかを決定することができる。
+この変数がゼロでないときは、@code{gen_reg_rtx} を使って新しい疑似レジスタを
+割り当てるのは危険である。
 
-The constraints on a @samp{mov@var{m}} must permit moving any hard
-register to any other hard register provided that
-@code{HARD_REGNO_MODE_OK} permits mode @var{m} in both registers and
-@code{TARGET_REGISTER_MOVE_COST} applied to their classes returns a value
-of 2.
+@samp{move@var{m}} についての制約は、任意のハードレジスタから別の任意の
+ハードレジスタへの移動を許さなければならない。
+ただし、@code{HARD_REGNO_MODE_OK} がどちらのレジスタもモード @var{m}
+であることを許し、これらのレジスタのクラスに @code{REGISTER_MOVE_COST}
+を適用した場合に 2 という値が返ってくるという前提がある。
 
-It is obligatory to support floating point @samp{mov@var{m}}
-instructions into and out of any registers that can hold fixed point
-values, because unions and structures (which have modes @code{SImode} or
-@code{DImode}) can be in those registers and they may have floating
-point members.
+固定小数点値を保持できる任意のレジスタについて、値を出し入れできる
+浮動小数点 @samp{mov@var{m}} 命令をサポートするのは必須である。
+なぜなら共用体や構造体(モードは @code{SImode} か @code{DImode})は
+そのようなレジスタに入れることができ、浮動小数点メンバが存在する
+可能性があるからである。
 
-There may also be a need to support fixed point @samp{mov@var{m}}
-instructions in and out of floating point registers.  Unfortunately, I
-have forgotten why this was so, and I don't know whether it is still
-true.  If @code{HARD_REGNO_MODE_OK} rejects fixed point values in
-floating point registers, then the constraints of the fixed point
-@samp{mov@var{m}} instructions must be designed to avoid ever trying to
-reload into a floating point register.
+また、浮動小数点レジスタから値を出し入れする固定小数点 @samp{mov@var{m}}
+命令も必要である。ただ、残念なことに著者はどうしてそうしたのだったかを
+忘れてしまっており、現在でもその通りであるかどうかがわからない。
+@code{HARD_REGNO_MODE_OK} が浮動小数点レジスタに固定小数点値を
+入れるのを拒絶するなら、固定小数点 @samp{mov@var{m}} 命令の制約は
+浮動小数点レジスタに再ロードするのを避けるように定義しなければならない。
 
 @cindex @code{reload_in} instruction pattern
 @cindex @code{reload_out} instruction pattern
 @item @samp{reload_in@var{m}}
 @itemx @samp{reload_out@var{m}}
-These named patterns have been obsoleted by the target hook
-@code{secondary_reload}.
-
-Like @samp{mov@var{m}}, but used when a scratch register is required to
-move between operand 0 and operand 1.  Operand 2 describes the scratch
-register.  See the discussion of the @code{SECONDARY_RELOAD_CLASS}
-macro in @pxref{Register Classes}.
-
-There are special restrictions on the form of the @code{match_operand}s
-used in these patterns.  First, only the predicate for the reload
-operand is examined, i.e., @code{reload_in} examines operand 1, but not
-the predicates for operand 0 or 2.  Second, there may be only one
-alternative in the constraints.  Third, only a single register class
-letter may be used for the constraint; subsequent constraint letters
-are ignored.  As a special exception, an empty constraint string
-matches the @code{ALL_REGS} register class.  This may relieve ports
-of the burden of defining an @code{ALL_REGS} constraint letter just
-for these patterns.
+@samp{mov@var{m}} と同様だが、オペランド 0 とオペランド 1 の間で
+移動を行なうのにスクラッチレジスタが必要な場合に使われる。
+オペランド 2 がそのスクラッチレジスタを記述する。
+@pxref{Register Classes} のマクロ @code{SECONDARY_RELOAD_CLASS} の
+議論を参照のこと。
 
 @cindex @code{movstrict@var{m}} instruction pattern
 @item @samp{movstrict@var{m}}
-Like @samp{mov@var{m}} except that if operand 0 is a @code{subreg}
-with mode @var{m} of a register whose natural mode is wider,
-the @samp{movstrict@var{m}} instruction is guaranteed not to alter
-any of the register except the part which belongs to mode @var{m}.
-
-@cindex @code{movmisalign@var{m}} instruction pattern
-@item @samp{movmisalign@var{m}}
-This variant of a move pattern is designed to load or store a value
-from a memory address that is not naturally aligned for its mode.
-For a store, the memory will be in operand 0; for a load, the memory
-will be in operand 1.  The other operand is guaranteed not to be a
-memory, so that it's easy to tell whether this is a load or store.
-
-This pattern is used by the autovectorizer, and when expanding a
-@code{MISALIGNED_INDIRECT_REF} expression.
+@samp{mov@var{m}} と同様だが、オペランド 0 が、その自然なモードが
+もっと広いようなレジスタのモード @var{m} の @code{subreg} であるなら、
+@samp{movstrict@var{m}} 命令は、モード @var{m} に属する部分を除いて、
+そのレジスタをなんら変更しないことが保証される。
 
 @cindex @code{load_multiple} instruction pattern
 @item @samp{load_multiple}
-Load several consecutive memory locations into consecutive registers.
-Operand 0 is the first of the consecutive registers, operand 1
-is the first memory location, and operand 2 is a constant: the
-number of consecutive registers.
+幾つかの連続したメモリ位置から幾つかの連続したレジスタにロードする。
+オペランド 0 は連続するレジスタの先頭のレジスタであり、
+オペランド 1 は、メモリ位置の先頭であり、オペランド 2 は、
+連続するレジスタ数を指定する定数である。
 
-Define this only if the target machine really has such an instruction;
-do not define this if the most efficient way of loading consecutive
-registers from memory is to do them one at a time.
+これを定義するのは、ターゲットマシンが実際にこのような命令を持っている
+場合に限る。メモリから連続するレジスタへロードするのに最も効率が
+良い方法が、一個一個ロードすることであれば、このマクロは定義しては
+いけない。
 
-On some machines, there are restrictions as to which consecutive
-registers can be stored into memory, such as particular starting or
-ending register numbers or only a range of valid counts.  For those
-machines, use a @code{define_expand} (@pxref{Expander Definitions})
-and make the pattern fail if the restrictions are not met.
+マシンによっては、どの連続するレジスタがメモリに格納可能であるか
+について制限がある。例えば、先頭や末尾のレジスタ番号が特定の
+ものでなくてはいけないとか、有効なレジスタ数の範囲内でのみ
+可能である、などである。
+このような制限がある場合は、@code{define_expand}(@pxref{Expander Definitions})
+を使って、制限が満たされない場合はそのパターンが失敗するようにする。
 
-Write the generated insn as a @code{parallel} with elements being a
-@code{set} of one register from the appropriate memory location (you may
-also need @code{use} or @code{clobber} elements).  Use a
-@code{match_parallel} (@pxref{RTL Template}) to recognize the insn.  See
-@file{rs6000.md} for examples of the use of this insn pattern.
+生成される insn は一個の @code{parallel} として書き、その要素は
+一個のレジスタを適切なメモリ位置に設定する @code{set} とする
+(また、@code{use} あるいは @code{clobber} の要素も必要である)。
+@code{match_parallel} (@pxref{RTL Template})を使って、その insn を
+認識する。
+この insn パターンの使い方の例としては、@file{a29k.md} と @file{rs6000.md}
+を参照のこと。
 
 @cindex @samp{store_multiple} instruction pattern
 @item @samp{store_multiple}
-Similar to @samp{load_multiple}, but store several consecutive registers
-into consecutive memory locations.  Operand 0 is the first of the
-consecutive memory locations, operand 1 is the first register, and
-operand 2 is a constant: the number of consecutive registers.
-
-@cindex @code{vec_load_lanes@var{m}@var{n}} instruction pattern
-@item @samp{vec_load_lanes@var{m}@var{n}}
-Perform an interleaved load of several vectors from memory operand 1
-into register operand 0.  Both operands have mode @var{m}.  The register
-operand is viewed as holding consecutive vectors of mode @var{n},
-while the memory operand is a flat array that contains the same number
-of elements.  The operation is equivalent to:
-
-@smallexample
-int c = GET_MODE_SIZE (@var{m}) / GET_MODE_SIZE (@var{n});
-for (j = 0; j < GET_MODE_NUNITS (@var{n}); j++)
-  for (i = 0; i < c; i++)
-    operand0[i][j] = operand1[j * c + i];
-@end smallexample
-
-For example, @samp{vec_load_lanestiv4hi} loads 8 16-bit values
-from memory into a register of mode @samp{TI}@.  The register
-contains two consecutive vectors of mode @samp{V4HI}@.
-
-This pattern can only be used if:
-@smallexample
-TARGET_ARRAY_MODE_SUPPORTED_P (@var{n}, @var{c})
-@end smallexample
-is true.  GCC assumes that, if a target supports this kind of
-instruction for some mode @var{n}, it also supports unaligned
-loads for vectors of mode @var{n}.
-
-@cindex @code{vec_store_lanes@var{m}@var{n}} instruction pattern
-@item @samp{vec_store_lanes@var{m}@var{n}}
-Equivalent to @samp{vec_load_lanes@var{m}@var{n}}, with the memory
-and register operands reversed.  That is, the instruction is
-equivalent to:
-
-@smallexample
-int c = GET_MODE_SIZE (@var{m}) / GET_MODE_SIZE (@var{n});
-for (j = 0; j < GET_MODE_NUNITS (@var{n}); j++)
-  for (i = 0; i < c; i++)
-    operand0[j * c + i] = operand1[i][j];
-@end smallexample
-
-for a memory operand 0 and register operand 1.
-
-@cindex @code{vec_set@var{m}} instruction pattern
-@item @samp{vec_set@var{m}}
-Set given field in the vector value.  Operand 0 is the vector to modify,
-operand 1 is new value of field and operand 2 specify the field index.
-
-@cindex @code{vec_extract@var{m}} instruction pattern
-@item @samp{vec_extract@var{m}}
-Extract given field from the vector value.  Operand 1 is the vector, operand 2
-specify field index and operand 0 place to store value into.
-
-@cindex @code{vec_init@var{m}} instruction pattern
-@item @samp{vec_init@var{m}}
-Initialize the vector to given values.  Operand 0 is the vector to initialize
-and operand 1 is parallel containing values for individual fields.
-
-@cindex @code{vcond@var{m}@var{n}} instruction pattern
-@item @samp{vcond@var{m}@var{n}}
-Output a conditional vector move.  Operand 0 is the destination to
-receive a combination of operand 1 and operand 2, which are of mode @var{m},
-dependent on the outcome of the predicate in operand 3 which is a
-vector comparison with operands of mode @var{n} in operands 4 and 5.  The
-modes @var{m} and @var{n} should have the same size.  Operand 0
-will be set to the value @var{op1} & @var{msk} | @var{op2} & ~@var{msk}
-where @var{msk} is computed by element-wise evaluation of the vector
-comparison with a truth value of all-ones and a false value of all-zeros.
-
-@cindex @code{vec_perm@var{m}} instruction pattern
-@item @samp{vec_perm@var{m}}
-Output a (variable) vector permutation.  Operand 0 is the destination
-to receive elements from operand 1 and operand 2, which are of mode
-@var{m}.  Operand 3 is the @dfn{selector}.  It is an integral mode
-vector of the same width and number of elements as mode @var{m}.
-
-The input elements are numbered from 0 in operand 1 through
-@math{2*@var{N}-1} in operand 2.  The elements of the selector must
-be computed modulo @math{2*@var{N}}.  Note that if
-@code{rtx_equal_p(operand1, operand2)}, this can be implemented
-with just operand 1 and selector elements modulo @var{N}.
-
-In order to make things easy for a number of targets, if there is no
-@samp{vec_perm} pattern for mode @var{m}, but there is for mode @var{q}
-where @var{q} is a vector of @code{QImode} of the same width as @var{m},
-the middle-end will lower the mode @var{m} @code{VEC_PERM_EXPR} to
-mode @var{q}.
-
-@cindex @code{vec_perm_const@var{m}} instruction pattern
-@item @samp{vec_perm_const@var{m}}
-Like @samp{vec_perm} except that the permutation is a compile-time
-constant.  That is, operand 3, the @dfn{selector}, is a @code{CONST_VECTOR}.
-
-Some targets cannot perform a permutation with a variable selector,
-but can efficiently perform a constant permutation.  Further, the
-target hook @code{vec_perm_ok} is queried to determine if the 
-specific constant permutation is available efficiently; the named
-pattern is never expanded without @code{vec_perm_ok} returning true.
-
-There is no need for a target to supply both @samp{vec_perm@var{m}}
-and @samp{vec_perm_const@var{m}} if the former can trivially implement
-the operation with, say, the vector constant loaded into a register.
-
-@cindex @code{push@var{m}1} instruction pattern
-@item @samp{push@var{m}1}
-Output a push instruction.  Operand 0 is value to push.  Used only when
-@code{PUSH_ROUNDING} is defined.  For historical reason, this pattern may be
-missing and in such case an @code{mov} expander is used instead, with a
-@code{MEM} expression forming the push operation.  The @code{mov} expander
-method is deprecated.
+@samp{load_multiple} と同様だが、複数の連続したレジスタを
+連続したメモリ位置に格納する。
+オペランド 0 が連続したメモリ位置の先頭で、オペランド 1 が先頭のレジスタ、
+オペランド 2 がある定数で、連続するレジスタの数を表す。
 
 @cindex @code{add@var{m}3} instruction pattern
 @item @samp{add@var{m}3}
-Add operand 2 and operand 1, storing the result in operand 0.  All operands
-must have mode @var{m}.  This can be used even on two-address machines, by
-means of constraints requiring operands 1 and 0 to be the same location.
+オペランド 2 と 1 を加算し、結果をオペランド 0 に格納する。
+オペランドは全てモードが @var{m} でなければならない。
+2オペランドのマシンでも使用可能である。
+その場合は、オペランド 1 とオペランド 0 が同じ位置にあるという制約を
+課せば良い。
 
-@cindex @code{addptr@var{m}3} instruction pattern
-@item @samp{addptr@var{m}3}
-Like @code{add@var{m}3} but is guaranteed to only be used for address
-calculations.  The expanded code is not allowed to clobber the
-condition code.  It only needs to be defined if @code{add@var{m}3}
-sets the condition code.  If adds used for address calculations and
-normal adds are not compatible it is required to expand a distinct
-pattern (e.g. using an unspec).  The pattern is used by LRA to emit
-address calculations.  @code{add@var{m}3} is used if
-@code{addptr@var{m}3} is not defined.
-
-@cindex @code{ssadd@var{m}3} instruction pattern
-@cindex @code{usadd@var{m}3} instruction pattern
 @cindex @code{sub@var{m}3} instruction pattern
-@cindex @code{sssub@var{m}3} instruction pattern
-@cindex @code{ussub@var{m}3} instruction pattern
 @cindex @code{mul@var{m}3} instruction pattern
-@cindex @code{ssmul@var{m}3} instruction pattern
-@cindex @code{usmul@var{m}3} instruction pattern
 @cindex @code{div@var{m}3} instruction pattern
-@cindex @code{ssdiv@var{m}3} instruction pattern
 @cindex @code{udiv@var{m}3} instruction pattern
-@cindex @code{usdiv@var{m}3} instruction pattern
 @cindex @code{mod@var{m}3} instruction pattern
 @cindex @code{umod@var{m}3} instruction pattern
+@cindex @code{smin@var{m}3} instruction pattern
+@cindex @code{smax@var{m}3} instruction pattern
 @cindex @code{umin@var{m}3} instruction pattern
 @cindex @code{umax@var{m}3} instruction pattern
 @cindex @code{and@var{m}3} instruction pattern
 @cindex @code{ior@var{m}3} instruction pattern
 @cindex @code{xor@var{m}3} instruction pattern
-@item @samp{ssadd@var{m}3}, @samp{usadd@var{m}3}
-@itemx @samp{sub@var{m}3}, @samp{sssub@var{m}3}, @samp{ussub@var{m}3}
-@itemx @samp{mul@var{m}3}, @samp{ssmul@var{m}3}, @samp{usmul@var{m}3}
-@itemx @samp{div@var{m}3}, @samp{ssdiv@var{m}3}
-@itemx @samp{udiv@var{m}3}, @samp{usdiv@var{m}3}
-@itemx @samp{mod@var{m}3}, @samp{umod@var{m}3}
-@itemx @samp{umin@var{m}3}, @samp{umax@var{m}3}
+@item @samp{sub@var{m}3}, @samp{mul@var{m}3}
+@itemx @samp{div@var{m}3}, @samp{udiv@var{m}3}, @samp{mod@var{m}3}, @samp{umod@var{m}3}
+@itemx @samp{smin@var{m}3}, @samp{smax@var{m}3}, @samp{umin@var{m}3}, @samp{umax@var{m}3}
 @itemx @samp{and@var{m}3}, @samp{ior@var{m}3}, @samp{xor@var{m}3}
-Similar, for other arithmetic operations.
-
-@cindex @code{fma@var{m}4} instruction pattern
-@item @samp{fma@var{m}4}
-Multiply operand 2 and operand 1, then add operand 3, storing the
-result in operand 0 without doing an intermediate rounding step.  All
-operands must have mode @var{m}.  This pattern is used to implement
-the @code{fma}, @code{fmaf}, and @code{fmal} builtin functions from
-the ISO C99 standard.
-
-@cindex @code{fms@var{m}4} instruction pattern
-@item @samp{fms@var{m}4}
-Like @code{fma@var{m}4}, except operand 3 subtracted from the
-product instead of added to the product.  This is represented
-in the rtl as
-
-@smallexample
-(fma:@var{m} @var{op1} @var{op2} (neg:@var{m} @var{op3}))
-@end smallexample
-
-@cindex @code{fnma@var{m}4} instruction pattern
-@item @samp{fnma@var{m}4}
-Like @code{fma@var{m}4} except that the intermediate product
-is negated before being added to operand 3.  This is represented
-in the rtl as
-
-@smallexample
-(fma:@var{m} (neg:@var{m} @var{op1}) @var{op2} @var{op3})
-@end smallexample
-
-@cindex @code{fnms@var{m}4} instruction pattern
-@item @samp{fnms@var{m}4}
-Like @code{fms@var{m}4} except that the intermediate product
-is negated before subtracting operand 3.  This is represented
-in the rtl as
-
-@smallexample
-(fma:@var{m} (neg:@var{m} @var{op1}) @var{op2} (neg:@var{m} @var{op3}))
-@end smallexample
-
-@cindex @code{min@var{m}3} instruction pattern
-@cindex @code{max@var{m}3} instruction pattern
-@item @samp{smin@var{m}3}, @samp{smax@var{m}3}
-Signed minimum and maximum operations.  When used with floating point,
-if both operands are zeros, or if either operand is @code{NaN}, then
-it is unspecified which of the two operands is returned as the result.
-
-@cindex @code{reduc_smin_@var{m}} instruction pattern
-@cindex @code{reduc_smax_@var{m}} instruction pattern
-@item @samp{reduc_smin_@var{m}}, @samp{reduc_smax_@var{m}}
-Find the signed minimum/maximum of the elements of a vector. The vector is
-operand 1, and the result is stored in the least significant bits of
-operand 0 (also a vector). The output and input vector should have the same
-modes. These are legacy optabs, and platforms should prefer to implement
-@samp{reduc_smin_scal_@var{m}} and @samp{reduc_smax_scal_@var{m}}.
-
-@cindex @code{reduc_umin_@var{m}} instruction pattern
-@cindex @code{reduc_umax_@var{m}} instruction pattern
-@item @samp{reduc_umin_@var{m}}, @samp{reduc_umax_@var{m}}
-Find the unsigned minimum/maximum of the elements of a vector. The vector is
-operand 1, and the result is stored in the least significant bits of
-operand 0 (also a vector). The output and input vector should have the same
-modes. These are legacy optabs, and platforms should prefer to implement
-@samp{reduc_umin_scal_@var{m}} and @samp{reduc_umax_scal_@var{m}}.
-
-@cindex @code{reduc_splus_@var{m}} instruction pattern
-@cindex @code{reduc_uplus_@var{m}} instruction pattern
-@item @samp{reduc_splus_@var{m}}, @samp{reduc_uplus_@var{m}}
-Compute the sum of the signed/unsigned elements of a vector. The vector is
-operand 1, and the result is stored in the least significant bits of operand 0
-(also a vector). The output and input vector should have the same modes.
-These are legacy optabs, and platforms should prefer to implement
-@samp{reduc_plus_scal_@var{m}}.
-
-@cindex @code{reduc_smin_scal_@var{m}} instruction pattern
-@cindex @code{reduc_smax_scal_@var{m}} instruction pattern
-@item @samp{reduc_smin_scal_@var{m}}, @samp{reduc_smax_scal_@var{m}}
-Find the signed minimum/maximum of the elements of a vector. The vector is
-operand 1, and operand 0 is the scalar result, with mode equal to the mode of
-the elements of the input vector.
-
-@cindex @code{reduc_umin_scal_@var{m}} instruction pattern
-@cindex @code{reduc_umax_scal_@var{m}} instruction pattern
-@item @samp{reduc_umin_scal_@var{m}}, @samp{reduc_umax_scal_@var{m}}
-Find the unsigned minimum/maximum of the elements of a vector. The vector is
-operand 1, and operand 0 is the scalar result, with mode equal to the mode of
-the elements of the input vector.
-
-@cindex @code{reduc_plus_scal_@var{m}} instruction pattern
-@item @samp{reduc_plus_scal_@var{m}}
-Compute the sum of the elements of a vector. The vector is operand 1, and
-operand 0 is the scalar result, with mode equal to the mode of the elements of
-the input vector.
-
-@cindex @code{sdot_prod@var{m}} instruction pattern
-@item @samp{sdot_prod@var{m}}
-@cindex @code{udot_prod@var{m}} instruction pattern
-@itemx @samp{udot_prod@var{m}}
-Compute the sum of the products of two signed/unsigned elements.
-Operand 1 and operand 2 are of the same mode. Their product, which is of a
-wider mode, is computed and added to operand 3. Operand 3 is of a mode equal or
-wider than the mode of the product. The result is placed in operand 0, which
-is of the same mode as operand 3.
-
-@cindex @code{ssad@var{m}} instruction pattern
-@item @samp{ssad@var{m}}
-@cindex @code{usad@var{m}} instruction pattern
-@item @samp{usad@var{m}}
-Compute the sum of absolute differences of two signed/unsigned elements.
-Operand 1 and operand 2 are of the same mode. Their absolute difference, which
-is of a wider mode, is computed and added to operand 3. Operand 3 is of a mode
-equal or wider than the mode of the absolute difference. The result is placed
-in operand 0, which is of the same mode as operand 3.
-
-@cindex @code{ssum_widen@var{m3}} instruction pattern
-@item @samp{ssum_widen@var{m3}}
-@cindex @code{usum_widen@var{m3}} instruction pattern
-@itemx @samp{usum_widen@var{m3}}
-Operands 0 and 2 are of the same mode, which is wider than the mode of
-operand 1. Add operand 1 to operand 2 and place the widened result in
-operand 0. (This is used express accumulation of elements into an accumulator
-of a wider mode.)
-
-@cindex @code{vec_shr_@var{m}} instruction pattern
-@item @samp{vec_shr_@var{m}}
-Whole vector right shift in bits, i.e. towards element 0.
-Operand 1 is a vector to be shifted.
-Operand 2 is an integer shift amount in bits.
-Operand 0 is where the resulting shifted vector is stored.
-The output and input vectors should have the same modes.
-
-@cindex @code{vec_pack_trunc_@var{m}} instruction pattern
-@item @samp{vec_pack_trunc_@var{m}}
-Narrow (demote) and merge the elements of two vectors. Operands 1 and 2
-are vectors of the same mode having N integral or floating point elements
-of size S@.  Operand 0 is the resulting vector in which 2*N elements of
-size N/2 are concatenated after narrowing them down using truncation.
-
-@cindex @code{vec_pack_ssat_@var{m}} instruction pattern
-@cindex @code{vec_pack_usat_@var{m}} instruction pattern
-@item @samp{vec_pack_ssat_@var{m}}, @samp{vec_pack_usat_@var{m}}
-Narrow (demote) and merge the elements of two vectors.  Operands 1 and 2
-are vectors of the same mode having N integral elements of size S.
-Operand 0 is the resulting vector in which the elements of the two input
-vectors are concatenated after narrowing them down using signed/unsigned
-saturating arithmetic.
-
-@cindex @code{vec_pack_sfix_trunc_@var{m}} instruction pattern
-@cindex @code{vec_pack_ufix_trunc_@var{m}} instruction pattern
-@item @samp{vec_pack_sfix_trunc_@var{m}}, @samp{vec_pack_ufix_trunc_@var{m}}
-Narrow, convert to signed/unsigned integral type and merge the elements
-of two vectors.  Operands 1 and 2 are vectors of the same mode having N
-floating point elements of size S@.  Operand 0 is the resulting vector
-in which 2*N elements of size N/2 are concatenated.
-
-@cindex @code{vec_unpacks_hi_@var{m}} instruction pattern
-@cindex @code{vec_unpacks_lo_@var{m}} instruction pattern
-@item @samp{vec_unpacks_hi_@var{m}}, @samp{vec_unpacks_lo_@var{m}}
-Extract and widen (promote) the high/low part of a vector of signed
-integral or floating point elements.  The input vector (operand 1) has N
-elements of size S@.  Widen (promote) the high/low elements of the vector
-using signed or floating point extension and place the resulting N/2
-values of size 2*S in the output vector (operand 0).
-
-@cindex @code{vec_unpacku_hi_@var{m}} instruction pattern
-@cindex @code{vec_unpacku_lo_@var{m}} instruction pattern
-@item @samp{vec_unpacku_hi_@var{m}}, @samp{vec_unpacku_lo_@var{m}}
-Extract and widen (promote) the high/low part of a vector of unsigned
-integral elements.  The input vector (operand 1) has N elements of size S.
-Widen (promote) the high/low elements of the vector using zero extension and
-place the resulting N/2 values of size 2*S in the output vector (operand 0).
-
-@cindex @code{vec_unpacks_float_hi_@var{m}} instruction pattern
-@cindex @code{vec_unpacks_float_lo_@var{m}} instruction pattern
-@cindex @code{vec_unpacku_float_hi_@var{m}} instruction pattern
-@cindex @code{vec_unpacku_float_lo_@var{m}} instruction pattern
-@item @samp{vec_unpacks_float_hi_@var{m}}, @samp{vec_unpacks_float_lo_@var{m}}
-@itemx @samp{vec_unpacku_float_hi_@var{m}}, @samp{vec_unpacku_float_lo_@var{m}}
-Extract, convert to floating point type and widen the high/low part of a
-vector of signed/unsigned integral elements.  The input vector (operand 1)
-has N elements of size S@.  Convert the high/low elements of the vector using
-floating point conversion and place the resulting N/2 values of size 2*S in
-the output vector (operand 0).
-
-@cindex @code{vec_widen_umult_hi_@var{m}} instruction pattern
-@cindex @code{vec_widen_umult_lo_@var{m}} instruction pattern
-@cindex @code{vec_widen_smult_hi_@var{m}} instruction pattern
-@cindex @code{vec_widen_smult_lo_@var{m}} instruction pattern
-@cindex @code{vec_widen_umult_even_@var{m}} instruction pattern
-@cindex @code{vec_widen_umult_odd_@var{m}} instruction pattern
-@cindex @code{vec_widen_smult_even_@var{m}} instruction pattern
-@cindex @code{vec_widen_smult_odd_@var{m}} instruction pattern
-@item @samp{vec_widen_umult_hi_@var{m}}, @samp{vec_widen_umult_lo_@var{m}}
-@itemx @samp{vec_widen_smult_hi_@var{m}}, @samp{vec_widen_smult_lo_@var{m}}
-@itemx @samp{vec_widen_umult_even_@var{m}}, @samp{vec_widen_umult_odd_@var{m}}
-@itemx @samp{vec_widen_smult_even_@var{m}}, @samp{vec_widen_smult_odd_@var{m}}
-Signed/Unsigned widening multiplication.  The two inputs (operands 1 and 2)
-are vectors with N signed/unsigned elements of size S@.  Multiply the high/low
-or even/odd elements of the two vectors, and put the N/2 products of size 2*S
-in the output vector (operand 0). A target shouldn't implement even/odd pattern
-pair if it is less efficient than lo/hi one.
-
-@cindex @code{vec_widen_ushiftl_hi_@var{m}} instruction pattern
-@cindex @code{vec_widen_ushiftl_lo_@var{m}} instruction pattern
-@cindex @code{vec_widen_sshiftl_hi_@var{m}} instruction pattern
-@cindex @code{vec_widen_sshiftl_lo_@var{m}} instruction pattern
-@item @samp{vec_widen_ushiftl_hi_@var{m}}, @samp{vec_widen_ushiftl_lo_@var{m}}
-@itemx @samp{vec_widen_sshiftl_hi_@var{m}}, @samp{vec_widen_sshiftl_lo_@var{m}}
-Signed/Unsigned widening shift left.  The first input (operand 1) is a vector
-with N signed/unsigned elements of size S@.  Operand 2 is a constant.  Shift
-the high/low elements of operand 1, and put the N/2 results of size 2*S in the
-output vector (operand 0).
+他の算術演算についても同様である。
 
 @cindex @code{mulhisi3} instruction pattern
 @item @samp{mulhisi3}
-Multiply operands 1 and 2, which have mode @code{HImode}, and store
-a @code{SImode} product in operand 0.
+オペランド 1 と 2 を乗算する。どちらもモードは @code{HImode} である。
+@code{SImode} の乗算の結果をオペランド 0 に格納する。
 
 @cindex @code{mulqihi3} instruction pattern
 @cindex @code{mulsidi3} instruction pattern
 @item @samp{mulqihi3}, @samp{mulsidi3}
-Similar widening-multiplication instructions of other widths.
+他の幅の、乗算の結果がオペランドの幅よりも大きくなる命令についても
+同様である。
 
 @cindex @code{umulqihi3} instruction pattern
 @cindex @code{umulhisi3} instruction pattern
 @cindex @code{umulsidi3} instruction pattern
 @item @samp{umulqihi3}, @samp{umulhisi3}, @samp{umulsidi3}
-Similar widening-multiplication instructions that do unsigned
-multiplication.
-
-@cindex @code{usmulqihi3} instruction pattern
-@cindex @code{usmulhisi3} instruction pattern
-@cindex @code{usmulsidi3} instruction pattern
-@item @samp{usmulqihi3}, @samp{usmulhisi3}, @samp{usmulsidi3}
-Similar widening-multiplication instructions that interpret the first
-operand as unsigned and the second operand as signed, then do a signed
-multiplication.
+符号なしの乗算を行なう、乗算の結果がオペランドの幅よりも大きくなる命令に
+ついても同様である。
 
 @cindex @code{smul@var{m}3_highpart} instruction pattern
-@item @samp{smul@var{m}3_highpart}
-Perform a signed multiplication of operands 1 and 2, which have mode
-@var{m}, and store the most significant half of the product in operand 0.
-The least significant half of the product is discarded.
+@item @samp{mul@var{m}3_highpart}
+オペランド 1 と 2 の符号付き乗算を行なう。モードは @var{m} である。
+積の上位半分をオペランド 0 に格納する。
+積の下位半分は捨てられる。
 
 @cindex @code{umul@var{m}3_highpart} instruction pattern
 @item @samp{umul@var{m}3_highpart}
-Similar, but the multiplication is unsigned.
-
-@cindex @code{madd@var{m}@var{n}4} instruction pattern
-@item @samp{madd@var{m}@var{n}4}
-Multiply operands 1 and 2, sign-extend them to mode @var{n}, add
-operand 3, and store the result in operand 0.  Operands 1 and 2
-have mode @var{m} and operands 0 and 3 have mode @var{n}.
-Both modes must be integer or fixed-point modes and @var{n} must be twice
-the size of @var{m}.
-
-In other words, @code{madd@var{m}@var{n}4} is like
-@code{mul@var{m}@var{n}3} except that it also adds operand 3.
-
-These instructions are not allowed to @code{FAIL}.
-
-@cindex @code{umadd@var{m}@var{n}4} instruction pattern
-@item @samp{umadd@var{m}@var{n}4}
-Like @code{madd@var{m}@var{n}4}, but zero-extend the multiplication
-operands instead of sign-extending them.
-
-@cindex @code{ssmadd@var{m}@var{n}4} instruction pattern
-@item @samp{ssmadd@var{m}@var{n}4}
-Like @code{madd@var{m}@var{n}4}, but all involved operations must be
-signed-saturating.
-
-@cindex @code{usmadd@var{m}@var{n}4} instruction pattern
-@item @samp{usmadd@var{m}@var{n}4}
-Like @code{umadd@var{m}@var{n}4}, but all involved operations must be
-unsigned-saturating.
-
-@cindex @code{msub@var{m}@var{n}4} instruction pattern
-@item @samp{msub@var{m}@var{n}4}
-Multiply operands 1 and 2, sign-extend them to mode @var{n}, subtract the
-result from operand 3, and store the result in operand 0.  Operands 1 and 2
-have mode @var{m} and operands 0 and 3 have mode @var{n}.
-Both modes must be integer or fixed-point modes and @var{n} must be twice
-the size of @var{m}.
-
-In other words, @code{msub@var{m}@var{n}4} is like
-@code{mul@var{m}@var{n}3} except that it also subtracts the result
-from operand 3.
-
-These instructions are not allowed to @code{FAIL}.
-
-@cindex @code{umsub@var{m}@var{n}4} instruction pattern
-@item @samp{umsub@var{m}@var{n}4}
-Like @code{msub@var{m}@var{n}4}, but zero-extend the multiplication
-operands instead of sign-extending them.
-
-@cindex @code{ssmsub@var{m}@var{n}4} instruction pattern
-@item @samp{ssmsub@var{m}@var{n}4}
-Like @code{msub@var{m}@var{n}4}, but all involved operations must be
-signed-saturating.
-
-@cindex @code{usmsub@var{m}@var{n}4} instruction pattern
-@item @samp{usmsub@var{m}@var{n}4}
-Like @code{umsub@var{m}@var{n}4}, but all involved operations must be
-unsigned-saturating.
+@samp{mul@var{m}3_highpart} と、乗算が符号なしで行なわれる点を
+除いて、同じである。
 
 @cindex @code{divmod@var{m}4} instruction pattern
 @item @samp{divmod@var{m}4}
-Signed division that produces both a quotient and a remainder.
-Operand 1 is divided by operand 2 to produce a quotient stored
-in operand 0 and a remainder stored in operand 3.
+商と剰余の両方を生成する符号付き除算である。
+オペランド1 をオペランド 2 で割り、商がオペランド 0 に、
+剰余がオペランド 3 に格納される。
 
-For machines with an instruction that produces both a quotient and a
-remainder, provide a pattern for @samp{divmod@var{m}4} but do not
-provide patterns for @samp{div@var{m}3} and @samp{mod@var{m}3}.  This
-allows optimization in the relatively common case when both the quotient
-and remainder are computed.
+商と剰余の両方を生成する命令がある機種では、@samp{divmod@var{m}4} の
+パターンを定義し、@samp{div@var{m}3} と @samp{mod@var{m}3} の
+パターンは定義しないようにすること。
+これにより、商と剰余の両方を計算するという比較的良くある場合に
+最適化が可能になる。
 
-If an instruction that just produces a quotient or just a remainder
-exists and is more efficient than the instruction that produces both,
-write the output routine of @samp{divmod@var{m}4} to call
-@code{find_reg_note} and look for a @code{REG_UNUSED} note on the
-quotient or remainder and generate the appropriate instruction.
+単に商か剰余のどちらかを生成する命令が存在し、両方を生成する命令よりも
+効率が良い場合は、@samp{divmod@var{m}4} の出力ルーチンを、
+@code{find_reg_note} を呼び出して、商か剰余についての @code{REG_UNUSED}
+ノートを見つけ、適切な命令を生成するように書く。
 
 @cindex @code{udivmod@var{m}4} instruction pattern
 @item @samp{udivmod@var{m}4}
-Similar, but does unsigned division.
+@samp{divmod@var{m}4} と、除算が符号なしで行なわれる点を除いて、
+同じである。
 
-@anchor{shift patterns}
 @cindex @code{ashl@var{m}3} instruction pattern
-@cindex @code{ssashl@var{m}3} instruction pattern
-@cindex @code{usashl@var{m}3} instruction pattern
-@item @samp{ashl@var{m}3}, @samp{ssashl@var{m}3}, @samp{usashl@var{m}3}
-Arithmetic-shift operand 1 left by a number of bits specified by operand
-2, and store the result in operand 0.  Here @var{m} is the mode of
-operand 0 and operand 1; operand 2's mode is specified by the
-instruction pattern, and the compiler will convert the operand to that
-mode before generating the instruction.  The meaning of out-of-range shift
-counts can optionally be specified by @code{TARGET_SHIFT_TRUNCATION_MASK}.
-@xref{TARGET_SHIFT_TRUNCATION_MASK}.  Operand 2 is always a scalar type.
+@item @samp{ashl@var{m}3}
+オペランド 1 を、オペランド 2 で指定されたビット数だけ左に
+算術シフトし、結果をオペランド 0 に格納する。
+ここで、@var{m}は、オペランド 0 とオペランド 1 のモードである。
+オペランド 2 のモードは、命令パターンにより指定され、コンパイラは
+命令を生成する前にオペランドをそのモードに変換する。
 
 @cindex @code{ashr@var{m}3} instruction pattern
 @cindex @code{lshr@var{m}3} instruction pattern
 @cindex @code{rotl@var{m}3} instruction pattern
 @cindex @code{rotr@var{m}3} instruction pattern
 @item @samp{ashr@var{m}3}, @samp{lshr@var{m}3}, @samp{rotl@var{m}3}, @samp{rotr@var{m}3}
-Other shift and rotate instructions, analogous to the
-@code{ashl@var{m}3} instructions.  Operand 2 is always a scalar type.
-
-@cindex @code{vashl@var{m}3} instruction pattern
-@cindex @code{vashr@var{m}3} instruction pattern
-@cindex @code{vlshr@var{m}3} instruction pattern
-@cindex @code{vrotl@var{m}3} instruction pattern
-@cindex @code{vrotr@var{m}3} instruction pattern
-@item @samp{vashl@var{m}3}, @samp{vashr@var{m}3}, @samp{vlshr@var{m}3}, @samp{vrotl@var{m}3}, @samp{vrotr@var{m}3}
-Vector shift and rotate instructions that take vectors as operand 2
-instead of a scalar type.
-
-@cindex @code{bswap@var{m}2} instruction pattern
-@item @samp{bswap@var{m}2}
-Reverse the order of bytes of operand 1 and store the result in operand 0.
+その他のシフトとローテート命令群。@code{ashl@var{m}3} と同様である。
 
 @cindex @code{neg@var{m}2} instruction pattern
-@cindex @code{ssneg@var{m}2} instruction pattern
-@cindex @code{usneg@var{m}2} instruction pattern
-@item @samp{neg@var{m}2}, @samp{ssneg@var{m}2}, @samp{usneg@var{m}2}
-Negate operand 1 and store the result in operand 0.
+@item @samp{neg@var{m}2}
+オペランド 1 の符号を反転し、その結果をオペランド 0 に格納する。
 
 @cindex @code{abs@var{m}2} instruction pattern
 @item @samp{abs@var{m}2}
-Store the absolute value of operand 1 into operand 0.
+オペランド 1 の絶対値をオペランド 0 に格納する。
 
 @cindex @code{sqrt@var{m}2} instruction pattern
 @item @samp{sqrt@var{m}2}
-Store the square root of operand 1 into operand 0.
+オペランド 1 の平方根をオペランド 0 に格納する。
 
-The @code{sqrt} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{sqrtf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{fmod@var{m}3} instruction pattern
-@item @samp{fmod@var{m}3}
-Store the remainder of dividing operand 1 by operand 2 into
-operand 0, rounded towards zero to an integer.
-
-The @code{fmod} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{fmodf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{remainder@var{m}3} instruction pattern
-@item @samp{remainder@var{m}3}
-Store the remainder of dividing operand 1 by operand 2 into
-operand 0, rounded to the nearest integer.
-
-The @code{remainder} built-in function of C always uses the mode
-which corresponds to the C data type @code{double} and the
-@code{remainderf} built-in function uses the mode which corresponds
-to the C data type @code{float}.
-
-@cindex @code{cos@var{m}2} instruction pattern
-@item @samp{cos@var{m}2}
-Store the cosine of operand 1 into operand 0.
-
-The @code{cos} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{cosf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{sin@var{m}2} instruction pattern
-@item @samp{sin@var{m}2}
-Store the sine of operand 1 into operand 0.
-
-The @code{sin} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{sinf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{sincos@var{m}3} instruction pattern
-@item @samp{sincos@var{m}3}
-Store the cosine of operand 2 into operand 0 and the sine of
-operand 2 into operand 1.
-
-The @code{sin} and @code{cos} built-in functions of C always use the
-mode which corresponds to the C data type @code{double} and the
-@code{sinf} and @code{cosf} built-in function use the mode which
-corresponds to the C data type @code{float}.
-Targets that can calculate the sine and cosine simultaneously can
-implement this pattern as opposed to implementing individual
-@code{sin@var{m}2} and @code{cos@var{m}2} patterns.  The @code{sin}
-and @code{cos} built-in functions will then be expanded to the
-@code{sincos@var{m}3} pattern, with one of the output values
-left unused.
-
-@cindex @code{exp@var{m}2} instruction pattern
-@item @samp{exp@var{m}2}
-Store the exponential of operand 1 into operand 0.
-
-The @code{exp} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{expf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{log@var{m}2} instruction pattern
-@item @samp{log@var{m}2}
-Store the natural logarithm of operand 1 into operand 0.
-
-The @code{log} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{logf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{pow@var{m}3} instruction pattern
-@item @samp{pow@var{m}3}
-Store the value of operand 1 raised to the exponent operand 2
-into operand 0.
-
-The @code{pow} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{powf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{atan2@var{m}3} instruction pattern
-@item @samp{atan2@var{m}3}
-Store the arc tangent (inverse tangent) of operand 1 divided by
-operand 2 into operand 0, using the signs of both arguments to
-determine the quadrant of the result.
-
-The @code{atan2} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{atan2f}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{floor@var{m}2} instruction pattern
-@item @samp{floor@var{m}2}
-Store the largest integral value not greater than argument.
-
-The @code{floor} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{floorf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{btrunc@var{m}2} instruction pattern
-@item @samp{btrunc@var{m}2}
-Store the argument rounded to integer towards zero.
-
-The @code{trunc} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{truncf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{round@var{m}2} instruction pattern
-@item @samp{round@var{m}2}
-Store the argument rounded to integer away from zero.
-
-The @code{round} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{roundf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{ceil@var{m}2} instruction pattern
-@item @samp{ceil@var{m}2}
-Store the argument rounded to integer away from zero.
-
-The @code{ceil} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{ceilf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{nearbyint@var{m}2} instruction pattern
-@item @samp{nearbyint@var{m}2}
-Store the argument rounded according to the default rounding mode
-
-The @code{nearbyint} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{nearbyintf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{rint@var{m}2} instruction pattern
-@item @samp{rint@var{m}2}
-Store the argument rounded according to the default rounding mode and
-raise the inexact exception when the result differs in value from
-the argument
-
-The @code{rint} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{rintf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
-
-@cindex @code{lrint@var{m}@var{n}2}
-@item @samp{lrint@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as a signed number according to the current
-rounding mode and store in operand 0 (which has mode @var{n}).
-
-@cindex @code{lround@var{m}@var{n}2}
-@item @samp{lround@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as a signed number rounding to nearest and away
-from zero and store in operand 0 (which has mode @var{n}).
-
-@cindex @code{lfloor@var{m}@var{n}2}
-@item @samp{lfloor@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as a signed number rounding down and store in
-operand 0 (which has mode @var{n}).
-
-@cindex @code{lceil@var{m}@var{n}2}
-@item @samp{lceil@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as a signed number rounding up and store in
-operand 0 (which has mode @var{n}).
-
-@cindex @code{copysign@var{m}3} instruction pattern
-@item @samp{copysign@var{m}3}
-Store a value with the magnitude of operand 1 and the sign of operand
-2 into operand 0.
-
-The @code{copysign} built-in function of C always uses the mode which
-corresponds to the C data type @code{double} and the @code{copysignf}
-built-in function uses the mode which corresponds to the C data
-type @code{float}.
+C の組み込み関数 @code{sqrt} は、常に C 言語のデータ型 @code{double}
+に対応するモードを使用する。
 
 @cindex @code{ffs@var{m}2} instruction pattern
 @item @samp{ffs@var{m}2}
-Store into operand 0 one plus the index of the least significant 1-bit
-of operand 1.  If operand 1 is zero, store zero.  @var{m} is the mode
-of operand 0; operand 1's mode is specified by the instruction
-pattern, and the compiler will convert the operand to that mode before
-generating the instruction.
+オペランド 0 に、1 と、オペランド 1 のビットが 1 のうち最下位のものの
+インデックスを足したものを格納する。
+オペランド 1 がゼロなら、ゼロを格納する。
+@var{m} はオペランド 0 のモードである。オペランド 1 のモードは命令
+パターンにより指定され、コンパイラが命令を生成する前にオペランド 1 を
+そのモードに変換する。
 
-The @code{ffs} built-in function of C always uses the mode which
-corresponds to the C data type @code{int}.
-
-@cindex @code{clrsb@var{m}2} instruction pattern
-@item @samp{clrsb@var{m}2}
-Count leading redundant sign bits.
-Store into operand 0 the number of redundant sign bits in operand 1, starting
-at the most significant bit position.
-A redundant sign bit is defined as any sign bit after the first. As such,
-this count will be one less than the count of leading sign bits.
-
-@cindex @code{clz@var{m}2} instruction pattern
-@item @samp{clz@var{m}2}
-Store into operand 0 the number of leading 0-bits in operand 1, starting
-at the most significant bit position.  If operand 1 is 0, the
-@code{CLZ_DEFINED_VALUE_AT_ZERO} (@pxref{Misc}) macro defines if
-the result is undefined or has a useful value.
-@var{m} is the mode of operand 0; operand 1's mode is
-specified by the instruction pattern, and the compiler will convert the
-operand to that mode before generating the instruction.
-
-@cindex @code{ctz@var{m}2} instruction pattern
-@item @samp{ctz@var{m}2}
-Store into operand 0 the number of trailing 0-bits in operand 1, starting
-at the least significant bit position.  If operand 1 is 0, the
-@code{CTZ_DEFINED_VALUE_AT_ZERO} (@pxref{Misc}) macro defines if
-the result is undefined or has a useful value.
-@var{m} is the mode of operand 0; operand 1's mode is
-specified by the instruction pattern, and the compiler will convert the
-operand to that mode before generating the instruction.
-
-@cindex @code{popcount@var{m}2} instruction pattern
-@item @samp{popcount@var{m}2}
-Store into operand 0 the number of 1-bits in operand 1.  @var{m} is the
-mode of operand 0; operand 1's mode is specified by the instruction
-pattern, and the compiler will convert the operand to that mode before
-generating the instruction.
-
-@cindex @code{parity@var{m}2} instruction pattern
-@item @samp{parity@var{m}2}
-Store into operand 0 the parity of operand 1, i.e.@: the number of 1-bits
-in operand 1 modulo 2.  @var{m} is the mode of operand 0; operand 1's mode
-is specified by the instruction pattern, and the compiler will convert
-the operand to that mode before generating the instruction.
+C の組み込み関数 @code{ffs} は、C のデータ型 @code{int} に
+対応するモードを常に使う。
 
 @cindex @code{one_cmpl@var{m}2} instruction pattern
 @item @samp{one_cmpl@var{m}2}
-Store the bitwise-complement of operand 1 into operand 0.
+オペランド 1 のビット毎の補数をオペランド 0 に格納する。
 
-@cindex @code{movmem@var{m}} instruction pattern
-@item @samp{movmem@var{m}}
-Block move instruction.  The destination and source blocks of memory
-are the first two operands, and both are @code{mem:BLK}s with an
-address in mode @code{Pmode}.
+@cindex @code{cmp@var{m}} instruction pattern
+@item @samp{cmp@var{m}}
+オペランド 0 とオペランド 1 を比較し、条件コードを設定する。
+RTL パターンは以下のようにする必要がある。
 
-The number of bytes to move is the third operand, in mode @var{m}.
-Usually, you specify @code{Pmode} for @var{m}.  However, if you can
-generate better code knowing the range of valid lengths is smaller than
-those representable in a full Pmode pointer, you should provide
-a pattern with a
-mode corresponding to the range of values you can handle efficiently
-(e.g., @code{QImode} for values in the range 0--127; note we avoid numbers
-that appear negative) and also a pattern with @code{Pmode}.
+@smallexample
+(set (cc0) (compare (match_operand:@var{m} 0 @dots{})
+                    (match_operand:@var{m} 1 @dots{})))
+@end smallexample
 
-The fourth operand is the known shared alignment of the source and
-destination, in the form of a @code{const_int} rtx.  Thus, if the
-compiler knows that both source and destination are word-aligned,
-it may provide the value 4 for this operand.
+@cindex @code{tst@var{m}} instruction pattern
+@item @samp{tst@var{m}}
+オペランド 0 とゼロを比較し、条件コードを設定する。
+RTL パターンは以下のようにする必要がある。
 
-Optional operands 5 and 6 specify expected alignment and size of block
-respectively.  The expected alignment differs from alignment in operand 4
-in a way that the blocks are not required to be aligned according to it in
-all cases. This expected alignment is also in bytes, just like operand 4.
-Expected size, when unknown, is set to @code{(const_int -1)}.
+@smallexample
+(set (cc0) (match_operand:@var{m} 0 @dots{}))
+@end smallexample
 
-Descriptions of multiple @code{movmem@var{m}} patterns can only be
-beneficial if the patterns for smaller modes have fewer restrictions
-on their first, second and fourth operands.  Note that the mode @var{m}
-in @code{movmem@var{m}} does not impose any restriction on the mode of
-individually moved data units in the block.
+@code{(cc0)} を使わない機種では、@samp{tst@var{m}} パターンを
+定義すべきでない。定義すると、どの @code{set} 演算が比較なのか
+はっきりしなくなってしまうために最適化パスが混乱する。
+代わりに、@samp{cmp@var{m}} パターンを使うべきである。
 
-These patterns need not give special consideration to the possibility
-that the source and destination strings might overlap.
+@cindex @code{movstr@var{m}} instruction pattern
+@item @samp{movstr@var{m}}
+ブロック移動命令である。移動先と移動元の文字列のアドレスが最初の
+二つのオペランドであり、どちらも @code{Pmode} モードである。
 
-@cindex @code{movstr} instruction pattern
-@item @samp{movstr}
-String copy instruction, with @code{stpcpy} semantics.  Operand 0 is
-an output operand in mode @code{Pmode}.  The addresses of the
-destination and source strings are operands 1 and 2, and both are
-@code{mem:BLK}s with addresses in mode @code{Pmode}.  The execution of
-the expansion of this pattern should store in operand 0 the address in
-which the @code{NUL} terminator was stored in the destination string.
+移動すべきバイト数を三番目のオペランドで、モード @var{m} で指定する。
+普通は、@var{m} として @code{word_mode} を指定する。
+しかし、有効な長さの範囲が全ワードで表せる範囲より狭いことが
+分かっているなら、より良いコードを生成することができるという
+場合には、効率良く扱える値の範囲に対応するモード(例えば、
+0--127の範囲の値の場合なら @code{QImode} とする。負の数に見えるものは
+避けることに注意)のパターンと
+@code{word_mode} のパターンの両方を提供すべきである。
 
-This patern has also several optional operands that are same as in
-@code{setmem}.
+四番目のオペランドは、移動元と移動先で共通の既知のアライメントを
+@code{const_int} rtx の形で表したものである。
+つまり、コンパイラが移動元も移動先もワード境界にアライメントされている
+ことを知っているなら、このオペランドには 4 という値が与えられる。
 
-@cindex @code{setmem@var{m}} instruction pattern
-@item @samp{setmem@var{m}}
-Block set instruction.  The destination string is the first operand,
-given as a @code{mem:BLK} whose address is in mode @code{Pmode}.  The
-number of bytes to set is the second operand, in mode @var{m}.  The value to
-initialize the memory with is the third operand. Targets that only support the
-clearing of memory should reject any value that is not the constant 0.  See
-@samp{movmem@var{m}} for a discussion of the choice of mode.
+複数の @code{movstr@var{m}} パターンを記述するのは、
+より小さなモードに対するそれらのパターンについて、第一、第二、第四オペランド
+についての制限がより少ない場合にのみ、有益である。
+@code{movstr@var{m}} のモード @var{m} は、ブロック中の個々の移動された
+データ単位のモードには、なんら制限を与えないことに注意。
 
-The fourth operand is the known alignment of the destination, in the form
-of a @code{const_int} rtx.  Thus, if the compiler knows that the
-destination is word-aligned, it may provide the value 4 for this
-operand.
+このパターンは、移動元と移動先の文字列が重なっている可能性は、
+特に考えなくて良い。
 
-Optional operands 5 and 6 specify expected alignment and size of block
-respectively.  The expected alignment differs from alignment in operand 4
-in a way that the blocks are not required to be aligned according to it in
-all cases. This expected alignment is also in bytes, just like operand 4.
-Expected size, when unknown, is set to @code{(const_int -1)}.
-Operand 7 is the minimal size of the block and operand 8 is the
-maximal size of the block (NULL if it can not be represented as CONST_INT).
-Operand 9 is the probable maximal size (i.e. we can not rely on it for correctness,
-but it can be used for choosing proper code sequence for a given size).
+@cindex @code{clrstr@var{m}} instruction pattern
+@item @samp{clrstr@var{m}}
+ブロックのクリア命令である。対象文字列のアドレスが第一オペランドであり、
+モード @code{Pmode} である。クリアすべきバイト数が第二オペランドであり、
+モード @var{m} である。モードの選択についての議論は、@samp{movstr@var{m}} を
+参照のこと。
 
-The use for multiple @code{setmem@var{m}} is as for @code{movmem@var{m}}.
+三番目のオペランドは、目的先の既知のアラインメントを @code{const_int} RTX の
+形で表したものである。つまり、コンパイラが目的先がワード整合されている
+ことを知っているなら、このオペランドの値を 4 とする。
 
-@cindex @code{cmpstrn@var{m}} instruction pattern
-@item @samp{cmpstrn@var{m}}
-String compare instruction, with five operands.  Operand 0 is the output;
-it has mode @var{m}.  The remaining four operands are like the operands
-of @samp{movmem@var{m}}.  The two memory blocks specified are compared
-byte by byte in lexicographic order starting at the beginning of each
-string.  The instruction is not allowed to prefetch more than one byte
-at a time since either string may end in the first byte and reading past
-that may access an invalid page or segment and cause a fault.  The
-comparison terminates early if the fetched bytes are different or if
-they are equal to zero.  The effect of the instruction is to store a
-value in operand 0 whose sign indicates the result of the comparison.
+複数の @code{clrstr@var{m}} の使い方は、@code{movstr@var{m}} と
+同じである。
 
 @cindex @code{cmpstr@var{m}} instruction pattern
 @item @samp{cmpstr@var{m}}
-String compare instruction, without known maximum length.  Operand 0 is the
-output; it has mode @var{m}.  The second and third operand are the blocks of
-memory to be compared; both are @code{mem:BLK} with an address in mode
-@code{Pmode}.
-
-The fourth operand is the known shared alignment of the source and
-destination, in the form of a @code{const_int} rtx.  Thus, if the
-compiler knows that both source and destination are word-aligned,
-it may provide the value 4 for this operand.
-
-The two memory blocks specified are compared byte by byte in lexicographic
-order starting at the beginning of each string.  The instruction is not allowed
-to prefetch more than one byte at a time since either string may end in the
-first byte and reading past that may access an invalid page or segment and
-cause a fault.  The comparison will terminate when the fetched bytes
-are different or if they are equal to zero.  The effect of the
-instruction is to store a value in operand 0 whose sign indicates the
-result of the comparison.
-
-@cindex @code{cmpmem@var{m}} instruction pattern
-@item @samp{cmpmem@var{m}}
-Block compare instruction, with five operands like the operands
-of @samp{cmpstr@var{m}}.  The two memory blocks specified are compared
-byte by byte in lexicographic order starting at the beginning of each
-block.  Unlike @samp{cmpstr@var{m}} the instruction can prefetch
-any bytes in the two memory blocks.  Also unlike @samp{cmpstr@var{m}}
-the comparison will not stop if both bytes are zero.  The effect of
-the instruction is to store a value in operand 0 whose sign indicates
-the result of the comparison.
+ブロック同士の比較命令で、オペランドは5つある。
+オペランド 0 には出力が置かれ、モードは @var{m} である。
+その他の4つのオペランドは、@samp{movstr@var{m}} のオペランドと同様である。
+指定された二つのメモリブロックがバイト毎に辞書順で比較される。
+この命令の結果、オペランド 0 に格納された値の符号が、比較結果になる。
 
 @cindex @code{strlen@var{m}} instruction pattern
 @item @samp{strlen@var{m}}
-Compute the length of a string, with three operands.
-Operand 0 is the result (of mode @var{m}), operand 1 is
-a @code{mem} referring to the first character of the string,
-operand 2 is the character to search for (normally zero),
-and operand 3 is a constant describing the known alignment
-of the beginning of the string.
+文字列の長さを計算する。オペランドは三つある。
+オペランド 0 は結果(モードは @var{m})を格納する。
+オペランド 1 は、文字列の先頭の文字を参照する @code{mem} である。
+オペランド 2 は、検索すべき文字(通常はゼロ)である。
+オペランド 3 は、文字列の開始位置の既知のアラインメントを記述する
+定数である。
 
-@cindex @code{float@var{m}@var{n}2} instruction pattern
+@cindex @code{float@var{mn}2} instruction pattern
 @item @samp{float@var{m}@var{n}2}
-Convert signed integer operand 1 (valid for fixed point mode @var{m}) to
-floating point mode @var{n} and store in operand 0 (which has mode
-@var{n}).
+符号付き整数オペランド 1(固定小数点モード @var{m} として有効) を
+浮動小数点モード @var{n} に変換し、オペランド 0 (モード @var{n})に格納する。
 
-@cindex @code{floatuns@var{m}@var{n}2} instruction pattern
+@cindex @code{floatuns@var{mn}2} instruction pattern
 @item @samp{floatuns@var{m}@var{n}2}
-Convert unsigned integer operand 1 (valid for fixed point mode @var{m})
-to floating point mode @var{n} and store in operand 0 (which has mode
-@var{n}).
+符号なし整数オペランド 1(固定小数点モード @var{m} として有効) を
+浮動小数点モード @var{n} に変換し、オペランド 0 (モード @var{n})に格納する。
 
-@cindex @code{fix@var{m}@var{n}2} instruction pattern
+@cindex @code{fix@var{mn}2} instruction pattern
 @item @samp{fix@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as a signed number and store in operand 0 (which
-has mode @var{n}).  This instruction's result is defined only when
-the value of operand 1 is an integer.
+オペランド 1(浮動小数点モード @var{m} として有効)を符号付き数として
+固定小数点モード @var{n} に変換し、オペランド 0(モード @var{n}) に
+格納する。この命令の結果は、オペランド 1 の値が整数の場合にのみ
+定義される。
 
-If the machine description defines this pattern, it also needs to
-define the @code{ftrunc} pattern.
-
-@cindex @code{fixuns@var{m}@var{n}2} instruction pattern
+@cindex @code{fixuns@var{mn}2} instruction pattern
 @item @samp{fixuns@var{m}@var{n}2}
-Convert operand 1 (valid for floating point mode @var{m}) to fixed
-point mode @var{n} as an unsigned number and store in operand 0 (which
-has mode @var{n}).  This instruction's result is defined only when the
-value of operand 1 is an integer.
+オペランド 1(浮動小数点モード @var{m} として有効)を符号なし数として
+固定小数点モード @var{n} に変換し、オペランド 0(モード @var{n}) に
+格納する。この命令の結果は、オペランド 1 の値が整数の場合にのみ
+定義される。
 
 @cindex @code{ftrunc@var{m}2} instruction pattern
 @item @samp{ftrunc@var{m}2}
-Convert operand 1 (valid for floating point mode @var{m}) to an
-integer value, still represented in floating point mode @var{m}, and
-store it in operand 0 (valid for floating point mode @var{m}).
+オペランド 1(浮動小数点モード @var{m} として有効) を
+整数値に変換する。ただし、依然として浮動小数点モード @var{m} で表現される。
+結果は、オペランド 0(浮動小数点モード @var{m} として有効)に格納される。
 
-@cindex @code{fix_trunc@var{m}@var{n}2} instruction pattern
+@cindex @code{fix_trunc@var{mn}2} instruction pattern
 @item @samp{fix_trunc@var{m}@var{n}2}
-Like @samp{fix@var{m}@var{n}2} but works for any floating point value
-of mode @var{m} by converting the value to an integer.
+@samp{fix@var{m}@var{n}2} と同様だが、モードが @var{m} の
+任意の浮動小数点値について、その値を整数に変換することにより、
+動作する。
 
-@cindex @code{fixuns_trunc@var{m}@var{n}2} instruction pattern
+@cindex @code{fixuns_trunc@var{mn}2} instruction pattern
 @item @samp{fixuns_trunc@var{m}@var{n}2}
-Like @samp{fixuns@var{m}@var{n}2} but works for any floating point
-value of mode @var{m} by converting the value to an integer.
+@samp{fixuns@var{m}@var{n}2} と同様だが、モードが @var{m} の
+任意の浮動小数点値について、その値を整数に変換することにより、
+動作する。
 
-@cindex @code{trunc@var{m}@var{n}2} instruction pattern
+@cindex @code{trunc@var{mn}2} instruction pattern
 @item @samp{trunc@var{m}@var{n}2}
-Truncate operand 1 (valid for mode @var{m}) to mode @var{n} and
-store in operand 0 (which has mode @var{n}).  Both modes must be fixed
-point or both floating point.
+(モード @var{m} で有効な)オペランド1をモード @var{n} に切り詰め、
+結果を(モードが @var{n}の)オペランド 0 に格納する。
+両方のモードが固定小数点モードか、両方のモードが浮動小数点モードで
+なければならない。
 
-@cindex @code{extend@var{m}@var{n}2} instruction pattern
+@cindex @code{extend@var{mn}2} instruction pattern
 @item @samp{extend@var{m}@var{n}2}
-Sign-extend operand 1 (valid for mode @var{m}) to mode @var{n} and
-store in operand 0 (which has mode @var{n}).  Both modes must be fixed
-point or both floating point.
+(モード @var{m} で有効な)オペランド1をモード @var{n} に符号拡張し、
+結果を(モードが @var{n}の)オペランド 0 に格納する。
+両方のモードが固定小数点モードか、両方のモードが浮動小数点モードで
+なければならない。
 
-@cindex @code{zero_extend@var{m}@var{n}2} instruction pattern
+@cindex @code{zero_extend@var{mn}2} instruction pattern
 @item @samp{zero_extend@var{m}@var{n}2}
-Zero-extend operand 1 (valid for mode @var{m}) to mode @var{n} and
-store in operand 0 (which has mode @var{n}).  Both modes must be fixed
-point.
-
-@cindex @code{fract@var{m}@var{n}2} instruction pattern
-@item @samp{fract@var{m}@var{n}2}
-Convert operand 1 of mode @var{m} to mode @var{n} and store in
-operand 0 (which has mode @var{n}).  Mode @var{m} and mode @var{n}
-could be fixed-point to fixed-point, signed integer to fixed-point,
-fixed-point to signed integer, floating-point to fixed-point,
-or fixed-point to floating-point.
-When overflows or underflows happen, the results are undefined.
-
-@cindex @code{satfract@var{m}@var{n}2} instruction pattern
-@item @samp{satfract@var{m}@var{n}2}
-Convert operand 1 of mode @var{m} to mode @var{n} and store in
-operand 0 (which has mode @var{n}).  Mode @var{m} and mode @var{n}
-could be fixed-point to fixed-point, signed integer to fixed-point,
-or floating-point to fixed-point.
-When overflows or underflows happen, the instruction saturates the
-results to the maximum or the minimum.
-
-@cindex @code{fractuns@var{m}@var{n}2} instruction pattern
-@item @samp{fractuns@var{m}@var{n}2}
-Convert operand 1 of mode @var{m} to mode @var{n} and store in
-operand 0 (which has mode @var{n}).  Mode @var{m} and mode @var{n}
-could be unsigned integer to fixed-point, or
-fixed-point to unsigned integer.
-When overflows or underflows happen, the results are undefined.
-
-@cindex @code{satfractuns@var{m}@var{n}2} instruction pattern
-@item @samp{satfractuns@var{m}@var{n}2}
-Convert unsigned integer operand 1 of mode @var{m} to fixed-point mode
-@var{n} and store in operand 0 (which has mode @var{n}).
-When overflows or underflows happen, the instruction saturates the
-results to the maximum or the minimum.
-
-@cindex @code{extv@var{m}} instruction pattern
-@item @samp{extv@var{m}}
-Extract a bit-field from register operand 1, sign-extend it, and store
-it in operand 0.  Operand 2 specifies the width of the field in bits
-and operand 3 the starting bit, which counts from the most significant
-bit if @samp{BITS_BIG_ENDIAN} is true and from the least significant bit
-otherwise.
-
-Operands 0 and 1 both have mode @var{m}.  Operands 2 and 3 have a
-target-specific mode.
-
-@cindex @code{extvmisalign@var{m}} instruction pattern
-@item @samp{extvmisalign@var{m}}
-Extract a bit-field from memory operand 1, sign extend it, and store
-it in operand 0.  Operand 2 specifies the width in bits and operand 3
-the starting bit.  The starting bit is always somewhere in the first byte of
-operand 1; it counts from the most significant bit if @samp{BITS_BIG_ENDIAN}
-is true and from the least significant bit otherwise.
-
-Operand 0 has mode @var{m} while operand 1 has @code{BLK} mode.
-Operands 2 and 3 have a target-specific mode.
-
-The instruction must not read beyond the last byte of the bit-field.
-
-@cindex @code{extzv@var{m}} instruction pattern
-@item @samp{extzv@var{m}}
-Like @samp{extv@var{m}} except that the bit-field value is zero-extended.
-
-@cindex @code{extzvmisalign@var{m}} instruction pattern
-@item @samp{extzvmisalign@var{m}}
-Like @samp{extvmisalign@var{m}} except that the bit-field value is
-zero-extended.
-
-@cindex @code{insv@var{m}} instruction pattern
-@item @samp{insv@var{m}}
-Insert operand 3 into a bit-field of register operand 0.  Operand 1
-specifies the width of the field in bits and operand 2 the starting bit,
-which counts from the most significant bit if @samp{BITS_BIG_ENDIAN}
-is true and from the least significant bit otherwise.
-
-Operands 0 and 3 both have mode @var{m}.  Operands 1 and 2 have a
-target-specific mode.
-
-@cindex @code{insvmisalign@var{m}} instruction pattern
-@item @samp{insvmisalign@var{m}}
-Insert operand 3 into a bit-field of memory operand 0.  Operand 1
-specifies the width of the field in bits and operand 2 the starting bit.
-The starting bit is always somewhere in the first byte of operand 0;
-it counts from the most significant bit if @samp{BITS_BIG_ENDIAN}
-is true and from the least significant bit otherwise.
-
-Operand 3 has mode @var{m} while operand 0 has @code{BLK} mode.
-Operands 1 and 2 have a target-specific mode.
-
-The instruction must not read or write beyond the last byte of the bit-field.
+(モード @var{m} で有効な)オペランド1をモード @var{n} にゼロ拡張し、
+結果を(モードが @var{n}の)オペランド 0 に格納する。
+どちらのモードも固定小数点モードでなければならない。
 
 @cindex @code{extv} instruction pattern
 @item @samp{extv}
-Extract a bit-field from operand 1 (a register or memory operand), where
-operand 2 specifies the width in bits and operand 3 the starting bit,
-and store it in operand 0.  Operand 0 must have mode @code{word_mode}.
-Operand 1 may have mode @code{byte_mode} or @code{word_mode}; often
-@code{word_mode} is allowed only for registers.  Operands 2 and 3 must
-be valid for @code{word_mode}.
+オペランド 1(レジスタかメモリオペランド)からビットフィールドを
+抽出する。オペランド2 でビット幅を指定し、オペランド3で開始ビットを
+指定する。結果をオペランド 0 に格納する。
+オペランド 0 は、@code{word_mode} モードでなければならない。
+オペランド 1 は、@code{byte_mode} か @code{word_mode} である。
+@code{word_mode} はレジスタにしか許されないことが多い。
+オペランド 2 と 3 は、@code{word_mode} として有効でなくてはならない。
 
-The RTL generation pass generates this instruction only with constants
-for operands 2 and 3 and the constant is never zero for operand 2.
+RTL 生成パスは、オペランド 2 とオペランド 3 が定数の場合しか
+この命令を生成しない。
 
-The bit-field value is sign-extended to a full word integer
-before it is stored in operand 0.
-
-This pattern is deprecated; please use @samp{extv@var{m}} and
-@code{extvmisalign@var{m}} instead.
+ビットフィールドの値は、オペランド 0 に格納される前に
+全語の整数に符号拡張される。
 
 @cindex @code{extzv} instruction pattern
 @item @samp{extzv}
-Like @samp{extv} except that the bit-field value is zero-extended.
-
-This pattern is deprecated; please use @samp{extzv@var{m}} and
-@code{extzvmisalign@var{m}} instead.
+@samp{extv} との違いは、ビットフィールドの値がゼロ拡張される点である。
 
 @cindex @code{insv} instruction pattern
 @item @samp{insv}
-Store operand 3 (which must be valid for @code{word_mode}) into a
-bit-field in operand 0, where operand 1 specifies the width in bits and
-operand 2 the starting bit.  Operand 0 may have mode @code{byte_mode} or
-@code{word_mode}; often @code{word_mode} is allowed only for registers.
-Operands 1 and 2 must be valid for @code{word_mode}.
+オペランド 3(@code{word_mode} として有効でなくてはならない)を
+オペランド 0 のビットフィールドに格納する。
+オペランド 1 でビット幅を指定し、オペランド 2 で開始ビットを指定する。
+オペランド 0 は、@code{byte_mode} か @code{word_mode} である。
+@code{word_mode} はレジスタにしか許されないことが多い。
+オペランド 1 と 2 は、@code{word_mode} として有効でなくてはならない。
 
-The RTL generation pass generates this instruction only with constants
-for operands 1 and 2 and the constant is never zero for operand 1.
-
-This pattern is deprecated; please use @samp{insv@var{m}} and
-@code{insvmisalign@var{m}} instead.
+RTL 生成パスは、オペランド 1 とオペランド 2 が定数の場合しか
+この命令を生成しない。
 
 @cindex @code{mov@var{mode}cc} instruction pattern
 @item @samp{mov@var{mode}cc}
-Conditionally move operand 2 or operand 3 into operand 0 according to the
-comparison in operand 1.  If the comparison is true, operand 2 is moved
-into operand 0, otherwise operand 3 is moved.
+条件付きで、オペランド 2 またはオペランド 3 を、オペランド 1 に入っている
+比較にしたがって、オペランド 0 に移動する。
+比較が真ならオペランド 2 がオペランド 0 に移動され、
+偽ならオペランド 3 が移動される。
 
-The mode of the operands being compared need not be the same as the operands
-being moved.  Some machines, sparc64 for example, have instructions that
-conditionally move an integer value based on the floating point condition
-codes and vice versa.
+比較されるオペランドのモードは、移動されるオペランドのモードと
+同じである必要はない。例えば sparc64 のような機種には、
+浮動小数点の条件コードに基づいて整数を条件付きで移動したり、
+その逆を行なう命令がある。
 
-If the machine does not have conditional move instructions, do not
-define these patterns.
+条件付き移動命令を持たない機種では、このパターンは定義しないこと。
 
-@cindex @code{add@var{mode}cc} instruction pattern
-@item @samp{add@var{mode}cc}
-Similar to @samp{mov@var{mode}cc} but for conditional addition.  Conditionally
-move operand 2 or (operands 2 + operand 3) into operand 0 according to the
-comparison in operand 1.  If the comparison is false, operand 2 is moved into
-operand 0, otherwise (operand 2 + operand 3) is moved.
+@cindex @code{s@var{cond}} instruction pattern
+@item @samp{s@var{cond}}
+条件コードにしたがって、ゼロか非ゼロをオペランドに格納する。
+条件 @var{cond} が真なら格納される値は非ゼロである。
+@var{cond} は、比較演算式コードの名前で、例えば、@code{eq}、@code{lt}、
+@code{leu} 等がある。
 
-@cindex @code{cstore@var{mode}4} instruction pattern
-@item @samp{cstore@var{mode}4}
-Store zero or nonzero in operand 0 according to whether a comparison
-is true.  Operand 1 is a comparison operator.  Operand 2 and operand 3
-are the first and second operand of the comparison, respectively.
-You specify the mode that operand 0 must have when you write the
-@code{match_operand} expression.  The compiler automatically sees which
-mode you have used and supplies an operand of that mode.
+@code{match_operand} 式を書くときにオペランドが持たなければならない
+モードを指定する。コンパイラはどのモードを使ったかを見て、
+自動的にそのモードのオペランドを提供する。
 
-The value stored for a true condition must have 1 as its low bit, or
-else must be negative.  Otherwise the instruction is not suitable and
-you should omit it from the machine description.  You describe to the
-compiler exactly which value is stored by defining the macro
-@code{STORE_FLAG_VALUE} (@pxref{Misc}).  If a description cannot be
-found that can be used for all the possible comparison operators, you
-should pick one and use a @code{define_expand} to map all results
-onto the one you chose.
+条件が真の場合に格納される値は、下位ビットが 1 か、あるいは負で
+なければならない。
+そうなっていないと、その命令は適切でないので、マシン記述から取り除く
+べきである。マクロ @code{STORE_FLAG_VALUE} (@pxref{Misc}) を定義することで
+正確にはどの値がストアされるかということを GCC に対して指示する必要がある。
+全ての @samp{s@var{cond}} パターンに対して使用可能な指示が見つからない
+場合は、これらの演算をマシン記述から取り除くべきである。
 
-These operations may @code{FAIL}, but should do so only in relatively
-uncommon cases; if they would @code{FAIL} for common cases involving
-integer comparisons, it is best to restrict the predicates to not
-allow these operands.  Likewise if a given comparison operator will
-always fail, independent of the operands (for floating-point modes, the
-@code{ordered_comparison_operator} predicate is often useful in this case).
+これらの演算は失敗する可能性があるが、失敗して良いのは比較的
+珍しいケースだけである。整数の比較を含む良くあるケースで
+失敗することがあるなら、そういうパターンは取り除くのが良い。
 
-If this pattern is omitted, the compiler will generate a conditional
-branch---for example, it may copy a constant one to the target and branching
-around an assignment of zero to the target---or a libcall.  If the predicate
-for operand 1 only rejects some operators, it will also try reordering the
-operands and/or inverting the result value (e.g.@: by an exclusive OR).
-These possibilities could be cheaper or equivalent to the instructions
-used for the @samp{cstore@var{mode}4} pattern followed by those required
-to convert a positive result from @code{STORE_FLAG_VALUE} to 1; in this
-case, you can and should make operand 1's predicate reject some operators
-in the @samp{cstore@var{mode}4} pattern, or remove the pattern altogether
-from the machine description.
+そういう演算が取り除かれると、GNU CC は、定数 1 をターゲットに
+コピーし、そのターゲットにゼロを代入している付近に分岐する。
+このコードが、@samp{s@var{cond}} パターンで使われる潜在的な
+命令に、結果を @code{SImode} の 1 か ゼロに変換するのに必要な命令が
+続けたものより、効率が良いのなら、マシン記述から @samp{s@var{cond}} という
+演算を取り除くべきである。
 
-@cindex @code{cbranch@var{mode}4} instruction pattern
-@item @samp{cbranch@var{mode}4}
-Conditional branch instruction combined with a compare instruction.
-Operand 0 is a comparison operator.  Operand 1 and operand 2 are the
-first and second operands of the comparison, respectively.  Operand 3
-is a @code{label_ref} that refers to the label to jump to.
+@cindex @code{b@var{cond}} instruction pattern
+@item @samp{b@var{cond}}
+条件分岐命令。オペランド 0 は、ジャンプ先のラベルを参照する
+@code{label_ref} である。条件コードが条件 @var{cond} に一致した場合に
+ジャンプする。
 
-@cindex @code{jump} instruction pattern
-@item @samp{jump}
-A jump inside a function; an unconditional branch.  Operand 0 is the
-@code{label_ref} of the label to jump to.  This pattern name is mandatory
-on all machines.
+機種によっては、個々で想定した、比較命令の後には条件分岐命令が
+続くというモデルに従わないものもある。その場合、@samp{cmp@var{m}}
+(と @samp{tst@var{m}}) パターンでは、オペランドを単に格納しておき、
+条件分岐演算を表す @code{define_expand} (@pxref{Expander Definitions})
+で必要とされる全ての insn を生成すべきである。@samp{b@var{cond}} 
+パターンを展開する全ての呼び出しの直前には、@samp{cmp@var{m}} パターンか
+@samp{tst@var{m}} パターンを展開する呼び出しが置かれる。
+
+条件コード値を表すのに疑似レジスタを使っていたり、
+比較に使われるモードがテストされる条件に依存する機種でも、やはり
+上記の方法を使うべきである。 @xref{Jump Patterns}.
+
+上の議論は、@samp{mov@var{mode}cc} と @samp{s@var{cond}} のパターンにも
+当てはまる。
 
 @cindex @code{call} instruction pattern
 @item @samp{call}
-Subroutine call instruction returning no value.  Operand 0 is the
-function to call; operand 1 is the number of bytes of arguments pushed
-as a @code{const_int}; operand 2 is the number of registers used as
-operands.
+値を返さないサブルーチン命令呼びだしである。
+オペランド 0 は呼び出すべき関数であり、オペランド 1 は
+@code{const_int} としてスタックに積まれた引数のバイト数である。
+オペランド 2 はオペランドとして使われるレジスタの数である。
 
-On most machines, operand 2 is not actually stored into the RTL
-pattern.  It is supplied for the sake of some RISC machines which need
-to put this information into the assembler code; they can put it in
-the RTL instead of operand 1.
+ほとんどのマシンでは、オペランド 2 は実際には RTL パターンには格納されない。
+この情報をアセンブラコードに置く必要のある、いくつかの RISC 機種の
+ために提供されている。オペランド 1 の代わりに RTL に置くことができる。
 
-Operand 0 should be a @code{mem} RTX whose address is the address of the
-function.  Note, however, that this address can be a @code{symbol_ref}
-expression even if it would not be a legitimate memory address on the
-target machine.  If it is also not a valid argument for a call
-instruction, the pattern for this operation should be a
-@code{define_expand} (@pxref{Expander Definitions}) that places the
-address into a register and uses that register in the call instruction.
+オペランド 0 は、アドレスがその関数のアドレスである @code{mem} RTX で
+あるべきである。だが、このアドレスは、ターゲット機種上での
+正当なメモリアドレスになっていなくても、@code{symbol_ref} になりうる
+ことに注意して欲しい。また、call 命令の正しい引数でない場合も、
+この演算用のパターンは、アドレスをレジスタに置き、そのレジスタを
+call 命令で使うような @code{define_expand} (@pxref{Expander Definitions})
+になっている必要がある。
 
 @cindex @code{call_value} instruction pattern
 @item @samp{call_value}
-Subroutine call instruction returning a value.  Operand 0 is the hard
-register in which the value is returned.  There are three more
-operands, the same as the three operands of the @samp{call}
-instruction (but with numbers increased by one).
+値を返すサブルーチン呼び出し命令である。
+オペランド 0 は、値が返されるハードレジスタである。
+さらにオペランドが三つあり、それらは @samp{call} 命令の三つのオペランド
+と同じである(オペランド番号は一ずつ増えている)。
 
-Subroutines that return @code{BLKmode} objects use the @samp{call}
-insn.
+@code{BLKmode} のオブジェクトを返すサブルーチンは @samp{call} insn を
+使う。
 
 @cindex @code{call_pop} instruction pattern
 @cindex @code{call_value_pop} instruction pattern
 @item @samp{call_pop}, @samp{call_value_pop}
-Similar to @samp{call} and @samp{call_value}, except used if defined and
-if @code{RETURN_POPS_ARGS} is nonzero.  They should emit a @code{parallel}
-that contains both the function call and a @code{set} to indicate the
-adjustment made to the frame pointer.
+@samp{call} や @samp{call_value} と同様だが、
+定義されていて、かつ、@code{RETURN_POPS_ARGS} がゼロでない場合に
+使われる点が異なる。
+これらのパターンは、関数呼び出しとフレームポインタに対してなされた
+調整を表す @code{set} の両方を含む @code{parallel} を生成すべきである。
 
-For machines where @code{RETURN_POPS_ARGS} can be nonzero, the use of these
-patterns increases the number of functions for which the frame pointer
-can be eliminated, if desired.
+@code{RETURN_POPS_ARGS} がゼロでない値になりうる機種では、
+これらのパターンを使うと、望まれている場合には、
+フレームポインタを消去可能な関数の数が増えることになる。
 
 @cindex @code{untyped_call} instruction pattern
 @item @samp{untyped_call}
-Subroutine call instruction returning a value of any type.  Operand 0 is
-the function to call; operand 1 is a memory location where the result of
-calling the function is to be stored; operand 2 is a @code{parallel}
-expression where each element is a @code{set} expression that indicates
-the saving of a function return value into the result block.
+任意の型の値を返すサブルーチン呼びだし命令である。
+オペランド 0 が呼び出すべき関数、オペランド 1 が関数を呼び出した結果を
+格納すべきメモリ位置、オペランド 2 が @code{parallel} 式である。
+この @code{parallel} 式の各要素は、関数の戻り値を結果のブロックへ
+セーブすることを示す @code{set} 式である。
 
-This instruction pattern should be defined to support
-@code{__builtin_apply} on machines where special instructions are needed
-to call a subroutine with arbitrary arguments or to save the value
-returned.  This instruction pattern is required on machines that have
-multiple registers that can hold a return value
-(i.e.@: @code{FUNCTION_VALUE_REGNO_P} is true for more than one register).
+この命令パターンは、任意個数の引数のサブルーチンを呼び出したり、
+戻り値をセーブするのに特別な命令を必要とするマシンで、@code{__builtin_apply}
+を動作させるために定義する必要がある。
+この命令パターンは、戻り値を保持できるレジスタが複数ある(すなわち、
+@code{FUNCTION_VALUE_REGNO_P} が二個以上のレジスタに対して
+真である)マシンで必要とされる。
 
 @cindex @code{return} instruction pattern
 @item @samp{return}
-Subroutine return instruction.  This instruction pattern name should be
-defined only if a single instruction can do all the work of returning
-from a function.
+サブルーチンから戻る命令である。この命令パターン名は、
+一個の命令だけで、関数から戻る処理の全てを行なえる場合にのみ
+定義するべきである。
 
-Like the @samp{mov@var{m}} patterns, this pattern is also used after the
-RTL generation phase.  In this case it is to support machines where
-multiple instructions are usually needed to return from a function, but
-some class of functions only requires one instruction to implement a
-return.  Normally, the applicable functions are those which do not need
-to save any registers or allocate stack space.
-
-It is valid for this pattern to expand to an instruction using
-@code{simple_return} if no epilogue is required.
-
-@cindex @code{simple_return} instruction pattern
-@item @samp{simple_return}
-Subroutine return instruction.  This instruction pattern name should be
-defined only if a single instruction can do all the work of returning
-from a function on a path where no epilogue is required.  This pattern
-is very similar to the @code{return} instruction pattern, but it is emitted
-only by the shrink-wrapping optimization on paths where the function
-prologue has not been executed, and a function return should occur without
-any of the effects of the epilogue.  Additional uses may be introduced on
-paths where both the prologue and the epilogue have executed.
+@samp{mov@var{m}} パターンと同様、このパターンも RTL 生成以後の
+フェーズでも使われる。その場合、関数から戻るのに通常複数の命令が
+必要だが、関数のクラスによっては、戻るのに命令を一個しか必要としない
+ものもあるような機種を支援するためである。
+通常、利用可能な関数は、なんらレジスタをセーブしたり、スタック空間を
+割り当てたりする必要がないような関数になる。
 
 @findex reload_completed
 @findex leaf_function_p
-For such machines, the condition specified in this pattern should only
-be true when @code{reload_completed} is nonzero and the function's
-epilogue would only be a single instruction.  For machines with register
-windows, the routine @code{leaf_function_p} may be used to determine if
-a register window push is required.
+このような機種については、このパターンで指定された条件は、
+@code{reload_completed} がゼロでなく、関数のエピローグがただ一つの命令に
+なる場合にのみ真とならなければならない。レジスタウィンドウのある機種に
+ついては、@code{leaf_function_p} ルーチンを使って、レジスタウィンドウの
+プッシュが必要かどうかを決定することができる。
 
-Machines that have conditional return instructions should define patterns
-such as
+条件付きリターン命令のある機種では以下のようにパターンを定義すべきである。
 
 @smallexample
 (define_insn ""
@@ -3058,128 +2231,95 @@ such as
   "@dots{}")
 @end smallexample
 
-where @var{condition} would normally be the same condition specified on the
-named @samp{return} pattern.
+ここで、@var{condition} は普通は、名前付き @samp{return} パターンで
+指定されるのと同じ条件である。
 
 @cindex @code{untyped_return} instruction pattern
 @item @samp{untyped_return}
-Untyped subroutine return instruction.  This instruction pattern should
-be defined to support @code{__builtin_return} on machines where special
-instructions are needed to return a value of any type.
+型指定なしのサブルーチンからの復帰命令。この命令パターンは、
+任意の型の値を返すのに特別な命令を必要とする機種では、@code{__builtin_return}
+をサポートするために定義すべきである。
 
-Operand 0 is a memory location where the result of calling a function
-with @code{__builtin_apply} is stored; operand 1 is a @code{parallel}
-expression where each element is a @code{set} expression that indicates
-the restoring of a function return value from the result block.
+オペランド 0 は、@code{__builtin_apply} により関数を呼び出した結果が
+格納されるメモリ位置である。オペランド 1 は、@code{parallel} 式であり、
+この式の各要素はその結果のブロックから関数の戻り値をリストアすることを
+指示する @code{set} 式である。
 
 @cindex @code{nop} instruction pattern
 @item @samp{nop}
-No-op instruction.  This instruction pattern name should always be defined
-to output a no-op in assembler code.  @code{(const_int 0)} will do as an
-RTL pattern.
+ノップ命令。この命令パターン名は常に定義する必要があり、アセンブラコードで
+ノップを出力しなければならない。@code{(const_int 0)} は RTL パターンとして
+の役割を果たす。
 
 @cindex @code{indirect_jump} instruction pattern
 @item @samp{indirect_jump}
-An instruction to jump to an address which is operand zero.
-This pattern name is mandatory on all machines.
+オペランド 0 のアドレスにジャンプする命令。
+このパターンは全機種で必須である。
 
 @cindex @code{casesi} instruction pattern
 @item @samp{casesi}
-Instruction to jump through a dispatch table, including bounds checking.
-This instruction takes five operands:
+ディスパッチテーブルを通してのジャンプ命令であり、範囲チェックを含む。
+この命令は次の5つのオペランドを取る。
 
 @enumerate
 @item
-The index to dispatch on, which has mode @code{SImode}.
+ディスパッチ先のインデックス。モードは @code{SImode} である。
 
 @item
-The lower bound for indices in the table, an integer constant.
+テーブルのインデックスの下限であり、整数定数である。
 
 @item
-The total range of indices in the table---the largest index
-minus the smallest one (both inclusive).
+テーブルのインデックスの全範囲。最大のインデックスから最小の
+インデックスを引いたものである。最大、最小とも範囲に含まれる
 
 @item
-A label that precedes the table itself.
+テーブル自身に先行するラベル。
 
 @item
-A label to jump to if the index has a value outside the bounds.
+インデックスの値が範囲外にあるときにジャンプすべきラベル。
+マシン記述マクロ @code{CASE_DROPS_THROUGH} が定義されていると、
+範囲外のインデックスの場合は、このラベルにジャンプする代わりに、
+ジャンプテーブルに続くコードにそのまま落ちて行く。
+その場合、このラベルは @samp{casesi} 命令では実際には使われない。
 @end enumerate
 
-The table is an @code{addr_vec} or @code{addr_diff_vec} inside of a
-@code{jump_table_data}.  The number of elements in the table is one plus the
-difference between the upper bound and the lower bound.
+このテーブルは、@code{jump_insn} の中の @code{addr_vec} か
+@code{addr_diff_vec} である。このテーブルの要素数は、
+上限値と下限値の差に 1 を加えたものである。
 
 @cindex @code{tablejump} instruction pattern
 @item @samp{tablejump}
-Instruction to jump to a variable address.  This is a low-level
-capability which can be used to implement a dispatch table when there
-is no @samp{casesi} pattern.
+可変アドレスにジャンプする命令。これは低レベルの機能であり、
+@samp{casesi} パターンがない場合に分岐テーブルを実装するのに
+使うことが出来る。
 
-This pattern requires two operands: the address or offset, and a label
-which should immediately precede the jump table.  If the macro
-@code{CASE_VECTOR_PC_RELATIVE} evaluates to a nonzero value then the first
-operand is an offset which counts from the address of the table; otherwise,
-it is an absolute address to jump to.  In either case, the first operand has
-mode @code{Pmode}.
+このパターンにはオペランドが二つ必要である。アドレスまたはオフセット、
+それとジャンプ表の直前に置くべきラベルである。マクロ
+@code{CASE_VECTOR_PC_RELATIVE} を評価した結果ゼロでない値になれば、
+最初のオペランドはその表のアドレスからのオフセットである。
+定義されていない場合は、ジャンプ先の絶対アドレスである。
+どちらの場合も、最初のオペランドのモードは @code{Pmode} である。
 
-The @samp{tablejump} insn is always the last insn before the jump
-table it uses.  Its assembler code normally has no need to use the
-second operand, but you should incorporate it in the RTL pattern so
-that the jump optimizer will not delete the table as unreachable code.
-
-
-@cindex @code{decrement_and_branch_until_zero} instruction pattern
-@item @samp{decrement_and_branch_until_zero}
-Conditional branch instruction that decrements a register and
-jumps if the register is nonzero.  Operand 0 is the register to
-decrement and test; operand 1 is the label to jump to if the
-register is nonzero.  
-
-This optional instruction pattern is only used by the combiner,
-typically for loops reversed by the loop optimizer when strength
-reduction is enabled.
-
-@cindex @code{doloop_end} instruction pattern
-@item @samp{doloop_end}
-Conditional branch instruction that decrements a register and
-jumps if the register is nonzero.  Operand 0 is the register to
-decrement and test; operand 1 is the label to jump to if the
-register is nonzero.
-
-
-This optional instruction pattern should be defined for machines with
-low-overhead looping instructions as the loop optimizer will try to
-modify suitable loops to utilize it.  The target hook
-@code{TARGET_CAN_USE_DOLOOP_P} controls the conditions under which
-low-overhead loops can be used.
-
-@cindex @code{doloop_begin} instruction pattern
-@item @samp{doloop_begin}
-Companion instruction to @code{doloop_end} required for machines that
-need to perform some initialization, such as loading a special counter
-register.  Operand 1 is the associated @code{doloop_end} pattern and
-operand 0 is the register that it decrements.
-
-If initialization insns do not always need to be emitted, use a
-@code{define_expand} (@pxref{Expander Definitions}) and make it fail.
+@samp{tablejump} insn は、常に、それを使うジャンプ表の前にある最後の
+insn になる。このアセンブラコードは普通は第二のオペランドを使う必要が
+ないが、それを RTL パターンに取り込むことで 、ジャンプ最適化フェーズが
+その表を到達不能コードとして削除しないようにしなければならない。
 
 @cindex @code{canonicalize_funcptr_for_compare} instruction pattern
 @item @samp{canonicalize_funcptr_for_compare}
-Canonicalize the function pointer in operand 1 and store the result
-into operand 0.
+オペランド 1 にある関数ポインタを正規化し、その結果をオペランド 0 に
+格納する。
 
-Operand 0 is always a @code{reg} and has mode @code{Pmode}; operand 1
-may be a @code{reg}, @code{mem}, @code{symbol_ref}, @code{const_int}, etc
-and also has mode @code{Pmode}.
+オペランド 0 は常に @code{reg} であり、モードは @code{Pmode} である。
+オペランド 1 は、@code{reg}、@code{mem}、@code{symbol_ref}、
+@code{const_int} 等であり、モードは @code{Pmode} である。
 
-Canonicalization of a function pointer usually involves computing
-the address of the function which would be called if the function
-pointer were used in an indirect call.
+関数ポインタの正規化には、間接呼び出しの文脈で関数ポインタが
+使われた場合呼び出される関数のアドレスを計算することが通常含まれる。
 
-Only define this pattern if function pointers on the target machine
-can have different values but still call the same function when
-used in an indirect call.
+ターゲット機種の関数ポインタが、間接の呼び出しに使われた場合、
+値は異なりうるが、呼び出す関数は同じという場合にだけ、このパターンを
+定義すること。
 
 @cindex @code{save_stack_block} instruction pattern
 @cindex @code{save_stack_function} instruction pattern
@@ -3193,618 +2333,222 @@ used in an indirect call.
 @itemx @samp{restore_stack_block}
 @itemx @samp{restore_stack_function}
 @itemx @samp{restore_stack_nonlocal}
-Most machines save and restore the stack pointer by copying it to or
-from an object of mode @code{Pmode}.  Do not define these patterns on
-such machines.
+多くの機種には、モード @code{Pmode} のオブジェクトへ
+コピーしたり、あるいはそのオブジェクトからコピーすることで、
+スタックポインタをセーブしたり、リストアする。
+そういう機種ではこれらのパターンを定義しないこと。
 
-Some machines require special handling for stack pointer saves and
-restores.  On those machines, define the patterns corresponding to the
-non-standard cases by using a @code{define_expand} (@pxref{Expander
-Definitions}) that produces the required insns.  The three types of
-saves and restores are:
+機種によっては、スタックポインタのセーブとリストアには特別な
+取扱いが必要なものもある。そういう機種では、非標準のケースに
+対応するパターンを、必要とされる insn を生成する @code{define_expand} 
+(@pxref{Expander Definitions}) を使って、定義する。
+セーブとリストアには以下の三つのタイプがある。
 
 @enumerate
 @item
-@samp{save_stack_block} saves the stack pointer at the start of a block
-that allocates a variable-sized object, and @samp{restore_stack_block}
-restores the stack pointer when the block is exited.
+@samp{save_stack_block} は可変長オブジェクトを割当要るブロックの
+開始点でのスタックポインタをセーブする。@samp{restore_stack_block} は
+そのブロックを抜けた時点でスタックポインタをリストアする。
 
 @item
-@samp{save_stack_function} and @samp{restore_stack_function} do a
-similar job for the outermost block of a function and are used when the
-function allocates variable-sized objects or calls @code{alloca}.  Only
-the epilogue uses the restored stack pointer, allowing a simpler save or
-restore sequence on some machines.
+@samp{save_stack_function} と @samp{restore_stack_function} は、
+関数の最も外側のブロックに対して同様の処理を行ない、その関数が
+可変長オブジェクトを確保したり、@code{alloca} を呼び出したときに
+使われる。リストアされたスタックポインタを使うのは
+エピローグだけなので、機種によってはセーブやリストアの命令列が
+簡単になる。
 
 @item
-@samp{save_stack_nonlocal} is used in functions that contain labels
-branched to by nested functions.  It saves the stack pointer in such a
-way that the inner function can use @samp{restore_stack_nonlocal} to
-restore the stack pointer.  The compiler generates code to restore the
-frame and argument pointer registers, but some machines require saving
-and restoring additional data such as register window information or
-stack backchains.  Place insns in these patterns to save and restore any
-such required data.
+@samp{save_stack_nonlocal} は、ネストした関数から分岐してくるラベルを
+含む関数の中で使われる。これは、内側の関数が
+@samp{resotre_stack_nonlocal} を使ってスタックポインタをリストアできるよう
+な方法で、スタックポインタをセーブする。
+GCC はフレームポインタと引数ポインタのレジスタをリストアするコードを
+生成するが、機種によっては、その他に、例えば、レジスタウィンドウ情報や
+スタックのバックチェーンのようなデータをセーブ、リストアする必要が
+あるものがある。これらのパターンに insn を置いて、そういう必要なデータを
+セーブ、リストアする。
 @end enumerate
 
-When saving the stack pointer, operand 0 is the save area and operand 1
-is the stack pointer.  The mode used to allocate the save area defaults
-to @code{Pmode} but you can override that choice by defining the
-@code{STACK_SAVEAREA_MODE} macro (@pxref{Storage Layout}).  You must
-specify an integral mode, or @code{VOIDmode} if no save area is needed
-for a particular type of save (either because no save is needed or
-because a machine-specific save area can be used).  Operand 0 is the
-stack pointer and operand 1 is the save area for restore operations.  If
-@samp{save_stack_block} is defined, operand 0 must not be
-@code{VOIDmode} since these saves can be arbitrarily nested.
+スタックポインタをセーブするときは、オペランド 0 がセーブ領域であり、
+オペランド 1 がスタックポインタである。セーブ領域を確保するのに使う
+モードはデフォルトでは @code{VOIDmode} になるが、マクロ
+@code{STACK_SAVEAREA_MODE} (@pxref{Storage Layout}) を定義することで
+上書きできる。整数モードか、あるいは、
+特定のタイプのセーブの場合はセーブ領域がひつようでない場合は
+@code{VOIDmode} を指定しなければならない。
+リストアの場合は、オペランド 0 がスタックポインタで、オペランド 1 が
+セーブ領域である。@samp{save_stack_block} が定義されているなら、
+オペランド 0 は @code{VOIDmode} であってはならない。こういうセーブは
+好きなだけ重ねられるからである。
 
-A save area is a @code{mem} that is at a constant offset from
-@code{virtual_stack_vars_rtx} when the stack pointer is saved for use by
-nonlocal gotos and a @code{reg} in the other two cases.
+セーブ領域は、スタックポインタが非局所 goto で使うために
+セーブされるときは、ある @code{mem} であり、@code{virtual_stack_vars_rtx}
+から一定のオフセットにある。
+他の二つの場合は、@code{reg} である。
 
 @cindex @code{allocate_stack} instruction pattern
 @item @samp{allocate_stack}
-Subtract (or add if @code{STACK_GROWS_DOWNWARD} is undefined) operand 1 from
-the stack pointer to create space for dynamically allocated data.
+オペランド 1 をスタックポインタから減算(@code{STACK_GROWS_DOWNWARD} が
+定義されていれば加算)することで、動的に確保するデータ用のスペースを作る。
 
-Store the resultant pointer to this space into operand 0.  If you
-are allocating space from the main stack, do this by emitting a
-move insn to copy @code{virtual_stack_dynamic_rtx} to operand 0.
-If you are allocating the space elsewhere, generate code to copy the
-location of the space to operand 0.  In the latter case, you must
-ensure this space gets freed when the corresponding space on the main
-stack is free.
+このスペースを指す、減算(あるいは加算)後のポインタをオペランド 0 に
+格納する。主スタックからスペースを割り当てているなら、これは
+@code{virtual_stack_dynamic_rtx} をオペランド 0 にコピーする移動命令を
+生成することで行なうこと。その他の場所からスペースを割り当てている場合は、
+スペースのその位置をオペランド 0 にコピーするコードを生成すること。
+後者の場合、主スタック上の対応するスペースが解放された
+時に、このスペースが解放されることを保証しなければならない。
 
-Do not define this pattern if all that must be done is the subtraction.
-Some machines require other operations such as stack probes or
-maintaining the back chain.  Define this pattern to emit those
-operations in addition to updating the stack pointer.
+やらなければならないことがこの減算だけであるならこのパターンは定義しないこと。
+機種によっては、その他の、スタック探針やバックチェーンの維持等の
+操作を必要とするものがある。その場合には、このパターンで、
+スタックポインタの更新に加えてそれらの操作を生成するように定義する。
+
+@cindex @code{probe} instruction pattern
+@item @samp{probe}
+機種によっては、スタックからスペースを割り当てた後に実行すべき
+命令を必要とする場合がある。例えば、スタックの基底への参照を
+生成するためである。
+
+スタックの調整が完了するまえに命令群を出す必要があるなら、
+その命令群を @samp{allocate_stack} パターンに入れるようにする。
+その必要がなければ、@samp{probe} パターンが必要な命令を出すように
+定義する。
+
+オペランドはない。
 
 @cindex @code{check_stack} instruction pattern
 @item @samp{check_stack}
-If stack checking (@pxref{Stack Checking}) cannot be done on your system by
-probing the stack, define this pattern to perform the needed check and signal
-an error if the stack has overflowed.  The single operand is the address in
-the stack farthest from the current stack pointer that you need to validate.
-Normally, on platforms where this pattern is needed, you would obtain the
-stack limit from a global or thread-specific variable or register.
-
-@cindex @code{probe_stack_address} instruction pattern
-@item @samp{probe_stack_address}
-If stack checking (@pxref{Stack Checking}) can be done on your system by
-probing the stack but without the need to actually access it, define this
-pattern and signal an error if the stack has overflowed.  The single operand
-is the memory address in the stack that needs to be probed.
-
-@cindex @code{probe_stack} instruction pattern
-@item @samp{probe_stack}
-If stack checking (@pxref{Stack Checking}) can be done on your system by
-probing the stack but doing it with a ``store zero'' instruction is not valid
-or optimal, define this pattern to do the probing differently and signal an
-error if the stack has overflowed.  The single operand is the memory reference
-in the stack that needs to be probed.
+スタック検査を行なうのに、ロード命令あるいはストア命令を使って
+スタックを探査する方法(@pxref{Stack Checking})が使えないシステムでは、
+このパターンを定義して、必要な検査を行ない、スタックがオーバーフロー
+したなら、エラーを発するようにする。オペランドは一つで、
+検査する必要のある現在のスタックポインタから最も遠いスタック上の
+位置である。このパターンが必要な機種では、普通、スタックの限界は、
+グローバルまたスレッド固有である、変数またはレジスタから得ることになる。
 
 @cindex @code{nonlocal_goto} instruction pattern
 @item @samp{nonlocal_goto}
-Emit code to generate a non-local goto, e.g., a jump from one function
-to a label in an outer function.  This pattern has four arguments,
-each representing a value to be used in the jump.  The first
-argument is to be loaded into the frame pointer, the second is
-the address to branch to (code to dispatch to the actual label),
-the third is the address of a location where the stack is saved,
-and the last is the address of the label, to be placed in the
-location for the incoming static chain.
+非局所 goto すなわち、ある関数から外側の関数中のラベルへのジャンプを
+生成するコードを出す。このパターンには引数が四つあり、
+それぞれがジャンプで使われる値を表す。先頭の引数は、フレームポインタに
+ロードされる、二番目の引数は、分岐先アドレス(実際のラベルへディスパッチする
+コード)である。三番目は、スタックがセーブされる位置のアドレスであり、
+最後の引数は、ラベルのアドレスであり、入力静的連鎖の位置に置かれる
+ものである。
 
-On most machines you need not define this pattern, since GCC will
-already generate the correct code, which is to load the frame pointer
-and static chain, restore the stack (using the
-@samp{restore_stack_nonlocal} pattern, if defined), and jump indirectly
-to the dispatcher.  You need only define this pattern if this code will
-not work on your machine.
+ほとんどの機種ではこのパターンを定義する必要がない。GNU CC が
+既に正しいコードを生成しているからである。この正しいコードでは、
+フレームポインタと静的連鎖をロードし、スタックをリストアし
+(定義されていれば @samp{restore_stack_nonlocal} パターンを使って)、
+ディスパッチ部へ間接的にジャンプする。このコードでは正しく動作しない
+機種の場合だけ、このパターンを自分で定義する必要がある。
 
 @cindex @code{nonlocal_goto_receiver} instruction pattern
 @item @samp{nonlocal_goto_receiver}
-This pattern, if defined, contains code needed at the target of a
-nonlocal goto after the code already generated by GCC@.  You will not
-normally need to define this pattern.  A typical reason why you might
-need this pattern is if some value, such as a pointer to a global table,
-must be restored when the frame pointer is restored.  Note that a nonlocal
-goto only occurs within a unit-of-translation, so a global table pointer
-that is shared by all functions of a given module need not be restored.
-There are no arguments.
+このパターンは、定義されていれば、非局所 goto の飛び先に GNU CC が
+生成済みのコードの後で必要なコードが入っている。
+普通はこのパターンを定義する必要はない。
+このパターンが必要な理由の典型的なものは、ある値、例えばグローバルな
+表へのポインタのようなものが、フレームポインタがリストアされたときに
+リストアされなくてはならない場合である。
+非局所 goto は翻訳単位内でしか起こらないので、指定されたモジュールの
+全ての関数により共有されるグローバル・テーブル・ポインタを
+リストアする必要はない。引数はない。
 
 @cindex @code{exception_receiver} instruction pattern
 @item @samp{exception_receiver}
-This pattern, if defined, contains code needed at the site of an
-exception handler that isn't needed at the site of a nonlocal goto.  You
-will not normally need to define this pattern.  A typical reason why you
-might need this pattern is if some value, such as a pointer to a global
-table, must be restored after control flow is branched to the handler of
-an exception.  There are no arguments.
+このパターンは、定義されていれば、非局所 goto の位置には必要ないが、
+例外ハンドラの位置では必要とされるコードが入っている。
+普通はこのパターンを定義する必要はない。
+このパターンが必要な理由の典型的なものは、ある値、例えばグローバルな
+表へのポインタのようなものが、制御の流れが例外ハンドラに分岐した後で
+リストアされなくてはならない場合である。引数はない。
 
 @cindex @code{builtin_setjmp_setup} instruction pattern
 @item @samp{builtin_setjmp_setup}
-This pattern, if defined, contains additional code needed to initialize
-the @code{jmp_buf}.  You will not normally need to define this pattern.
-A typical reason why you might need this pattern is if some value, such
-as a pointer to a global table, must be restored.  Though it is
-preferred that the pointer value be recalculated if possible (given the
-address of a label for instance).  The single argument is a pointer to
-the @code{jmp_buf}.  Note that the buffer is five words long and that
-the first three are normally used by the generic mechanism.
+このパターンは、定義されていれば、@code{jmp_buf} を初期化するのに
+必要な追加のコードを保持している。普通は、このパターンを定義する必要は
+ない。このパターンが必要になる代表的な理由としては、何かの値、
+例えばグローバル変数テーブルへのポインタのような値がリストア
+する必要がある場合である。そのようなポインタ値は可能な限り
+(例えばラベルのアドレスが与えられているような場合)再計算するのが
+望ましいのではあるが。引数は一つであり、@code{jmp_buf} へのポインタである。
+このバッファは 5語長であり、最初の 3語分は普通は汎用的な機構が
+使うことに注意。
 
 @cindex @code{builtin_setjmp_receiver} instruction pattern
 @item @samp{builtin_setjmp_receiver}
-This pattern, if defined, contains code needed at the site of a
-built-in setjmp that isn't needed at the site of a nonlocal goto.  You
-will not normally need to define this pattern.  A typical reason why you
-might need this pattern is if some value, such as a pointer to a global
-table, must be restored.  It takes one argument, which is the label
-to which builtin_longjmp transferred control; this pattern may be emitted
-at a small offset from that label.
+このパターンは、定義されていれば、非局所 goto の位置には必要ないが、
+組み込みの setjmp の位置では必要とされるコードが入っている。
+普通はこのパターンを定義する必要はない。
+このパターンが必要な理由の典型的なものは、ある値、例えばグローバルな
+表へのポインタのようなものが、リストアされなくてはならない場合である。
+これは引数を一つ取る。それは制御を渡してきた @code{builtin_longjmp} に
+付くラベルである。このパターンはそのラベルから小さなオフセット分だけ
+後に生成される。
 
 @cindex @code{builtin_longjmp} instruction pattern
 @item @samp{builtin_longjmp}
-This pattern, if defined, performs the entire action of the longjmp.
-You will not normally need to define this pattern unless you also define
-@code{builtin_setjmp_setup}.  The single argument is a pointer to the
-@code{jmp_buf}.
+このパターンは、定義されていれば、longjmp の全動作を実行する。
+@code{builtin_setjmp_setup} も定義しているのでない限り、普通は
+このパターンを定義する必要はない。引数は一個で、@code{jmp_buf} への
+ポインタである。
 
-@cindex @code{eh_return} instruction pattern
-@item @samp{eh_return}
-This pattern, if defined, affects the way @code{__builtin_eh_return},
-and thence the call frame exception handling library routines, are
-built.  It is intended to handle non-trivial actions needed along
-the abnormal return path.
+@cindex @code{eh_epilogue} instruction pattern
+@item @samp{eh_epilogue}
+このパターンは、@code{__builtin_eh_return}、それに伴って @code{__throw}
+の構築方法に影響を与える。例外処理機構とそのターゲット向けの通常の
+エピローグコードとの間の通信を可能にすることを意図している。
 
-The address of the exception handler to which the function should return
-is passed as operand to this pattern.  It will normally need to copied by
-the pattern to some special register or memory location.
-If the pattern needs to determine the location of the target call
-frame in order to do so, it may use @code{EH_RETURN_STACKADJ_RTX},
-if defined; it will have already been assigned.
+このパターンには引数が三つある。一番目は、例外今テキストポインタである。
+これは、ポインタに適した関数戻りレジスタに既にコピーされているであろう。
+普通はこれを無視出来る。二番目の引数は、スタックポインタに加算すべき
+オフセットである。これはある勝手な呼出し時破壊ハードレジスタに
+コピーされるので、再ロード後、通常のエピローグが生成される間での
+間生き残る。三番目の引数は、この関数が戻るべき例外ハンドラの
+アドレスである。これは通常、このパターンによりある特別なレジスタに
+コピーされる必要がある。
 
-If this pattern is not defined, the default action will be to simply
-copy the return address to @code{EH_RETURN_HANDLER_RTX}.  Either
-that macro or this pattern needs to be defined if call frame exception
-handling is to be used.
+このパターンは、もし @code{RETURN_ADDR_RTX} が、何か信頼性があり
+永久的な修正が可能であるもの、例えば固定ハードレジスタやスタックメモリ
+参照のようなものを生み出さない場合は、定義しなければならない。
 
 @cindex @code{prologue} instruction pattern
-@anchor{prologue instruction pattern}
 @item @samp{prologue}
-This pattern, if defined, emits RTL for entry to a function.  The function
-entry is responsible for setting up the stack frame, initializing the frame
-pointer register, saving callee saved registers, etc.
+このパターンが定義されていると、関数の入り口点に対する RTL を生成する。
+関数の入り口点には、スタックフレームの設定、フレームポインタレジスタの
+初期化、被呼出し側セーブレジスタのセーブ等の役割がある。
 
-Using a prologue pattern is generally preferred over defining
-@code{TARGET_ASM_FUNCTION_PROLOGUE} to emit assembly code for the prologue.
+@code{prologue} パターンの方が、@code{FUNCTION_PROLOGUE} を
+定義するよりも、プロローグ用アセンブリ・コードを
+生成する方法として一般に望ましい。
 
-The @code{prologue} pattern is particularly useful for targets which perform
-instruction scheduling.
-
-@cindex @code{window_save} instruction pattern
-@anchor{window_save instruction pattern}
-@item @samp{window_save}
-This pattern, if defined, emits RTL for a register window save.  It should
-be defined if the target machine has register windows but the window events
-are decoupled from calls to subroutines.  The canonical example is the SPARC
-architecture.
+@code{prologue} パターンは、命令スケジューリングを行うターゲットには
+特に有効である。
 
 @cindex @code{epilogue} instruction pattern
-@anchor{epilogue instruction pattern}
 @item @samp{epilogue}
-This pattern emits RTL for exit from a function.  The function
-exit is responsible for deallocating the stack frame, restoring callee saved
-registers and emitting the return instruction.
+このパターンが定義されていると、関数の出口点に対する RTL を生成する。
+関数の出口点には、スタックフレームの解放、
+被呼出し側セーブレジスタのリストア、リターン命令の生成等の役割がある。
 
-Using an epilogue pattern is generally preferred over defining
-@code{TARGET_ASM_FUNCTION_EPILOGUE} to emit assembly code for the epilogue.
+@code{epilogue} パターンの方が、@code{FUNCTION_EPILOGUE} を
+定義するよりも、エピローグ用アセンブリ・コードを
+生成する方法として一般に望ましい。
 
-The @code{epilogue} pattern is particularly useful for targets which perform
-instruction scheduling or which have delay slots for their return instruction.
+@code{prologue} パターンは、命令スケジューリングを行ったり、
+リターン命令に遅延スロットが伴うターゲットには特に有効である。
 
 @cindex @code{sibcall_epilogue} instruction pattern
 @item @samp{sibcall_epilogue}
-This pattern, if defined, emits RTL for exit from a function without the final
-branch back to the calling function.  This pattern will be emitted before any
-sibling call (aka tail call) sites.
+このパターンが定義されていると、最終的に呼出し元関数へ分岐して戻らない
+関数の出口点に対する RTL を生成する。
+このパターンは、任意の同族呼出し(別名末尾呼出し)位置の前に生成される。
 
-The @code{sibcall_epilogue} pattern must not clobber any arguments used for
-parameter passing or any stack slots for arguments passed to the current
-function.
-
-@cindex @code{trap} instruction pattern
-@item @samp{trap}
-This pattern, if defined, signals an error, typically by causing some
-kind of signal to be raised.  Among other places, it is used by the Java
-front end to signal `invalid array index' exceptions.
-
-@cindex @code{ctrap@var{MM}4} instruction pattern
-@item @samp{ctrap@var{MM}4}
-Conditional trap instruction.  Operand 0 is a piece of RTL which
-performs a comparison, and operands 1 and 2 are the arms of the
-comparison.  Operand 3 is the trap code, an integer.
-
-A typical @code{ctrap} pattern looks like
-
-@smallexample
-(define_insn "ctrapsi4"
-  [(trap_if (match_operator 0 "trap_operator"
-             [(match_operand 1 "register_operand")
-              (match_operand 2 "immediate_operand")])
-            (match_operand 3 "const_int_operand" "i"))]
-  ""
-  "@dots{}")
-@end smallexample
-
-@cindex @code{prefetch} instruction pattern
-@item @samp{prefetch}
-This pattern, if defined, emits code for a non-faulting data prefetch
-instruction.  Operand 0 is the address of the memory to prefetch.  Operand 1
-is a constant 1 if the prefetch is preparing for a write to the memory
-address, or a constant 0 otherwise.  Operand 2 is the expected degree of
-temporal locality of the data and is a value between 0 and 3, inclusive; 0
-means that the data has no temporal locality, so it need not be left in the
-cache after the access; 3 means that the data has a high degree of temporal
-locality and should be left in all levels of cache possible;  1 and 2 mean,
-respectively, a low or moderate degree of temporal locality.
-
-Targets that do not support write prefetches or locality hints can ignore
-the values of operands 1 and 2.
-
-@cindex @code{blockage} instruction pattern
-@item @samp{blockage}
-This pattern defines a pseudo insn that prevents the instruction
-scheduler and other passes from moving instructions and using register
-equivalences across the boundary defined by the blockage insn.
-This needs to be an UNSPEC_VOLATILE pattern or a volatile ASM.
-
-@cindex @code{memory_barrier} instruction pattern
-@item @samp{memory_barrier}
-If the target memory model is not fully synchronous, then this pattern
-should be defined to an instruction that orders both loads and stores
-before the instruction with respect to loads and stores after the instruction.
-This pattern has no operands.
-
-@cindex @code{sync_compare_and_swap@var{mode}} instruction pattern
-@item @samp{sync_compare_and_swap@var{mode}}
-This pattern, if defined, emits code for an atomic compare-and-swap
-operation.  Operand 1 is the memory on which the atomic operation is
-performed.  Operand 2 is the ``old'' value to be compared against the
-current contents of the memory location.  Operand 3 is the ``new'' value
-to store in the memory if the compare succeeds.  Operand 0 is the result
-of the operation; it should contain the contents of the memory
-before the operation.  If the compare succeeds, this should obviously be
-a copy of operand 2.
-
-This pattern must show that both operand 0 and operand 1 are modified.
-
-This pattern must issue any memory barrier instructions such that all
-memory operations before the atomic operation occur before the atomic
-operation and all memory operations after the atomic operation occur
-after the atomic operation.
-
-For targets where the success or failure of the compare-and-swap
-operation is available via the status flags, it is possible to
-avoid a separate compare operation and issue the subsequent
-branch or store-flag operation immediately after the compare-and-swap.
-To this end, GCC will look for a @code{MODE_CC} set in the
-output of @code{sync_compare_and_swap@var{mode}}; if the machine
-description includes such a set, the target should also define special
-@code{cbranchcc4} and/or @code{cstorecc4} instructions.  GCC will then
-be able to take the destination of the @code{MODE_CC} set and pass it
-to the @code{cbranchcc4} or @code{cstorecc4} pattern as the first
-operand of the comparison (the second will be @code{(const_int 0)}).
-
-For targets where the operating system may provide support for this
-operation via library calls, the @code{sync_compare_and_swap_optab}
-may be initialized to a function with the same interface as the
-@code{__sync_val_compare_and_swap_@var{n}} built-in.  If the entire
-set of @var{__sync} builtins are supported via library calls, the
-target can initialize all of the optabs at once with
-@code{init_sync_libfuncs}.
-For the purposes of C++11 @code{std::atomic::is_lock_free}, it is
-assumed that these library calls do @emph{not} use any kind of
-interruptable locking.
-
-@cindex @code{sync_add@var{mode}} instruction pattern
-@cindex @code{sync_sub@var{mode}} instruction pattern
-@cindex @code{sync_ior@var{mode}} instruction pattern
-@cindex @code{sync_and@var{mode}} instruction pattern
-@cindex @code{sync_xor@var{mode}} instruction pattern
-@cindex @code{sync_nand@var{mode}} instruction pattern
-@item @samp{sync_add@var{mode}}, @samp{sync_sub@var{mode}}
-@itemx @samp{sync_ior@var{mode}}, @samp{sync_and@var{mode}}
-@itemx @samp{sync_xor@var{mode}}, @samp{sync_nand@var{mode}}
-These patterns emit code for an atomic operation on memory.
-Operand 0 is the memory on which the atomic operation is performed.
-Operand 1 is the second operand to the binary operator.
-
-This pattern must issue any memory barrier instructions such that all
-memory operations before the atomic operation occur before the atomic
-operation and all memory operations after the atomic operation occur
-after the atomic operation.
-
-If these patterns are not defined, the operation will be constructed
-from a compare-and-swap operation, if defined.
-
-@cindex @code{sync_old_add@var{mode}} instruction pattern
-@cindex @code{sync_old_sub@var{mode}} instruction pattern
-@cindex @code{sync_old_ior@var{mode}} instruction pattern
-@cindex @code{sync_old_and@var{mode}} instruction pattern
-@cindex @code{sync_old_xor@var{mode}} instruction pattern
-@cindex @code{sync_old_nand@var{mode}} instruction pattern
-@item @samp{sync_old_add@var{mode}}, @samp{sync_old_sub@var{mode}}
-@itemx @samp{sync_old_ior@var{mode}}, @samp{sync_old_and@var{mode}}
-@itemx @samp{sync_old_xor@var{mode}}, @samp{sync_old_nand@var{mode}}
-These patterns emit code for an atomic operation on memory,
-and return the value that the memory contained before the operation.
-Operand 0 is the result value, operand 1 is the memory on which the
-atomic operation is performed, and operand 2 is the second operand
-to the binary operator.
-
-This pattern must issue any memory barrier instructions such that all
-memory operations before the atomic operation occur before the atomic
-operation and all memory operations after the atomic operation occur
-after the atomic operation.
-
-If these patterns are not defined, the operation will be constructed
-from a compare-and-swap operation, if defined.
-
-@cindex @code{sync_new_add@var{mode}} instruction pattern
-@cindex @code{sync_new_sub@var{mode}} instruction pattern
-@cindex @code{sync_new_ior@var{mode}} instruction pattern
-@cindex @code{sync_new_and@var{mode}} instruction pattern
-@cindex @code{sync_new_xor@var{mode}} instruction pattern
-@cindex @code{sync_new_nand@var{mode}} instruction pattern
-@item @samp{sync_new_add@var{mode}}, @samp{sync_new_sub@var{mode}}
-@itemx @samp{sync_new_ior@var{mode}}, @samp{sync_new_and@var{mode}}
-@itemx @samp{sync_new_xor@var{mode}}, @samp{sync_new_nand@var{mode}}
-These patterns are like their @code{sync_old_@var{op}} counterparts,
-except that they return the value that exists in the memory location
-after the operation, rather than before the operation.
-
-@cindex @code{sync_lock_test_and_set@var{mode}} instruction pattern
-@item @samp{sync_lock_test_and_set@var{mode}}
-This pattern takes two forms, based on the capabilities of the target.
-In either case, operand 0 is the result of the operand, operand 1 is
-the memory on which the atomic operation is performed, and operand 2
-is the value to set in the lock.
-
-In the ideal case, this operation is an atomic exchange operation, in
-which the previous value in memory operand is copied into the result
-operand, and the value operand is stored in the memory operand.
-
-For less capable targets, any value operand that is not the constant 1
-should be rejected with @code{FAIL}.  In this case the target may use
-an atomic test-and-set bit operation.  The result operand should contain
-1 if the bit was previously set and 0 if the bit was previously clear.
-The true contents of the memory operand are implementation defined.
-
-This pattern must issue any memory barrier instructions such that the
-pattern as a whole acts as an acquire barrier, that is all memory
-operations after the pattern do not occur until the lock is acquired.
-
-If this pattern is not defined, the operation will be constructed from
-a compare-and-swap operation, if defined.
-
-@cindex @code{sync_lock_release@var{mode}} instruction pattern
-@item @samp{sync_lock_release@var{mode}}
-This pattern, if defined, releases a lock set by
-@code{sync_lock_test_and_set@var{mode}}.  Operand 0 is the memory
-that contains the lock; operand 1 is the value to store in the lock.
-
-If the target doesn't implement full semantics for
-@code{sync_lock_test_and_set@var{mode}}, any value operand which is not
-the constant 0 should be rejected with @code{FAIL}, and the true contents
-of the memory operand are implementation defined.
-
-This pattern must issue any memory barrier instructions such that the
-pattern as a whole acts as a release barrier, that is the lock is
-released only after all previous memory operations have completed.
-
-If this pattern is not defined, then a @code{memory_barrier} pattern
-will be emitted, followed by a store of the value to the memory operand.
-
-@cindex @code{atomic_compare_and_swap@var{mode}} instruction pattern
-@item @samp{atomic_compare_and_swap@var{mode}} 
-This pattern, if defined, emits code for an atomic compare-and-swap
-operation with memory model semantics.  Operand 2 is the memory on which
-the atomic operation is performed.  Operand 0 is an output operand which
-is set to true or false based on whether the operation succeeded.  Operand
-1 is an output operand which is set to the contents of the memory before
-the operation was attempted.  Operand 3 is the value that is expected to
-be in memory.  Operand 4 is the value to put in memory if the expected
-value is found there.  Operand 5 is set to 1 if this compare and swap is to
-be treated as a weak operation.  Operand 6 is the memory model to be used
-if the operation is a success.  Operand 7 is the memory model to be used
-if the operation fails.
-
-If memory referred to in operand 2 contains the value in operand 3, then
-operand 4 is stored in memory pointed to by operand 2 and fencing based on
-the memory model in operand 6 is issued.  
-
-If memory referred to in operand 2 does not contain the value in operand 3,
-then fencing based on the memory model in operand 7 is issued.
-
-If a target does not support weak compare-and-swap operations, or the port
-elects not to implement weak operations, the argument in operand 5 can be
-ignored.  Note a strong implementation must be provided.
-
-If this pattern is not provided, the @code{__atomic_compare_exchange}
-built-in functions will utilize the legacy @code{sync_compare_and_swap}
-pattern with an @code{__ATOMIC_SEQ_CST} memory model.
-
-@cindex @code{atomic_load@var{mode}} instruction pattern
-@item @samp{atomic_load@var{mode}}
-This pattern implements an atomic load operation with memory model
-semantics.  Operand 1 is the memory address being loaded from.  Operand 0
-is the result of the load.  Operand 2 is the memory model to be used for
-the load operation.
-
-If not present, the @code{__atomic_load} built-in function will either
-resort to a normal load with memory barriers, or a compare-and-swap
-operation if a normal load would not be atomic.
-
-@cindex @code{atomic_store@var{mode}} instruction pattern
-@item @samp{atomic_store@var{mode}}
-This pattern implements an atomic store operation with memory model
-semantics.  Operand 0 is the memory address being stored to.  Operand 1
-is the value to be written.  Operand 2 is the memory model to be used for
-the operation.
-
-If not present, the @code{__atomic_store} built-in function will attempt to
-perform a normal store and surround it with any required memory fences.  If
-the store would not be atomic, then an @code{__atomic_exchange} is
-attempted with the result being ignored.
-
-@cindex @code{atomic_exchange@var{mode}} instruction pattern
-@item @samp{atomic_exchange@var{mode}}
-This pattern implements an atomic exchange operation with memory model
-semantics.  Operand 1 is the memory location the operation is performed on.
-Operand 0 is an output operand which is set to the original value contained
-in the memory pointed to by operand 1.  Operand 2 is the value to be
-stored.  Operand 3 is the memory model to be used.
-
-If this pattern is not present, the built-in function
-@code{__atomic_exchange} will attempt to preform the operation with a
-compare and swap loop.
-
-@cindex @code{atomic_add@var{mode}} instruction pattern
-@cindex @code{atomic_sub@var{mode}} instruction pattern
-@cindex @code{atomic_or@var{mode}} instruction pattern
-@cindex @code{atomic_and@var{mode}} instruction pattern
-@cindex @code{atomic_xor@var{mode}} instruction pattern
-@cindex @code{atomic_nand@var{mode}} instruction pattern
-@item @samp{atomic_add@var{mode}}, @samp{atomic_sub@var{mode}}
-@itemx @samp{atomic_or@var{mode}}, @samp{atomic_and@var{mode}}
-@itemx @samp{atomic_xor@var{mode}}, @samp{atomic_nand@var{mode}}
-These patterns emit code for an atomic operation on memory with memory
-model semantics. Operand 0 is the memory on which the atomic operation is
-performed.  Operand 1 is the second operand to the binary operator.
-Operand 2 is the memory model to be used by the operation.
-
-If these patterns are not defined, attempts will be made to use legacy
-@code{sync} patterns, or equivalent patterns which return a result.  If
-none of these are available a compare-and-swap loop will be used.
-
-@cindex @code{atomic_fetch_add@var{mode}} instruction pattern
-@cindex @code{atomic_fetch_sub@var{mode}} instruction pattern
-@cindex @code{atomic_fetch_or@var{mode}} instruction pattern
-@cindex @code{atomic_fetch_and@var{mode}} instruction pattern
-@cindex @code{atomic_fetch_xor@var{mode}} instruction pattern
-@cindex @code{atomic_fetch_nand@var{mode}} instruction pattern
-@item @samp{atomic_fetch_add@var{mode}}, @samp{atomic_fetch_sub@var{mode}}
-@itemx @samp{atomic_fetch_or@var{mode}}, @samp{atomic_fetch_and@var{mode}}
-@itemx @samp{atomic_fetch_xor@var{mode}}, @samp{atomic_fetch_nand@var{mode}}
-These patterns emit code for an atomic operation on memory with memory
-model semantics, and return the original value. Operand 0 is an output 
-operand which contains the value of the memory location before the 
-operation was performed.  Operand 1 is the memory on which the atomic 
-operation is performed.  Operand 2 is the second operand to the binary
-operator.  Operand 3 is the memory model to be used by the operation.
-
-If these patterns are not defined, attempts will be made to use legacy
-@code{sync} patterns.  If none of these are available a compare-and-swap
-loop will be used.
-
-@cindex @code{atomic_add_fetch@var{mode}} instruction pattern
-@cindex @code{atomic_sub_fetch@var{mode}} instruction pattern
-@cindex @code{atomic_or_fetch@var{mode}} instruction pattern
-@cindex @code{atomic_and_fetch@var{mode}} instruction pattern
-@cindex @code{atomic_xor_fetch@var{mode}} instruction pattern
-@cindex @code{atomic_nand_fetch@var{mode}} instruction pattern
-@item @samp{atomic_add_fetch@var{mode}}, @samp{atomic_sub_fetch@var{mode}}
-@itemx @samp{atomic_or_fetch@var{mode}}, @samp{atomic_and_fetch@var{mode}}
-@itemx @samp{atomic_xor_fetch@var{mode}}, @samp{atomic_nand_fetch@var{mode}}
-These patterns emit code for an atomic operation on memory with memory
-model semantics and return the result after the operation is performed.
-Operand 0 is an output operand which contains the value after the
-operation.  Operand 1 is the memory on which the atomic operation is
-performed.  Operand 2 is the second operand to the binary operator.
-Operand 3 is the memory model to be used by the operation.
-
-If these patterns are not defined, attempts will be made to use legacy
-@code{sync} patterns, or equivalent patterns which return the result before
-the operation followed by the arithmetic operation required to produce the
-result.  If none of these are available a compare-and-swap loop will be
-used.
-
-@cindex @code{atomic_test_and_set} instruction pattern
-@item @samp{atomic_test_and_set}
-This pattern emits code for @code{__builtin_atomic_test_and_set}.
-Operand 0 is an output operand which is set to true if the previous
-previous contents of the byte was "set", and false otherwise.  Operand 1
-is the @code{QImode} memory to be modified.  Operand 2 is the memory
-model to be used.
-
-The specific value that defines "set" is implementation defined, and
-is normally based on what is performed by the native atomic test and set
-instruction.
-
-@cindex @code{mem_thread_fence@var{mode}} instruction pattern
-@item @samp{mem_thread_fence@var{mode}}
-This pattern emits code required to implement a thread fence with
-memory model semantics.  Operand 0 is the memory model to be used.
-
-If this pattern is not specified, all memory models except
-@code{__ATOMIC_RELAXED} will result in issuing a @code{sync_synchronize}
-barrier pattern.
-
-@cindex @code{mem_signal_fence@var{mode}} instruction pattern
-@item @samp{mem_signal_fence@var{mode}}
-This pattern emits code required to implement a signal fence with
-memory model semantics.  Operand 0 is the memory model to be used.
-
-This pattern should impact the compiler optimizers the same way that
-mem_signal_fence does, but it does not need to issue any barrier
-instructions.
-
-If this pattern is not specified, all memory models except
-@code{__ATOMIC_RELAXED} will result in issuing a @code{sync_synchronize}
-barrier pattern.
-
-@cindex @code{get_thread_pointer@var{mode}} instruction pattern
-@cindex @code{set_thread_pointer@var{mode}} instruction pattern
-@item @samp{get_thread_pointer@var{mode}}
-@itemx @samp{set_thread_pointer@var{mode}}
-These patterns emit code that reads/sets the TLS thread pointer. Currently,
-these are only needed if the target needs to support the
-@code{__builtin_thread_pointer} and @code{__builtin_set_thread_pointer}
-builtins.
-
-The get/set patterns have a single output/input operand respectively,
-with @var{mode} intended to be @code{Pmode}.
-
-@cindex @code{stack_protect_set} instruction pattern
-@item @samp{stack_protect_set}
-This pattern, if defined, moves a @code{ptr_mode} value from the memory
-in operand 1 to the memory in operand 0 without leaving the value in
-a register afterward.  This is to avoid leaking the value some place
-that an attacker might use to rewrite the stack guard slot after
-having clobbered it.
-
-If this pattern is not defined, then a plain move pattern is generated.
-
-@cindex @code{stack_protect_test} instruction pattern
-@item @samp{stack_protect_test}
-This pattern, if defined, compares a @code{ptr_mode} value from the
-memory in operand 1 with the memory in operand 0 without leaving the
-value in a register afterward and branches to operand 2 if the values
-were equal.
-
-If this pattern is not defined, then a plain compare pattern and
-conditional branch pattern is used.
-
-@cindex @code{clear_cache} instruction pattern
-@item @samp{clear_cache}
-This pattern, if defined, flushes the instruction cache for a region of
-memory.  The region is bounded to by the Pmode pointers in operand 0
-inclusive and operand 1 exclusive.
-
-If this pattern is not defined, a call to the library function
-@code{__clear_cache} is used.
-
+@code{sibcall_epilogue} パターンは、パラメータの受渡しに使われる引数や
+現在の関数に渡された引数用のスタックスロットはどれも破壊してはならない。
 @end table
 
 @end ifset
