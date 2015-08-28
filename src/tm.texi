@@ -1363,28 +1363,31 @@ C の定数式群で、それぞれ、エスケープ・シーケンス @samp{\v
 @section Register Usage
 @cindex register usage
 
-This section explains how to describe what registers the target machine
-has, and how (in general) they can be used.
+この節では、ターゲットマシンにどんなレジスタがあり、
+一般的にはどのように使うことができるかを記述する方法を
+説明する。
 
-The description of which registers a specific instruction can use is
-done with register classes; see @ref{Register Classes}.  For information
-on using registers to access a stack frame, see @ref{Frame Registers}.
-For passing values in registers, see @ref{Register Arguments}.
-For returning values in registers, see @ref{Scalar Return}.
+ある特定の命令でどのレジスタが使用できるかは、レジスタクラスを使って
+記述する。@ref{Register Classes} を参照のこと。
+レジスタを使ってスタックフレームをアクセスするための情報については、
+@ref{Frame Registers} を参照のこと。
+レジスタを使って値を渡す方法については、@ref{Register Arguments} を、
+レジスタで値を返す方法については、@ref{Scalar Return} を参照。
 
 @menu
-* Register Basics::             Number and kinds of registers.
-* Allocation Order::            Order in which registers are allocated.
-* Values in Registers::         What kinds of values each reg can hold.
-* Leaf Functions::              Renumbering registers for leaf functions.
-* Stack Registers::             Handling a register stack such as 80387.
+* Register Basics::		レジスタの数と種類
+* Allocation Order::		レジスタ割り当ての順序
+* Values in Registers::		各レジスタが保持できる値の種類
+* Leaf Functions::		末端関数にレジスタ番号付け替え
+* Stack Registers::		80387 のようなレジスタスタックの操作
+* Obsolete Register Macros::	80387 で以前使われていたマクロ
 @end menu
 
 @node Register Basics
 @subsection Basic Characteristics of Registers
 
 @c prevent bad page break with this line
-Registers have various characteristics.
+レジスタには色々な特徴がある。
 
 @defmac FIRST_PSEUDO_REGISTER
 Number of hardware registers known to the compiler.  They receive
