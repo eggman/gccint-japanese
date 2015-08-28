@@ -1049,9 +1049,9 @@ main ()
 
 これが 2 と 5 を出力するなら、コンパイラの動作は
 @code{PCC_BITFIELD_TYPE_MATTERS} から得られるものである。
+@end defmac
 
-@findex BITFIELD_NBYTES_LIMITED
-@item BITFIELD_NBYTES_LIMITED
+@defmac  BITFIELD_NBYTES_LIMITED
 @code{PCC_BITFIELD_TYPE_MATTERS} と同様だが、その効果は
 構造体内のビットフィールドの整合に限られる。
 @end defmac
