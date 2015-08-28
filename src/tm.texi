@@ -483,9 +483,6 @@ C++ プログラムをコンパイルするときには、そのディレクト�
 @end smallexample
 @end defmac
 
-@ifset ENGLISH
-Here is the order of prefixes tried for exec files:
-@end ifset
 実行形式ファイルのプレフィックスを試す順序を以下に示す。
 
 @enumerate
@@ -552,177 +549,162 @@ Here is the order of prefixes tried for exec files:
 @c prevent bad page break with this line
 以下に実行時のターゲット指定を示す。
 
-@defmac TARGET_CPU_CPP_BUILTINS ()
-This function-like macro expands to a block of code that defines
-built-in preprocessor macros and assertions for the target CPU, using
-the functions @code{builtin_define}, @code{builtin_define_std} and
-@code{builtin_assert}.  When the front end
-calls this macro it provides a trailing semicolon, and since it has
-finished command line option processing your code can use those
-results freely.
+@defmac CPP_PREDEFINES
+C の文字列定数を定義する。
+この文字列には、マシンとシステムを特定する事前定義マクロを定義する、
+@samp{-D} オプションを指定する。
+ここで指定されたマクロは、@samp{-ansi} オプションが指定されない限り
+定義済となる。
 
-@code{builtin_assert} takes a string in the form you pass to the
-command-line option @option{-A}, such as @code{cpu=mips}, and creates
-the assertion.  @code{builtin_define} takes a string in the form
-accepted by option @option{-D} and unconditionally defines the macro.
+さらに、これらのマクロ名の前後に @samp{__} を付加した名前のマクロの
+セットが並行して定義済となる。
+これら @samp{__} 付きのマクロは ANSI 標準により許されており、
+@samp{-ansi} オプションの指定の有無に関わらず、定義済となる。
 
-@code{builtin_define_std} takes a string representing the name of an
-object-like macro.  If it doesn't lie in the user's namespace,
-@code{builtin_define_std} defines it unconditionally.  Otherwise, it
-defines a version with two leading underscores, and another version
-with two leading and trailing underscores, and defines the original
-only if an ISO standard was not requested on the command line.  For
-example, passing @code{unix} defines @code{__unix}, @code{__unix__}
-and possibly @code{unix}; passing @code{_mips} defines @code{__mips},
-@code{__mips__} and possibly @code{_mips}, and passing @code{_ABI64}
-defines only @code{_ABI64}.
+例えば、Sun では、次のような指定をすることができる。
 
-You can also test for the C dialect being compiled.  The variable
-@code{c_language} is set to one of @code{clk_c}, @code{clk_cplusplus}
-or @code{clk_objective_c}.  Note that if we are preprocessing
-assembler, this variable will be @code{clk_c} but the function-like
-macro @code{preprocessing_asm_p()} will return true, so you might want
-to check for that first.  If you need to check for strict ANSI, the
-variable @code{flag_iso} can be used.  The function-like macro
-@code{preprocessing_trad_p()} can be used to check for traditional
-preprocessing.
+@smallexample
+"-Dmc68000 -Dsun -Dunix"
+@end smallexample
+
+この結果、マクロ @code{__mc68000__}、@code{__sun__}、@code{__unix__} が
+無条件に定義され、@code{mc68000}、@code{sun}、@code{unix} が
+@samp{-ansi} オプションが指定されないときに定義される。
 @end defmac
 
-@defmac TARGET_OS_CPP_BUILTINS ()
-Similarly to @code{TARGET_CPU_CPP_BUILTINS} but this macro is optional
-and is used for the target operating system instead.
+@table @code
+@item extern int target_flags;
+この宣言は必須である。
+@end table
+
+@defmac TARGET_@dots{}
+この一連のマクロを定義することで、コンパイラのコマンド行引数により、
+ターゲット機種の選択的機能の使用を有効／無効にすることができる。
+例えば、一個のマシン記述で 68000 と 68020 の両方に対応できるので、
+コマンド行引数で、コンパイラに 68020 固有の命令を使うかどうかを
+指定できる。コマンド行引数が動作する仕組みは、@code{target_flags} 中の
+ビットが立っているかどうかをテストする @code{TARGET_68020} というマクロに
+よるものである。
+
+このようなオプション毎に @code{TARGET_@var{featurename}} というマクロを
+定義する。この定義では、@code{target_flags} 中のビットが立っているか
+どうかをテストしなければならない。例えば、以下のように書く。
+
+@smallexample
+#define TARGET_68020 (target_flags & 1)
+@end smallexample
+
+こういったマクロが使われるのは、一つには、命令パターン中の条件式である。
+@code{TARGET_68020} が、68000 のマシン記述ファイル、@file{m68k.md} に
+どれぐらい現れるか注意してみると良いだろう。
 @end defmac
 
-@defmac TARGET_OBJFMT_CPP_BUILTINS ()
-Similarly to @code{TARGET_CPU_CPP_BUILTINS} but this macro is optional
-and is used for the target object format.  @file{elfos.h} uses this
-macro to define @code{__ELF__}, so you probably do not need to define
-it yourself.
+@defmac TARGET_SWITCHES
+このマクロでは、@code{target_flags} 中のビットをセットしたりクリアする
+コマンド行オプションの名前を定義する。
+この定義は、各コマンド行オプション毎にグループ分けした初期化子とする。
+
+各グループは、オプション名を定義する文字列定数、@code{target_flags} に
+セットすべきビット群を含む数値、それに @code{--help} オプションを
+指定したときに表示される説明となる第二の文字列から成る。
+数値が負の数の場合、その数値で指定されるビットを立てる代わりに、
+クリアする。説明文字列が、存在はするが空の場合、そのオプションについての
+ヘルプ情報は何も表示されないが、隠しオプションには数えない。
+実際のオプション名は、ここで指定した名前に @samp{-m} を付加したものになる。
+
+ヌル文字列を持つグループが一個存在する必要がある。
+このグループで指定する数値が、@code{target_flags} のデフォルト値になる。
+どのターゲットオプションも最初はこのデフォルト値に対して作用する。
+
+以下の例では @samp{-m68000} と @samp{-m68020} をお互いに
+反対の意味を持つように定義し、後者をデフォルトとしている。
+
+@smallexample
+#define TARGET_SWITCHES \
+  @{ @{ "68020", 1, "" @},      \
+    @{ "68000", -1, "Compile for the 68000" @}, \
+    @{ "", 1, "" @}@}
+@end smallexample
 @end defmac
 
-@deftypevar {extern int} target_flags
-This variable is declared in @file{options.h}, which is included before
-any target-specific headers.
-@end deftypevar
+@defmac TARGET_OPTIONS
+@code{TARGET_SWITCHES} と同様のマクロだが、値を持つコマンド行オプションの
+名前を定義する。
+この定義は、コマンド行オプション毎のグループ分けした初期化子とする。
 
-@deftypevr {Common Target Hook} int TARGET_DEFAULT_TARGET_FLAGS
-This variable specifies the initial value of @code{target_flags}.
-Its default setting is 0.
-@end deftypevr
+各グループはそれぞれ、フィールドとして、オプション名の固定部分を
+定義する文字列定数、ある変数のアドレス、それに説明文字列を持つ。
+この変数は、@code{char *} 型であり、指定したオプションの固定部分が
+マッチした場合、変動部分がこの変数に設定される。
+実際のオプション名は、指定した名前に @samp{-m} を付加したものになる。
 
-@cindex optional hardware or system features
-@cindex features, optional, in system conventions
+以下の例では、@samp{-mshort-data-@var{number}} というオプションを定義
+している。指定されたオプションが @samp{-mshort-data-512} なら、
+変数 @code{m88k_short_data} には、文字列 @code{"512"} がセットされる。
 
-@deftypefn {Common Target Hook} bool TARGET_HANDLE_OPTION (struct gcc_options *@var{opts}, struct gcc_options *@var{opts_set}, const struct cl_decoded_option *@var{decoded}, location_t @var{loc})
-This hook is called whenever the user specifies one of the
-target-specific options described by the @file{.opt} definition files
-.  It has the opportunity to do some option-specific
-processing and should return true if the option is valid.  The default
-definition does nothing but return true.
-
-@var{decoded} specifies the option and its arguments.  @var{opts} and
-@var{opts_set} are the @code{gcc_options} structures to be used for
-storing option state, and @var{loc} is the location at which the
-option was passed (@code{UNKNOWN_LOCATION} except for options passed
-via attributes).
-@end deftypefn
-
-@deftypefn {C Target Hook} bool TARGET_HANDLE_C_OPTION (size_t @var{code}, const char *@var{arg}, int @var{value})
-This target hook is called whenever the user specifies one of the
-target-specific C language family options described by the @file{.opt}
-definition files.  It has the opportunity to do some
-option-specific processing and should return true if the option is
-valid.  The arguments are like for @code{TARGET_HANDLE_OPTION}.  The
-default definition does nothing but return false.
-
-In general, you should use @code{TARGET_HANDLE_OPTION} to handle
-options.  However, if processing an option requires routines that are
-only available in the C (and related language) front ends, then you
-should use @code{TARGET_HANDLE_C_OPTION} instead.
-@end deftypefn
-
-@deftypefn {C Target Hook} tree TARGET_OBJC_CONSTRUCT_STRING_OBJECT (tree @var{string})
-Targets may provide a string object type that can be used within and between C, C++ and their respective Objective-C dialects. A string object might, for example, embed encoding and length information. These objects are considered opaque to the compiler and handled as references. An ideal implementation makes the composition of the string object match that of the Objective-C @code{NSString} (@code{NXString} for GNUStep), allowing efficient interworking between C-only and Objective-C code. If a target implements string objects then this hook should return a reference to such an object constructed from the normal `C' string representation provided in @var{string}. At present, the hook is used by Objective-C only, to obtain a common-format string object when the target provides one.
-@end deftypefn
-
-@deftypefn {C Target Hook} void TARGET_OBJC_DECLARE_UNRESOLVED_CLASS_REFERENCE (const char *@var{classname})
-Declare that Objective C class @var{classname} is referenced  by the current TU.
-@end deftypefn
-
-@deftypefn {C Target Hook} void TARGET_OBJC_DECLARE_CLASS_DEFINITION (const char *@var{classname})
-Declare that Objective C class @var{classname} is defined  by the current TU.
-@end deftypefn
-
-@deftypefn {C Target Hook} bool TARGET_STRING_OBJECT_REF_TYPE_P (const_tree @var{stringref})
-If a target implements string objects then this hook should return @code{true} if @var{stringref} is a valid reference to such an object.
-@end deftypefn
-
-@deftypefn {C Target Hook} void TARGET_CHECK_STRING_OBJECT_FORMAT_ARG (tree @var{format_arg}, tree @var{args_list})
-If a target implements string objects then this hook should should  provide a facility to check the function arguments in @var{args_list}  against the format specifiers in @var{format_arg} where the type of  @var{format_arg} is one recognized as a valid string reference type.
-@end deftypefn
-
-@deftypefn {Target Hook} void TARGET_OVERRIDE_OPTIONS_AFTER_CHANGE (void)
-This target function is similar to the hook @code{TARGET_OPTION_OVERRIDE}
-but is called when the optimize level is changed via an attribute or
-pragma or when it is reset at the end of the code affected by the
-attribute or pragma.  It is not called at the beginning of compilation
-when @code{TARGET_OPTION_OVERRIDE} is called so if you want to perform these
-actions then, you should have @code{TARGET_OPTION_OVERRIDE} call
-@code{TARGET_OVERRIDE_OPTIONS_AFTER_CHANGE}.
-@end deftypefn
-
-@defmac C_COMMON_OVERRIDE_OPTIONS
-This is similar to the @code{TARGET_OPTION_OVERRIDE} hook
-but is only used in the C
-language frontends (C, Objective-C, C++, Objective-C++) and so can be
-used to alter option flag variables which only exist in those
-frontends.
+@smallexample
+extern char *m88k_short_data;
+#define TARGET_OPTIONS \
+ @{ @{ "short-data-", &m88k_short_data, "Specify the size of the short data section" @} @}
+@end smallexample
 @end defmac
 
-@deftypevr {Common Target Hook} {const struct default_options *} TARGET_OPTION_OPTIMIZATION_TABLE
-Some machines may desire to change what optimizations are performed for
-various optimization levels.   This variable, if defined, describes
-options to enable at particular sets of optimization levels.  These
-options are processed once
-just after the optimization level is determined and before the remainder
-of the command options have been parsed, so may be overridden by other
-options passed explicitly.
+@defmac TARGET_VERSION
+このマクロは C の文として定義する。この文は、選択された特定のマシン記述
+を説明する文字列を @code{stderr} に出力するようにする。
+どのマシン記述でも必ず @code{TARGET_VERSION} を定義して欲しい。
+以下に定義例を示す。
 
-This processing is run once at program startup and when the optimization
-options are changed via @code{#pragma GCC optimize} or by using the
-@code{optimize} attribute.
-@end deftypevr
-
-@deftypefn {Common Target Hook} void TARGET_OPTION_INIT_STRUCT (struct gcc_options *@var{opts})
-Set target-dependent initial values of fields in @var{opts}.
-@end deftypefn
-
-@deftypefn {Common Target Hook} void TARGET_OPTION_DEFAULT_PARAMS (void)
-Set target-dependent default values for @option{--param} settings, using calls to @code{set_default_param_value}.
-@end deftypefn
-
-@defmac SWITCHABLE_TARGET
-Some targets need to switch between substantially different subtargets
-during compilation.  For example, the MIPS target has one subtarget for
-the traditional MIPS architecture and another for MIPS16.  Source code
-can switch between these two subarchitectures using the @code{mips16}
-and @code{nomips16} attributes.
-
-Such subtargets can differ in things like the set of available
-registers, the set of available instructions, the costs of various
-operations, and so on.  GCC caches a lot of this type of information
-in global variables, and recomputing them for each subtarget takes a
-significant amount of time.  The compiler therefore provides a facility
-for maintaining several versions of the global variables and quickly
-switching between them; see @file{target-globals.h} for details.
-
-Define this macro to 1 if your target needs this facility.  The default
-is 0.
+@smallexample
+#ifdef MOTOROLA
+#define TARGET_VERSION \
+  fprintf (stderr, " (68k, Motorola syntax)");
+#else
+#define TARGET_VERSION \
+  fprintf (stderr, " (68k, MIT syntax)");
+#endif
+@end smallexample
 @end defmac
 
-@deftypefn {Target Hook} bool TARGET_FLOAT_EXCEPTIONS_ROUNDING_SUPPORTED_P (void)
-Returns true if the target supports IEEE 754 floating-point exceptions and rounding modes, false otherwise.  This is intended to relate to the @code{float} and @code{double} types, but not necessarily @code{long double}. By default, returns true if the @code{adddf3} instruction pattern is available and false otherwise, on the assumption that hardware floating point supports exceptions and rounding modes but software floating point does not.
-@end deftypefn
+@defmac OVERRIDE_OPTIONS
+場合によっては、コマンド行オプションのある組合せが、ある特定の
+ターゲット機種では意味をなさないことがある。
+そういう場合を考慮に入れるにはマクロ @code{OVERRIDE_OPTIONS} を
+定義する。このマクロは、定義されていると、全てのコマンド行オプションが
+パーズされた直後に一回だけ実行される。
+
+このマクロを使って、@samp{-O} オプションを指定したときに
+色々な特別の最適化を実行するようにしてはいけない。
+そのためには、@code{OPTIMIZATION_OPTIONS} というマクロがある。
+@end defmac
+
+@defmac OPTIMIZATION_OPTIONS (@var{level}, @var{size})
+このマクロは、定義されていれば、最適化レベルが決まった直後で、コマンド行
+オプションの残りがパースされる前に一回だけ実行される。
+このマクロに設定されている値は、他のコマンド行オプションのデフォルト値
+として使われる。
+
+@var{level} は指定された最適化レベルであり、@samp{-O2} が指定されれば
+ 2 であり、@samp{-O} が指定されれば 1、どちらも指定されなければ
+0 である。
+
+@var{size} は、@samp{-Os} が指定されていればゼロでない値であり、
+指定されていなければゼロである。
+
+このマクロを使って機種固有ではないオプションを変えるべきではない。
+機種固有でないオプションは、全てのサポートされている機種で同じ
+最適化レベルによって統一的に選択されるべきである。
+このマクロは、機種固有の最適化を有効にするのに使うこと。
+
+@strong{このマクロの中で、@code{write_symbols} を調べてはいけない。}
+デバッグ用オプションは、生成コードを変えるとは想定されていない。
+@end defmac
+
+@defmac CAN_DEBUG_WITHOUT_FP
+フレームポインタ無しでもデバッグできるようにするなら、このマクロを定義する。
+このマクロが定義されていると GNU CC は、@samp{-O} が指定されていれば
+必ず @samp{-fomit-frame-pointer} オプションを有効にする。
+@end defmac
 
 @node Storage Layout
 @section Storage Layout
