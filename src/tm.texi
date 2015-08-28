@@ -710,9 +710,10 @@ extern char *m88k_short_data;
 @section Storage Layout
 @cindex storage layout
 
-Note that the definitions of the macros in this table which are sizes or
-alignments measured in bits do not need to be constant.  They can be C
-expressions that refer to static variables, such as the @code{target_flags}.
+以下に示すテーブルでは、データのサイズやアラインメントをビット単位で
+表すマクロの定義を示している。注意して欲しいのは、
+これらのマクロは定数である必要はないということである。
+@code{target_flags} のような静的変数を参照する C の式でもかまわないのである。
 @xref{Run-time Target}.
 
 @defmac BITS_BIG_ENDIAN
@@ -735,376 +736,291 @@ expressions that refer to static variables, such as the @code{target_flags}.
 @end defmac
 
 @defmac WORDS_BIG_ENDIAN
-Define this macro to have the value 1 if, in a multiword object, the
-most significant word has the lowest number.  This applies to both
-memory locations and registers; see @code{REG_WORDS_BIG_ENDIAN} if the
-order of words in memory is not the same as the order in registers.  This
-macro need not be a constant.
+複数のワードからなるデータ中で最上位のワードが最下位の数を保持しているなら、
+このマクロを 1 に定義する。
+これは、メモリとレジスタの両方に適用される。GNU CC は基本的に、
+メモリ中のワードの順番とレジスタ中のワードの順番が同じであると
+仮定している。
+このマクロは定数である必要はない。
 @end defmac
 
-@defmac REG_WORDS_BIG_ENDIAN
-On some machines, the order of words in a multiword object differs between
-registers in memory.  In such a situation, define this macro to describe
-the order of words in a register.  The macro @code{WORDS_BIG_ENDIAN} controls
-the order of words in memory.
+@defmac LIBGCC2_WORDS_BIG_ENDIAN
+@code{WORDS_BIG_ENDIAN} が定数でない場合はこのマクロを定義する。
+これは @code{WORDS_BIG_ENDIAN} と同じ意味を持つ定数値でなければならない。
+この値は、CPP マクロに基づいて設定されることが多い。
 @end defmac
 
 @defmac FLOAT_WORDS_BIG_ENDIAN
-Define this macro to have the value 1 if @code{DFmode}, @code{XFmode} or
-@code{TFmode} floating point numbers are stored in memory with the word
-containing the sign bit at the lowest address; otherwise define it to
-have the value 0.  This macro need not be a constant.
+@code{DFmode} または @code{XFmode}、@code{TFmode} の浮動小数点数が
+メモリ中に格納されるときに、符号ビットを含むワードが最下位アドレスに
+置かれる場合は、このマクロを値 1 として定義する。
+このマクロが定数である必要はない。
 
-You need not define this macro if the ordering is the same as for
-multi-word integers.
+メモリ中に格納されるワードの順序が、複数ワードの整数の場合と同じなら、
+このマクロを定義する必要はない。
+@end defmac
+
+@defmac BITS_PER_UNIT
+アドレス可能な格納単位(バイト)中のビット数を定義するマクロである。
+通常は 8 になる。
 @end defmac
 
 @defmac BITS_PER_WORD
-Number of bits in a word.  If you do not define this macro, the default
-is @code{BITS_PER_UNIT * UNITS_PER_WORD}.
+ワードのビット数。普通は 32 である。
 @end defmac
 
 @defmac MAX_BITS_PER_WORD
-Maximum number of bits in a word.  If this is undefined, the default is
-@code{BITS_PER_WORD}.  Otherwise, it is the constant value that is the
-largest value that @code{BITS_PER_WORD} can have at run-time.
+ワード中の最大ビット数。定義されていない場合は、デフォルトで
+@code{BITS_PER_WORD} になる。定義する場合は、
+@code{BITS_PER_WORD} が実行時に取りうる最大値である定数値とする。
 @end defmac
 
 @defmac UNITS_PER_WORD
-Number of storage units in a word; normally the size of a general-purpose
-register, a power of two from 1 or 8.
+ワード中の格納単位数。普通は 4 である。
 @end defmac
 
 @defmac MIN_UNITS_PER_WORD
-Minimum number of units in a word.  If this is undefined, the default is
-@code{UNITS_PER_WORD}.  Otherwise, it is the constant value that is the
-smallest value that @code{UNITS_PER_WORD} can have at run-time.
+ワード中の格納単位の最小数。定義されていない場合は、デフォルトで
+@code{UNITS_PER_WORD} になる。定義する場合は、
+@code{UNITS_PER_WORD} が実行時に取りうる最小値となる定数値とする。
 @end defmac
 
 @defmac POINTER_SIZE
-Width of a pointer, in bits.  You must specify a value no wider than the
-width of @code{Pmode}.  If it is not equal to the width of @code{Pmode},
-you must define @code{POINTERS_EXTEND_UNSIGNED}.  If you do not specify
-a value the default is @code{BITS_PER_WORD}.
+ポインタの幅をビット数で表す。@code{Pmode} の幅よりも大きな値を
+指定してはならない。@code{Pmode} の幅と同じでない場合は、
+@code{POINTERS_EXTEND_UNSIGNED} を定義しなければならない。
 @end defmac
 
 @defmac POINTERS_EXTEND_UNSIGNED
-A C expression that determines how pointers should be extended from
-@code{ptr_mode} to either @code{Pmode} or @code{word_mode}.  It is
-greater than zero if pointers should be zero-extended, zero if they
-should be sign-extended, and negative if some other sort of conversion
-is needed.  In the last case, the extension is done by the target's
-@code{ptr_extend} instruction.
+C の式で、その値は、@code{POINTER_SIZE} ビット幅から @code{Pmode} に
+拡張する必要があるポインタがゼロ拡張されるならゼロでない値とし、
+符号拡張されるなら 0 とする。
 
-You need not define this macro if the @code{ptr_mode}, @code{Pmode}
-and @code{word_mode} are all the same width.
+@code{POINTER_SIZE} が @code{Pmode} の幅に同じならこのマクロを定義する
+必要はない。
 @end defmac
 
 @defmac PROMOTE_MODE (@var{m}, @var{unsignedp}, @var{type})
-A macro to update @var{m} and @var{unsignedp} when an object whose type
-is @var{type} and which has the specified mode and signedness is to be
-stored in a register.  This macro is only called when @var{type} is a
-scalar type.
+あるオブジェクトが、型が @var{type} であり、指定されたモード @var{m} と
+符号 @var{unsignedp} を持ち、レジスタに格納されることになっているなら、
+このマクロは @var{m} と @var{unsignedp} を更新する。
 
-On most RISC machines, which only have operations that operate on a full
-register, define this macro to set @var{m} to @code{word_mode} if
-@var{m} is an integer mode narrower than @code{BITS_PER_WORD}.  In most
-cases, only integer modes should be widened because wider-precision
-floating-point operations are usually more expensive than their narrower
-counterparts.
+多くの RISC マシンでは、全ワードに対して操作を行なう演算しか持っていないので、
+@var{m} が @code{BITS_PER_WORD} よりも幅の狭い整数モードなら
+このマクロで @var{m} を @code{word_mode} に設定するように定義する。
+大部分の場合、整数モードの場合だけ拡幅すべきである。
+何故なら、精度の高い浮動小数点演算は、普通は精度の低いものより高くつく
+からである。
 
-For most machines, the macro definition does not change @var{unsignedp}.
-However, some machines, have instructions that preferentially handle
-either signed or unsigned quantities of certain modes.  For example, on
-the DEC Alpha, 32-bit loads from memory and 32-bit add instructions
-sign-extend the result to 64 bits.  On such machines, set
-@var{unsignedp} according to which kind of extension is more efficient.
+多くの機種では、このマクロの定義で @var{unsignedp} を変えることはしていない。
+だが、機種によっては特定のモードについては符号付きか符号なしかのどちらかの
+量を優遇する命令を持っている。
+例えば、DEC Alpha では、メモリからの 32ビットのロードと 32ビットの加算命令は
+結果を 64 ビットに符号拡張する。
+そういう機種では、どちらの拡張が効率が良いかにしたがって @var{unsignedp} を
+設定するようにする。
 
-Do not define this macro if it would never modify @var{m}.
+@var{m} を更新することが絶対にないのであればこのマクロは定義しないこと。
 @end defmac
 
-@deftypefn {Target Hook} machine_mode TARGET_PROMOTE_FUNCTION_MODE (const_tree @var{type}, machine_mode @var{mode}, int *@var{punsignedp}, const_tree @var{funtype}, int @var{for_return})
-Like @code{PROMOTE_MODE}, but it is applied to outgoing function arguments or
-function return values.  The target hook should return the new mode
-and possibly change @code{*@var{punsignedp}} if the promotion should
-change signedness.  This function is called only for scalar @emph{or
-pointer} types.
+@defmac PROMOTE_FUNCTION_ARGS
+@code{PROMOTE_MODE} で記述される格上げを関数の出力(?)引数に対しても
+行なうべきなら、このマクロを定義する。
+@end defmac
 
-@var{for_return} allows to distinguish the promotion of arguments and
-return values.  If it is @code{1}, a return value is being promoted and
-@code{TARGET_FUNCTION_VALUE} must perform the same promotions done here.
-If it is @code{2}, the returned mode should be that of the register in
-which an incoming parameter is copied, or the outgoing result is computed;
-then the hook should return the same mode as @code{promote_mode}, though
-the signedness may be different.
+@defmac PROMOTE_FUNCTION_RETURN
+@code{PROMOTE_MODE} で記述される格上げを関数の戻り値に対しても
+行なうべきなら、このマクロを定義する。
 
-@var{type} can be NULL when promoting function arguments of libcalls.
+このマクロが定義されるなら、@code{FUNCTION_VALUE} は
+@code{PROMOTE_MODE} によりなされるのと同じ格上げを実行しなければならない。
+@end defmac
 
-The default is to not promote arguments and return values.  You can
-also define the hook to @code{default_promote_function_mode_always_promote}
-if you would like to apply the same rules given by @code{PROMOTE_MODE}.
-@end deftypefn
+@defmac PROMOTE_FOR_CALL_ONLY
+@code{PROMOTE_MODE} で記述される格上げを、
+関数の出力引数か関数の戻り値に対して@emph{のみ}、
+@code{PROMOTE_FUNCTION_ARGS} と@code{PROMOTE_FUNCTION_RETURN} で
+指定されているように、行なうべきなら、このマクロを定義する。
+@end defmac
 
 @defmac PARM_BOUNDARY
-Normal alignment required for function parameters on the stack, in
-bits.  All stack parameters receive at least this much alignment
-regardless of data type.  On most machines, this is the same as the
-size of an integer.
+スタック上の関数のパラメータに通常必要とされるアラインメントを
+ビット数で表す。
+スタックに置かれるパラメータは全て、データ型によらず、少なくともこの
+量だけのアラインメントが取られる。
+多くのマシンでは、この大きさは整数の大きさと同じである。
 @end defmac
 
 @defmac STACK_BOUNDARY
-Define this macro to the minimum alignment enforced by hardware for the
-stack pointer on this machine.  The definition is a C expression for the
-desired alignment (measured in bits).  This value is used as a default
-if @code{PREFERRED_STACK_BOUNDARY} is not defined.  On most machines,
-this should be the same as @code{PARM_BOUNDARY}.
+スタックポインタに保証されているアラインメントがあるなら、このマクロを
+定義する。定義は、望まれるアラインメントをビット単位で表す C の式とする。
+この値は、@code{PREFERRED_STACK_BOUNDARY} が定義されていない場合の
+デフォルトとして使われる。
 @end defmac
 
 @defmac PREFERRED_STACK_BOUNDARY
-Define this macro if you wish to preserve a certain alignment for the
-stack pointer, greater than what the hardware enforces.  The definition
-is a C expression for the desired alignment (measured in bits).  This
-macro must evaluate to a value equal to or larger than
-@code{STACK_BOUNDARY}.
-@end defmac
+スタックポインタについて一定のアラインメントを保持したいのであれば
+このマクロを定義する。
+定義は、望ましいアラインメントをビット数で表す C の式とする。
+@code{STACK_BOUNDARY} も定義されている場合は、このマクロを評価したなら、
+@code{STACK_BOUNDARY} 以上の値になるようにしなければならない。
 
-@defmac INCOMING_STACK_BOUNDARY
-Define this macro if the incoming stack boundary may be different
-from @code{PREFERRED_STACK_BOUNDARY}.  This macro must evaluate
-to a value equal to or larger than @code{STACK_BOUNDARY}.
+@cindex @code{PUSH_ROUNDING}, interaction with @code{PREFERRED_STACK_BOUNDARY}
+@code{PUSH_ROUNDING} が定義されていなければ、スタックは常に指定された
+境界に整合される。
+@code{PUSH_ROUNDING} が定義されていて、アラインメントの制限の指定が
+@code{PREFERRED_STACK_BOUNDARY} より緩ければ、スタックは引数をプッシュして
+いる間一時的に整合が取られないことがある。
 @end defmac
 
 @defmac FUNCTION_BOUNDARY
-Alignment required for a function entry point, in bits.
+関数の入り口点で必要とされるアラインメントをビット数で表す。
 @end defmac
 
 @defmac BIGGEST_ALIGNMENT
-Biggest alignment that any data type can require on this machine, in
-bits.  Note that this is not the biggest alignment that is supported,
-just the biggest alignment that, when violated, may cause a fault.
-@end defmac
-
-@deftypevr {Target Hook} HOST_WIDE_INT TARGET_ABSOLUTE_BIGGEST_ALIGNMENT
-If defined, this target hook specifies the absolute biggest alignment
-that a type or variable can have on this machine, otherwise,
-@code{BIGGEST_ALIGNMENT} is used.
-@end deftypevr
-
-@defmac MALLOC_ABI_ALIGNMENT
-Alignment, in bits, a C conformant malloc implementation has to
-provide.  If not defined, the default value is @code{BITS_PER_WORD}.
-@end defmac
-
-@defmac ATTRIBUTE_ALIGNED_VALUE
-Alignment used by the @code{__attribute__ ((aligned))} construct.  If
-not defined, the default value is @code{BIGGEST_ALIGNMENT}.
+対象機種で任意のデータ型が要求するうちで最大のアラインメントを
+ビット数で表したもの。
 @end defmac
 
 @defmac MINIMUM_ATOMIC_ALIGNMENT
-If defined, the smallest alignment, in bits, that can be given to an
-object that can be referenced in one operation, without disturbing any
-nearby object.  Normally, this is @code{BITS_PER_UNIT}, but may be larger
-on machines that don't have byte or half-word store operations.
+定義されていれば、最小のアラインメントをビット数で表したものである。
+これは、隣り合うオブジェクトを煩わせることなく、一回の操作で
+参照可能なオブジェクトに与えることができるものである。
+通常、@code{BITS_PER_UNIT} になるが、
+バイト単位あるいはハーフワード単位のストア演算がないマシンではもっと
+大きくなりうる。
 @end defmac
 
 @defmac BIGGEST_FIELD_ALIGNMENT
-Biggest alignment that any structure or union field can require on this
-machine, in bits.  If defined, this overrides @code{BIGGEST_ALIGNMENT} for
-structure and union fields only, unless the field alignment has been set
-by the @code{__attribute__ ((aligned (@var{n})))} construct.
+この機種で任意の構造体のフィールドが要求するアラインメントを
+ビット数で表したもの。
+これが定義されていると、構造体のフィールドに関しては
+@code{BIGGEST_ALIGNMENT} に優先する。
 @end defmac
 
 @defmac ADJUST_FIELD_ALIGN (@var{field}, @var{computed})
-An expression for the alignment of a structure field @var{field} if the
-alignment computed in the usual way (including applying of
-@code{BIGGEST_ALIGNMENT} and @code{BIGGEST_FIELD_ALIGNMENT} to the
-alignment) is @var{computed}.  It overrides alignment only if the
-field alignment has not been set by the
-@code{__attribute__ ((aligned (@var{n})))} construct.
-@end defmac
-
-@defmac MAX_STACK_ALIGNMENT
-Biggest stack alignment guaranteed by the backend.  Use this macro
-to specify the maximum alignment of a variable on stack.
-
-If not defined, the default value is @code{STACK_BOUNDARY}.
-
-@c FIXME: The default should be @code{PREFERRED_STACK_BOUNDARY}.
-@c But the fix for PR 32893 indicates that we can only guarantee
-@c maximum stack alignment on stack up to @code{STACK_BOUNDARY}, not
-@c @code{PREFERRED_STACK_BOUNDARY}, if stack alignment isn't supported.
+通常の方法で計算したアラインメントが @var{computed} である場合の、
+ある構造体フィールド @var{field} のアラインメントを表す式。
+GNU CC は、これが定義されていれば、構造体のフィールドに限って、
+@code{BIGGEST_ALIGNMENT} や @code{BIGGEST_FIELD_ALIGNMENT} の値の
+代わりにこの値を使う。
 @end defmac
 
 @defmac MAX_OFILE_ALIGNMENT
-Biggest alignment supported by the object file format of this machine.
-Use this macro to limit the alignment which can be specified using the
-@code{__attribute__ ((aligned (@var{n})))} construct.  If not defined,
-the default value is @code{BIGGEST_ALIGNMENT}.
-
-On systems that use ELF, the default (in @file{config/elfos.h}) is
-the largest supported 32-bit ELF section alignment representable on
-a 32-bit host e.g. @samp{(((uint64_t) 1 << 28) * 8)}.
-On 32-bit ELF the largest supported section alignment in bits is
-@samp{(0x80000000 * 8)}, but this is not representable on 32-bit hosts.
+対象機種向けのオブジェクトファイル形式でサポートされている
+最大のアラインメント。
+このマクロで、@code{__attribute__ ((aligned (@var{n})))} という構文を使って
+指定できるアラインメントを制限する。
+これが定義されていない場合は、デフォルト値は @code{BIGGEST_ALIGNMENT} に
+なる。
 @end defmac
 
 @defmac DATA_ALIGNMENT (@var{type}, @var{basic-align})
-If defined, a C expression to compute the alignment for a variable in
-the static store.  @var{type} is the data type, and @var{basic-align} is
-the alignment that the object would ordinarily have.  The value of this
-macro is used instead of that alignment to align the object.
+定義するなら、静的メモリ領域に置かれる変数のアラインメントを
+計算する C の式とする。
+@var{type} はデータの型であり、@var{basic-align} はそのオブジェクトが
+通常持つであろうアラインメントである。通常のアラインメントの
+代わりに、このマクロの値を使ってそのオブジェクトのアラインメントを取る。
 
-If this macro is not defined, then @var{basic-align} is used.
+このマクロが定義されなければ、@var{basic-align} が使われる。
 
 @findex strcpy
-One use of this macro is to increase alignment of medium-size data to
-make it all fit in fewer cache lines.  Another is to cause character
-arrays to be word-aligned so that @code{strcpy} calls that copy
-constants to character arrays can be done inline.
-@end defmac
-
-@defmac DATA_ABI_ALIGNMENT (@var{type}, @var{basic-align})
-Similar to @code{DATA_ALIGNMENT}, but for the cases where the ABI mandates
-some alignment increase, instead of optimization only purposes.  E.g.@
-AMD x86-64 psABI says that variables with array type larger than 15 bytes
-must be aligned to 16 byte boundaries.
-
-If this macro is not defined, then @var{basic-align} is used.
+このマクロの使い道は、一つには、
+より少ないキャッシュラインに収まるように、
+中間の大きさのデータのアラインメントを大きくすることにある。
+もう一つの使い方は、文字の配列をワード境界に整合することを
+強制することで、定数を文字配列にコピーするような @code{strcpy} の呼び出し
+をインライン展開可能にすることにある。
 @end defmac
 
 @defmac CONSTANT_ALIGNMENT (@var{constant}, @var{basic-align})
-If defined, a C expression to compute the alignment given to a constant
-that is being placed in memory.  @var{constant} is the constant and
-@var{basic-align} is the alignment that the object would ordinarily
-have.  The value of this macro is used instead of that alignment to
-align the object.
+メモリに置かれる定数に与えるべきアラインメントを計算する C の式を
+定義する。@var{constant} が定数で、@var{basic-align} が
+そのオブジェクトの通常のアライメントである。
+このマクロの値が、上記のアラインメントの代わりに、このオブジェクトを
+整合境界に置くのに使われる。
 
-The default definition just returns @var{basic-align}.
+このマクロが定義されていなければ、@var{basic-align} が使われる。
 
-The typical use of this macro is to increase alignment for string
-constants to be word aligned so that @code{strcpy} calls that copy
-constants can be done inline.
+このマクロの典型的な使い方は、文字列定数をワード境界に整合することを
+強制することで、定数をコピーする @code{strcpy} の呼び出し
+をインライン展開可能にすることにある。
 @end defmac
 
 @defmac LOCAL_ALIGNMENT (@var{type}, @var{basic-align})
-If defined, a C expression to compute the alignment for a variable in
-the local store.  @var{type} is the data type, and @var{basic-align} is
-the alignment that the object would ordinarily have.  The value of this
-macro is used instead of that alignment to align the object.
+定義されていれば、一個の C の式であり、局所的なメモリ領域に置かれる
+変数のアラインメントを計算する。@var{type} はデータ型であり、
+@var{basic-align} はそのオブジェクトが通常取るであろうアラインメントである。
+このマクロの値が、上記のアラインメントの代わりに、このオブジェクトを
+整合境界に置くのに使われる。
 
-If this macro is not defined, then @var{basic-align} is used.
+このマクロが定義されていない場合は、@var{basic-align} が使われる。
 
-One use of this macro is to increase alignment of medium-size data to
-make it all fit in fewer cache lines.
-
-If the value of this macro has a type, it should be an unsigned type.
-@end defmac
-
-@deftypefn {Target Hook} HOST_WIDE_INT TARGET_VECTOR_ALIGNMENT (const_tree @var{type})
-This hook can be used to define the alignment for a vector of type
-@var{type}, in order to comply with a platform ABI.  The default is to
-require natural alignment for vector types.  The alignment returned by
-this hook must be a power-of-two multiple of the default alignment of
-the vector element type.
-@end deftypefn
-
-@defmac STACK_SLOT_ALIGNMENT (@var{type}, @var{mode}, @var{basic-align})
-If defined, a C expression to compute the alignment for stack slot.
-@var{type} is the data type, @var{mode} is the widest mode available,
-and @var{basic-align} is the alignment that the slot would ordinarily
-have.  The value of this macro is used instead of that alignment to
-align the slot.
-
-If this macro is not defined, then @var{basic-align} is used when
-@var{type} is @code{NULL}.  Otherwise, @code{LOCAL_ALIGNMENT} will
-be used.
-
-This macro is to set alignment of stack slot to the maximum alignment
-of all possible modes which the slot may have.
-
-If the value of this macro has a type, it should be an unsigned type.
-@end defmac
-
-@defmac LOCAL_DECL_ALIGNMENT (@var{decl})
-If defined, a C expression to compute the alignment for a local
-variable @var{decl}.
-
-If this macro is not defined, then
-@code{LOCAL_ALIGNMENT (TREE_TYPE (@var{decl}), DECL_ALIGN (@var{decl}))}
-is used.
-
-One use of this macro is to increase alignment of medium-size data to
-make it all fit in fewer cache lines.
-
-If the value of this macro has a type, it should be an unsigned type.
-@end defmac
-
-@defmac MINIMUM_ALIGNMENT (@var{exp}, @var{mode}, @var{align})
-If defined, a C expression to compute the minimum required alignment
-for dynamic stack realignment purposes for @var{exp} (a type or decl),
-@var{mode}, assuming normal alignment @var{align}.
-
-If this macro is not defined, then @var{align} will be used.
+このマクロの使い道の一つは、中間の大きさのデータのアラインメントを
+より少ないキャッシュ・ラインに全て収まるように大きくすることである。
 @end defmac
 
 @defmac EMPTY_FIELD_BOUNDARY
-Alignment in bits to be given to a structure bit-field that follows an
-empty field such as @code{int : 0;}.
+@code{int : 0;} のような空のビットフィールの後に続くビットフィールドに
+指定すべきビット単位のアラインメントである。
 
-If @code{PCC_BITFIELD_TYPE_MATTERS} is true, it overrides this macro.
+@code{PCC_BITFIELD_TYPE_MATTERS}もまた、空のビットフィールドから生じる
+アラインメントに影響を及ぼすことに注意してほしい。
 @end defmac
 
 @defmac STRUCTURE_SIZE_BOUNDARY
-Number of bits which any structure or union's size must be a multiple of.
-Each structure or union's size is rounded up to a multiple of this.
+構造体や共用体の大きさが、その倍数になるべきビット数。
+各構造体や共用体の大きさは、この定数の倍数に切り上げられる。
 
-If you do not define this macro, the default is the same as
-@code{BITS_PER_UNIT}.
+このマクロを定義しない場合は、デフォルトは @code{BITS_PER_UNIT} と
+同じになる。
 @end defmac
 
 @defmac STRICT_ALIGNMENT
-Define this macro to be the value 1 if instructions will fail to work
-if given data not on the nominal alignment.  If instructions will merely
-go slower in that case, define this macro as 0.
+指定されたデータが満足すべきアラインメントにあっていない場合、
+命令が正しく動作しないなら、このマクロの値を 1 に定義する。
+命令が単に遅くなるだけなら、0 に定義する。
 @end defmac
 
 @defmac PCC_BITFIELD_TYPE_MATTERS
-Define this if you wish to imitate the way many other C compilers handle
-alignment of bit-fields and the structures that contain them.
+ビットフィールドとビットフィールド含む構造体のアラインメントの扱いを、
+他の多くの C コンパイラが取っている方法に合わせる場合は、このマクロを
+定義する。
 
-The behavior is that the type written for a named bit-field (@code{int},
-@code{short}, or other integer type) imposes an alignment for the entire
-structure, as if the structure really did contain an ordinary field of
-that type.  In addition, the bit-field is placed within the structure so
-that it would fit within such a field, not crossing a boundary for it.
+この場合の動作は、ビットフィールドに指定した型(@code{int}、@code{short}、
+またはその他の整数型)が、構造体全体のアライメントに制約を課す。
+これは、その構造体が、その型の普通の(ビットフィールドではない)フィールドを
+持っているかのようになる。
+さらに、このビットフィールドは、その普通のフィールド内に収まるように
+構造体内で配置される。普通のフィールドの境界を越えることはない。
 
-Thus, on most machines, a named bit-field whose type is written as
-@code{int} would not cross a four-byte boundary, and would force
-four-byte alignment for the whole structure.  (The alignment used may
-not be four bytes; it is controlled by the other alignment parameters.)
+つまり、多くの機種では型が @code{int} のビットフィールドは4バイト境界を
+越えることはないし、構造体全体のアライメントは4バイトに強制される。
+(実際に使われる場合、このアライメントは 4 バイトでないこともある。
+他のアラインメント関係のパラメータにより制御される。)
 
-An unnamed bit-field will not affect the alignment of the containing
-structure.
+このマクロは、C の式として定義する。
+この式の値が 0 でなければ上記の動作を有効にする。
 
-If the macro is defined, its definition should be a C expression;
-a nonzero value for the expression enables this behavior.
+このマクロが定義されていなかったり、値がゼロの場合は、
+ビットフィールドの中にはアラインメント境界を越えるものもありうる。
+メモリを直接参照できる、@samp{insv} や @samp{extv}、@samp{extzv} insn が
+あれば、コンパイラはそのような参照をサポート出来る。
 
-Note that if this macro is not defined, or its value is zero, some
-bit-fields may cross more than one alignment boundary.  The compiler can
-support such references if there are @samp{insv}, @samp{extv}, and
-@samp{extzv} insns that can directly reference memory.
+ビットフィールドを使えるようにするもう一つの有名な方法は、
+@code{STRUCTURE_SIZE_BOUNDARY} を @code{BIGGEST_ALIGNMENT} と
+同じ大きさに定義することである。
+そうすると、どの構造体もワード単位でアクセスできる。
 
-The other known way of making bit-fields work is to define
-@code{STRUCTURE_SIZE_BOUNDARY} as large as @code{BIGGEST_ALIGNMENT}.
-Then every structure can be accessed with fullwords.
+対象の機種がビットフィールドを持っていないか、
+@code{STRUCTURE_SIZE_BOUNDARY} を上記のように定義しない限り、
+@code{PCC_BITFIELD_TYPE_MATTERS} が 0 でない値を持つように
+しなければならない。
 
-Unless the machine has bit-field instructions or you define
-@code{STRUCTURE_SIZE_BOUNDARY} that way, you must define
-@code{PCC_BITFIELD_TYPE_MATTERS} to have a nonzero value.
-
-If your aim is to make GCC use the same conventions for laying out
-bit-fields as are used by another compiler, here is how to investigate
-what the other compiler does.  Compile and run this program:
+目的が、何か別のコンパイラで使われているビットフィールドの
+配置規約と同じ規約を GNU CC に使わせることにあるなら、
+以下に示す方法で、他のコンパイラがどうなっているかを調べることができる。
+このプログラムをコンパイルして実行すれば良い。
 
 @smallexample
 struct foo1
@@ -1131,186 +1047,132 @@ main ()
 @}
 @end smallexample
 
-If this prints 2 and 5, then the compiler's behavior is what you would
-get from @code{PCC_BITFIELD_TYPE_MATTERS}.
+これが 2 と 5 を出力するなら、コンパイラの動作は
+@code{PCC_BITFIELD_TYPE_MATTERS} から得られるものである。
+
+@findex BITFIELD_NBYTES_LIMITED
+@item BITFIELD_NBYTES_LIMITED
+@code{PCC_BITFIELD_TYPE_MATTERS} と同様だが、その効果は
+構造体内のビットフィールドの整合に限られる。
 @end defmac
 
-@defmac BITFIELD_NBYTES_LIMITED
-Like @code{PCC_BITFIELD_TYPE_MATTERS} except that its effect is limited
-to aligning a bit-field within the structure.
+@defmac ROUND_TYPE_SIZE (@var{type}, @var{computed}, @var{specified})
+このマクロは、一個の型(@var{type} により木ノードとして与えられる)
+全体の大きさを表す式を定義する。
+これを定義するのは、普通の方法で計算した大きさが
+@var{computed} であり、アラインメントが@var{specified} と
+なっている場合である。
+
+デフォルトは、@var{computed} を @var{specified} の倍数に切り上げる。
 @end defmac
-
-@deftypefn {Target Hook} bool TARGET_ALIGN_ANON_BITFIELD (void)
-When @code{PCC_BITFIELD_TYPE_MATTERS} is true this hook will determine
-whether unnamed bitfields affect the alignment of the containing
-structure.  The hook should return true if the structure should inherit
-the alignment requirements of an unnamed bitfield's type.
-@end deftypefn
-
-@deftypefn {Target Hook} bool TARGET_NARROW_VOLATILE_BITFIELD (void)
-This target hook should return @code{true} if accesses to volatile bitfields
-should use the narrowest mode possible.  It should return @code{false} if
-these accesses should use the bitfield container type.
-
-The default is @code{false}.
-@end deftypefn
-
-@deftypefn {Target Hook} bool TARGET_MEMBER_TYPE_FORCES_BLK (const_tree @var{field}, machine_mode @var{mode})
-Return true if a structure, union or array containing @var{field} should
-be accessed using @code{BLKMODE}.
-
-If @var{field} is the only field in the structure, @var{mode} is its
-mode, otherwise @var{mode} is VOIDmode.  @var{mode} is provided in the
-case where structures of one field would require the structure's mode to
-retain the field's mode.
-
-Normally, this is not needed.
-@end deftypefn
 
 @defmac ROUND_TYPE_ALIGN (@var{type}, @var{computed}, @var{specified})
-Define this macro as an expression for the alignment of a type (given
-by @var{type} as a tree node) if the alignment computed in the usual
-way is @var{computed} and the alignment explicitly specified was
-@var{specified}.
+このマクロは、一個の型(@var{type} により木ノードとして与えられる)
+のアラインメントを表す式を定義する。
+これを定義するのは、通常の方法で計算したアラインメントが
+@var{computed} であり、明示的に指定されたアラインメントが
+@var{specified} となっている場合である。
 
-The default is to use @var{specified} if it is larger; otherwise, use
-the smaller of @var{computed} and @code{BIGGEST_ALIGNMENT}
+デフォルトでは、@var{specified} の方が大きければそれを使う。
+さもなければ、@var{computed} と @code{BIGGEST_ALIGNMENT} の小さいほうを
+使う。
 @end defmac
 
 @defmac MAX_FIXED_MODE_SIZE
-An integer expression for the size in bits of the largest integer
-machine mode that should actually be used.  All integer machine modes of
-this size or smaller can be used for structures and unions with the
-appropriate sizes.  If this macro is undefined, @code{GET_MODE_BITSIZE
-(DImode)} is assumed.
+実際に使われるべき最大整数のマシンモードの大きさをビット数で
+表す整数式。
+この大きさ以下の全ての整数マシンモードは、適切な大きさの構造体と
+共用体に使うことができる。
+このマクロが定義されていない場合は、@code{GET_MODE_BITSIZE (DImode)} が
+仮定される。
 @end defmac
 
 @defmac STACK_SAVEAREA_MODE (@var{save_level})
-If defined, an expression of type @code{machine_mode} that
-specifies the mode of the save area operand of a
-@code{save_stack_@var{level}} named pattern (@pxref{Standard Names}).
-@var{save_level} is one of @code{SAVE_BLOCK}, @code{SAVE_FUNCTION}, or
-@code{SAVE_NONLOCAL} and selects which of the three named patterns is
-having its mode specified.
+定義されていれば、@code{enum machine_mode} 型の式であり、
+@code{save_stack_@var{level}} という名前付きパターン
+(@pxref{Standard Names}) のセーブ領域オペランドのモードを指定する。
+@var{save_level} は、@code{SAVE_BLOCK}、@code{SAVE_FUNCTION}、
+@code{SAVE_NONLOCAL} のどれかであり、三つの名前付きパターンのうち、
+どれのモードが指定されているかを選択する。
 
-You need not define this macro if it always returns @code{Pmode}.  You
-would most commonly define this macro if the
-@code{save_stack_@var{level}} patterns need to support both a 32- and a
-64-bit mode.
+必ず @code{Pmode} を返すのであれば、このマクロを定義する必要はない。
+このマクロを定義するのは、@code{save_stack_@var{level}} パターンが
+32 ビットモードと 64 ビットモードの両方をサポートする必要がある場合が
+一番多いだろう。
 @end defmac
 
 @defmac STACK_SIZE_MODE
-If defined, an expression of type @code{machine_mode} that
-specifies the mode of the size increment operand of an
-@code{allocate_stack} named pattern (@pxref{Standard Names}).
+定義されていれば、@code{enum machine_mode} 型の式であり、
+@code{allocate_stack} という名前付きパターン(@pxref{Standard Names})
+のサイズ・インクリメント・オペランドのモードを指定する。
 
-You need not define this macro if it always returns @code{word_mode}.
-You would most commonly define this macro if the @code{allocate_stack}
-pattern needs to support both a 32- and a 64-bit mode.
+必ず @code{word_mode} を返すのであれば、このマクロを定義する必要はない。
+このマクロを定義するのは、@code{allocate_stack} パターンが
+32 ビットモードと 64 ビットモードの両方をサポートする必要がある場合が
+一番多いだろう。
 @end defmac
 
-@deftypefn {Target Hook} machine_mode TARGET_LIBGCC_CMP_RETURN_MODE (void)
-This target hook should return the mode to be used for the return value
-of compare instructions expanded to libgcc calls.  If not defined
-@code{word_mode} is returned which is the right choice for a majority of
-targets.
-@end deftypefn
+@defmac CHECK_FLOAT_VALUE (@var{mode}, @var{value}, @var{overflow})
+(@code{double} 型の)値 @var{value} がモード @var{mode} として有効か
+どうかを検査する C の式である。
+対象とするターゲット機種のモード @var{mode} で表せる範囲の値に、
+@var{value} が収まるかどうかを検査するということを意味する。
+モード @var{mode} のクラスは常に @code{MODE_FLOAT} である。
+@var{overflow} は、その値が既に範囲からはみでていることが
+わかっている場合は、ゼロでない値になる。
 
-@deftypefn {Target Hook} machine_mode TARGET_LIBGCC_SHIFT_COUNT_MODE (void)
-This target hook should return the mode to be used for the shift count operand
-of shift instructions expanded to libgcc calls.  If not defined
-@code{word_mode} is returned which is the right choice for a majority of
-targets.
-@end deftypefn
+@var{value} が有効でないか、@var{overflow} がゼロでなければ、
+@var{overflow} を 1 に設定し、何らかの有効な値を @var{value} に
+割り当てるべきである。
+無効な値をそのままにしておくと、コンパイラが不正なアセンブラコードを
+出力し、Unix のアセンブラを異常終了させる可能性がある。
 
-@deftypefn {Target Hook} machine_mode TARGET_UNWIND_WORD_MODE (void)
-Return machine mode to be used for @code{_Unwind_Word} type.
-The default is to use @code{word_mode}.
-@end deftypefn
+なすべき処理がなければこのマクロを定義する必要はない。
+@end defmac
 
-@deftypefn {Target Hook} bool TARGET_MS_BITFIELD_LAYOUT_P (const_tree @var{record_type})
-This target hook returns @code{true} if bit-fields in the given
-@var{record_type} are to be laid out following the rules of Microsoft
-Visual C/C++, namely: (i) a bit-field won't share the same storage
-unit with the previous bit-field if their underlying types have
-different sizes, and the bit-field will be aligned to the highest
-alignment of the underlying types of itself and of the previous
-bit-field; (ii) a zero-sized bit-field will affect the alignment of
-the whole enclosing structure, even if it is unnamed; except that
-(iii) a zero-sized bit-field will be disregarded unless it follows
-another bit-field of nonzero size.  If this hook returns @code{true},
-other macros that control bit-field layout are ignored.
+@defmac TARGET_FLOAT_FORMAT
+ターゲットマシンの浮動小数点数形式を識別するためのコード。
+定義済の値が三つある。
+@end defmac
 
-When a bit-field is inserted into a packed record, the whole size
-of the underlying type is used by one or more same-size adjacent
-bit-fields (that is, if its long:3, 32 bits is used in the record,
-and any additional adjacent long bit-fields are packed into the same
-chunk of 32 bits.  However, if the size changes, a new field of that
-size is allocated).  In an unpacked record, this is the same as using
-alignment, but not equivalent when packing.
+@defmac IEEE_FLOAT_FORMAT
+IEEE 形式の浮動小数点数であることを示す。
+これがデフォルトになるので、IEEE 形式を使っている時は
+このマクロを定義する必要はない。
+@end defmac
 
-If both MS bit-fields and @samp{__attribute__((packed))} are used,
-the latter will take precedence.  If @samp{__attribute__((packed))} is
-used on a single field when MS bit-fields are in use, it will take
-precedence for that field, but the alignment of the rest of the structure
-may affect its placement.
-@end deftypefn
+@defmac VAX_FLOAT_FORMAT
+VAX で使用されている固有の形式であることを示す。
+@end defmac
 
-@deftypefn {Target Hook} bool TARGET_DECIMAL_FLOAT_SUPPORTED_P (void)
-Returns true if the target supports decimal floating point.
-@end deftypefn
+@defmac UNKNOWN_FLOAT_FORMAT
+このコードは、何か他の形式であることを示す。
 
-@deftypefn {Target Hook} bool TARGET_FIXED_POINT_SUPPORTED_P (void)
-Returns true if the target supports fixed-point arithmetic.
-@end deftypefn
+このマクロの値を @code{HOST_FLOAT_FORMAT}(@pxref{Config})と比べて、
+ターゲットマシンのフォーマットがホストマシンと同じかどうかを
+決める。何か他の形式が、サポートされている機種で実際に使われているのなら、
+そのための新しいコードで定義する必要がある。
 
-@deftypefn {Target Hook} void TARGET_EXPAND_TO_RTL_HOOK (void)
-This hook is called just before expansion into rtl, allowing the target
-to perform additional initializations or analysis before the expansion.
-For example, the rs6000 port uses it to allocate a scratch stack slot
-for use in copying SDmode values between memory and floating point
-registers whenever the function being expanded has any SDmode
-usage.
-@end deftypefn
+メモリ中に格納された浮動小数点数のワードの並び方は、
+ターゲットマシンについては @code{FLOAT_WORDS_BIG_ENDIAN} で、
+ホストマシンについては @code{HOST_FLOAT_WORDS_BIG_ENDIAN} で
+制御される。
+@end defmac
 
-@deftypefn {Target Hook} void TARGET_INSTANTIATE_DECLS (void)
-This hook allows the backend to perform additional instantiations on rtl
-that are not actually in any insns yet, but will be later.
-@end deftypefn
+@defmac default_vtable_thunks
+gnu cc は、c++ の仮想関数テーブル(vtable)の実装方法を二種類サポートしている。
+伝統的な方法と「thunks」と呼ばれる方法である。
+@samp{-fvtable-thunk} オプションでどちらかの方法を選択する。
+このオプションのデフォルト値を表す c の式としてこのマクロを定義する。
+@code{default_vtable_thunks} が 0 なら、gnu cc はデフォルトでは
+伝統的な実装方法を取る。
+「thunk」の実装の方が効率が良い(特に、@code{asm_output_mi_thunk} を
+実装している場合。@ref{function entry} を参照)。
+だが、伝統的な実装でコンパイルされたコードとのバイナリ互換性がない。
+新規に移植を行うなら、@code{default_vtable_thunks} を 1 に定義しよう。
 
-@deftypefn {Target Hook} {const char *} TARGET_MANGLE_TYPE (const_tree @var{type})
-If your target defines any fundamental types, or any types your target
-uses should be mangled differently from the default, define this hook
-to return the appropriate encoding for these types as part of a C++
-mangled name.  The @var{type} argument is the tree structure representing
-the type to be mangled.  The hook may be applied to trees which are
-not target-specific fundamental types; it should return @code{NULL}
-for all such types, as well as arguments it does not recognize.  If the
-return value is not @code{NULL}, it must point to a statically-allocated
-string constant.
-
-Target-specific fundamental types might be new fundamental types or
-qualified versions of ordinary fundamental types.  Encode new
-fundamental types as @samp{@w{u @var{n} @var{name}}}, where @var{name}
-is the name used for the type in source code, and @var{n} is the
-length of @var{name} in decimal.  Encode qualified versions of
-ordinary types as @samp{@w{U @var{n} @var{name} @var{code}}}, where
-@var{name} is the name used for the type qualifier in source code,
-@var{n} is the length of @var{name} as above, and @var{code} is the
-code used to represent the unqualified version of this type.  (See
-@code{write_builtin_type} in @file{cp/mangle.c} for the list of
-codes.)  In both cases the spaces are for clarity; do not include any
-spaces in your string.
-
-This hook is applied to types prior to typedef resolution.  If the mangled
-name for a particular type depends only on that type's main variant, you
-can perform typedef resolution yourself using @code{TYPE_MAIN_VARIANT}
-before mangling.
-
-The default version of this hook always returns @code{NULL}, which is
-appropriate for a target that does not define any new fundamental
-types.
-@end deftypefn
+このマクロを定義しなければ、@samp{-fvtable-thunk} のデフォルトは 0 になる。
+@end defmac
 
 @node Type Layout
 @section Layout of Source Language Data Types
