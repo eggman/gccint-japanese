@@ -1390,134 +1390,123 @@ C の定数式群で、それぞれ、エスケープ・シーケンス @samp{\v
 レジスタには色々な特徴がある。
 
 @defmac FIRST_PSEUDO_REGISTER
-Number of hardware registers known to the compiler.  They receive
-numbers 0 through @code{FIRST_PSEUDO_REGISTER-1}; thus, the first
-pseudo register's number really is assigned the number
-@code{FIRST_PSEUDO_REGISTER}.
+コンパイラに知らせるべきハードウェアレジスタの数。
+ハードウェアレジスタの番号は、0 から @code{FIRST_PSEUDO_REGISTER-1} に
+なる。つまり、最初の疑似レジスタ番号は @code{FIRST_PSEUDO_REGISER} になる。
 @end defmac
 
 @defmac FIXED_REGISTERS
 @cindex fixed register
-An initializer that says which registers are used for fixed purposes
-all throughout the compiled code and are therefore not available for
-general allocation.  These would include the stack pointer, the frame
-pointer (except on machines where that can be used as a general
-register when no frame pointer is needed), the program counter on
-machines where that is considered one of the addressable registers,
-and any other numbered register with a standard use.
+コンパイルされたコード全体を通して決まった目的で使用され、そのために一般の
+目的で使用することのできないレジスタを指定するための初期化子である。
+このようなレジスタとしては、スタックポインタ、フレームポインタ(フレーム
+ポインタを必要としないときは汎用レジスタとして使うことができるような機種
+の場合は除く)、アドレス可能なレジスタの一つとして考えることのできる
+機種ではプログラムカウンタ、あるいは
+ある標準的な使い方をするように番号が付けられた他のレジスタ等がある。
 
-This information is expressed as a sequence of numbers, separated by
-commas and surrounded by braces.  The @var{n}th number is 1 if
-register @var{n} is fixed, 0 otherwise.
+この情報は、一連の数字コンマで区切り、中括弧で囲んで表す。
+@var{n} 番目の数字は、レジスタ @var{n} が固定であれば 1 で、固定で
+なければ 0 である。
 
-The table initialized from this macro, and the table initialized by
-the following one, may be overridden at run time either automatically,
-by the actions of the macro @code{CONDITIONAL_REGISTER_USAGE}, or by
-the user with the command options @option{-ffixed-@var{reg}},
-@option{-fcall-used-@var{reg}} and @option{-fcall-saved-@var{reg}}.
+このマクロで初期化されたレジスタの表、それに以下のマクロのどれかで
+初期化された表は、次のどちらかの方法で上書きされる可能性がある。
+つまり、マクロ @code{CONDITIONAL_REGISTER_USAGE} の作用により自動的にか、
+あるいはユーザが指定したコマンド行オプション @samp{-ffixed-@var{reg}}、
+@samp{-fcall-used-@var{reg}}、@samp{-fcall-saved-@var{reg}} により
+書き換えられる。
 @end defmac
 
 @defmac CALL_USED_REGISTERS
 @cindex call-used register
 @cindex call-clobbered register
 @cindex call-saved register
-Like @code{FIXED_REGISTERS} but has 1 for each register that is
-clobbered (in general) by function calls as well as for fixed
-registers.  This macro therefore identifies the registers that are not
-available for general allocation of values that must live across
-function calls.
+@code{FIXED_REGISTERS} とほぼ同様だが、
+固定レジスタに加えて、(一般には)関数呼び出しで破壊されるレジスタ
+についても 1 とする。
+このため、このマクロにより、関数呼び出しを越えて保存されなければ
+ならない値の一般的な割当には利用できないレジスタを識別する。
 
-If a register has 0 in @code{CALL_USED_REGISTERS}, the compiler
-automatically saves it on function entry and restores it on function
-exit, if the register is used within the function.
-@end defmac
-
-@defmac CALL_REALLY_USED_REGISTERS
-@cindex call-used register
-@cindex call-clobbered register
-@cindex call-saved register
-Like @code{CALL_USED_REGISTERS} except this macro doesn't require
-that the entire set of @code{FIXED_REGISTERS} be included.
-(@code{CALL_USED_REGISTERS} must be a superset of @code{FIXED_REGISTERS}).
-This macro is optional.  If not specified, it defaults to the value
-of @code{CALL_USED_REGISTERS}.
+あるレジスタの @code{CALL_USED_REGISTERS} での値が 0 なら、
+そのレジスタが関数内で使われていれば、コンパイラは自動的に、そのレジスタを
+関数の入り口点でセーブし、関数の終了点でリストアする。
 @end defmac
 
 @defmac HARD_REGNO_CALL_PART_CLOBBERED (@var{regno}, @var{mode})
 @cindex call-used register
 @cindex call-clobbered register
 @cindex call-saved register
-A C expression that is nonzero if it is not permissible to store a
-value of mode @var{mode} in hard register number @var{regno} across a
-call without some part of it being clobbered.  For most machines this
-macro need not be defined.  It is only required for machines that do not
-preserve the entire contents of a register across a call.
+一個の C の式。この式は、モード @var{mode} の値を、
+その一部が破壊されることなく呼出しを越えて、
+ハードレジスタ番号@var{regno} に格納するのが許されない時はゼロでない
+値になる。ほとんどの機種ではこのマクロを定義する必要はない。
+レジスタの全内容を呼出しを越えては保存しない機種でのみ必要になる。
 @end defmac
 
 @findex fixed_regs
 @findex call_used_regs
-@findex global_regs
-@findex reg_names
-@findex reg_class_contents
-@deftypefn {Target Hook} void TARGET_CONDITIONAL_REGISTER_USAGE (void)
-This hook may conditionally modify five variables
-@code{fixed_regs}, @code{call_used_regs}, @code{global_regs},
-@code{reg_names}, and @code{reg_class_contents}, to take into account
-any dependence of these register sets on target flags.  The first three
-of these are of type @code{char []} (interpreted as Boolean vectors).
-@code{global_regs} is a @code{const char *[]}, and
-@code{reg_class_contents} is a @code{HARD_REG_SET}.  Before the macro is
-called, @code{fixed_regs}, @code{call_used_regs},
-@code{reg_class_contents}, and @code{reg_names} have been initialized
-from @code{FIXED_REGISTERS}, @code{CALL_USED_REGISTERS},
-@code{REG_CLASS_CONTENTS}, and @code{REGISTER_NAMES}, respectively.
-@code{global_regs} has been cleared, and any @option{-ffixed-@var{reg}},
-@option{-fcall-used-@var{reg}} and @option{-fcall-saved-@var{reg}}
-command options have been applied.
+@deftypefn {Target Hook} CONDITIONAL_REGISTER_USAGE
+0個以上の C の文で、四つの変数 @code{fixed_regs} と @code{call_used_regs}、
+@code{global_regs}(この三つは @code{char []} 型)、@code{reg_class_contents}
+(@code{HARD_REG_SET} 型)を条件により更新する。
+このマクロが呼ばれる前に、@code{fixed_regs}、@code{call_used_regs}、
+@code{reg_class_contents} がそれぞれ、@code{FIXED_REGISTERS}、
+@code{CALL_USED_REGISTERS}、@code{REG_CLASS_CONTENTS} により初期化され、
+@code{global_regs} がクリアされ、コマンド行オプション
+@samp{-ffixed-@var{reg}}、@samp{-fcall-used-@var{reg}}、
+@samp{-fcall-saved-@var{reg}} がどんなものであれ適用される。
+
+これは、固定レジスタや呼び出し破壊レジスタがターゲットのフラグに依存する場合に
+必要になる。
+
+することがなければ、このマクロを定義する必要はない。
 
 @cindex disabling certain registers
 @cindex controlling register usage
-If the usage of an entire class of registers depends on the target
-flags, you may indicate this to GCC by using this macro to modify
-@code{fixed_regs} and @code{call_used_regs} to 1 for each of the
-registers in the classes which should not be used by GCC@.  Also make
-@code{define_register_constraint}s return @code{NO_REGS} for constraints
-that shouldn't be used.
+あるクラスのレジスタ全体の使用法がターゲットのフラグに依存する場合は、
+そのことを GCC に知らせるのにこのマクロを使うことができる。
+このマクロで、GCC で使うべきでないクラスのレジスタのそれぞれについて、
+@code{fixed_regs} と @code{call_used_regs} を 1 になるように更新する。
+また、マクロ @code{REG_CLASS_FROM_LETTER} を定義して、
+使うべきでないクラスの文字を引数として呼ばれた場合は、
+@code{NO_REGS} を返すようにする。
 
-(However, if this class is not included in @code{GENERAL_REGS} and all
-of the insn patterns whose constraints permit this class are
-controlled by target switches, then GCC will automatically avoid using
-these registers when the target switches are opposed to them.)
+(だが、このクラスが @code{GENERAL_REGS} に含まれておらず、
+このクラスを許す制約を持つ全ての insn のパターンが、ターゲットスイッチ
+により制御されるなら、GCC は、ターゲットスイッチが反対しているなら
+これらのレジスタを使うのを自動的に避ける。)
 @end deftypefn
 
+@defmac NON_SAVING_SETJMP
+このマクロが定義されていてかつその値がゼロでない場合は、
+@code{setjmp} とその関連関数がレジスタのセーブに失敗するか、
+あるいは @code{longjmp} がレジスタのリストアに失敗するという
+ことを意味する。これを補償するために、コンパイラは
+@code{setjmp} を使っている関数ではレジスタに変数を置くのを避ける。
+@end defmac
+
 @defmac INCOMING_REGNO (@var{out})
-Define this macro if the target machine has register windows.  This C
-expression returns the register number as seen by the called function
-corresponding to the register number @var{out} as seen by the calling
-function.  Return @var{out} if register number @var{out} is not an
-outbound register.
+ターゲット機種にレジスタウィンドウがあればこのマクロを定義する。
+これは C の式であり、呼び出し側関数からは @var{out} と見えるレジスタ
+番号に対応するレジスタを、被呼び出し側関数から見た場合のレジスタ番号
+を返す。レジスタ番号 @var{out} が外向きのレジスタでなければ
+@var{out} を返す。
 @end defmac
 
 @defmac OUTGOING_REGNO (@var{in})
-Define this macro if the target machine has register windows.  This C
-expression returns the register number as seen by the calling function
-corresponding to the register number @var{in} as seen by the called
-function.  Return @var{in} if register number @var{in} is not an inbound
-register.
+ターゲット機種にレジスタウィンドウがあればこのマクロを定義する。
+これは C の式であり、被呼び出し側関数からは @var{in} と見えるレジスタ
+番号に対応するレジスタを、呼び出し側関数から見た場合のレジスタ番号
+を返す。レジスタ番号 @var{in} が内向きのレジスタでなければ
+@var{in} を返す。
 @end defmac
 
-@defmac LOCAL_REGNO (@var{regno})
-Define this macro if the target machine has register windows.  This C
-expression returns true if the register is call-saved but is in the
-register window.  Unlike most call-saved registers, such registers
-need not be explicitly restored on function exit or during non-local
-gotos.
-@end defmac
-
-@defmac PC_REGNUM
+@ignore
+@findex PC_REGNUM
+@item PC_REGNUM
 If the program counter has a register number, define this as that
 register number.  Otherwise, do not define it.
-@end defmac
+@end ignore
 
 @node Allocation Order
 @subsection Order of Allocation of Registers
