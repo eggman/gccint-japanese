@@ -2253,11 +2253,10 @@ C の式。モードが @var{mode} の値を保持するのに必要な、クラ
 @cindex calling conventions
 
 @c prevent bad page break with this line
-This describes the stack layout and calling conventions.
+以下では、スタックのレイアウトと呼び出し規約について述べる。
 
 @menu
 * Frame Layout::
-* Exception Handling::
 * Stack Checking::
 * Frame Registers::
 * Elimination::
@@ -2268,9 +2267,6 @@ This describes the stack layout and calling conventions.
 * Caller Saves::
 * Function Entry::
 * Profiling::
-* Tail Calls::
-* Stack Smashing Protection::
-* Miscellaneous Register Hooks::
 @end menu
 
 @node Frame Layout
@@ -2522,136 +2518,6 @@ If defined, a C expression whose value is an integer giving the offset
 in bytes from the canonical frame address (cfa) to the frame base used
 in DWARF 2 debug information.  The default is zero.  A different value
 may reduce the size of debug information on some ports.
-@end defmac
-
-@node Exception Handling
-@subsection Exception Handling Support
-@cindex exception handling
-
-@defmac EH_RETURN_DATA_REGNO (@var{N})
-A C expression whose value is the @var{N}th register number used for
-data by exception handlers, or @code{INVALID_REGNUM} if fewer than
-@var{N} registers are usable.
-
-The exception handling library routines communicate with the exception
-handlers via a set of agreed upon registers.  Ideally these registers
-should be call-clobbered; it is possible to use call-saved registers,
-but may negatively impact code size.  The target must support at least
-2 data registers, but should define 4 if there are enough free registers.
-
-You must define this macro if you want to support call frame exception
-handling like that provided by DWARF 2.
-@end defmac
-
-@defmac EH_RETURN_STACKADJ_RTX
-A C expression whose value is RTL representing a location in which
-to store a stack adjustment to be applied before function return.
-This is used to unwind the stack to an exception handler's call frame.
-It will be assigned zero on code paths that return normally.
-
-Typically this is a call-clobbered hard register that is otherwise
-untouched by the epilogue, but could also be a stack slot.
-
-Do not define this macro if the stack pointer is saved and restored
-by the regular prolog and epilog code in the call frame itself; in
-this case, the exception handling library routines will update the
-stack location to be restored in place.  Otherwise, you must define
-this macro if you want to support call frame exception handling like
-that provided by DWARF 2.
-@end defmac
-
-@defmac EH_RETURN_HANDLER_RTX
-A C expression whose value is RTL representing a location in which
-to store the address of an exception handler to which we should
-return.  It will not be assigned on code paths that return normally.
-
-Typically this is the location in the call frame at which the normal
-return address is stored.  For targets that return by popping an
-address off the stack, this might be a memory address just below
-the @emph{target} call frame rather than inside the current call
-frame.  If defined, @code{EH_RETURN_STACKADJ_RTX} will have already
-been assigned, so it may be used to calculate the location of the
-target call frame.
-
-Some targets have more complex requirements than storing to an
-address calculable during initial code generation.  In that case
-the @code{eh_return} instruction pattern should be used instead.
-
-If you want to support call frame exception handling, you must
-define either this macro or the @code{eh_return} instruction pattern.
-@end defmac
-
-@defmac RETURN_ADDR_OFFSET
-If defined, an integer-valued C expression for which rtl will be generated
-to add it to the exception handler address before it is searched in the
-exception handling tables, and to subtract it again from the address before
-using it to return to the exception handler.
-@end defmac
-
-@defmac ASM_PREFERRED_EH_DATA_FORMAT (@var{code}, @var{global})
-This macro chooses the encoding of pointers embedded in the exception
-handling sections.  If at all possible, this should be defined such
-that the exception handling section will not require dynamic relocations,
-and so may be read-only.
-
-@var{code} is 0 for data, 1 for code labels, 2 for function pointers.
-@var{global} is true if the symbol may be affected by dynamic relocations.
-The macro should return a combination of the @code{DW_EH_PE_*} defines
-as found in @file{dwarf2.h}.
-
-If this macro is not defined, pointers will not be encoded but
-represented directly.
-@end defmac
-
-@defmac ASM_MAYBE_OUTPUT_ENCODED_ADDR_RTX (@var{file}, @var{encoding}, @var{size}, @var{addr}, @var{done})
-This macro allows the target to emit whatever special magic is required
-to represent the encoding chosen by @code{ASM_PREFERRED_EH_DATA_FORMAT}.
-Generic code takes care of pc-relative and indirect encodings; this must
-be defined if the target uses text-relative or data-relative encodings.
-
-This is a C statement that branches to @var{done} if the format was
-handled.  @var{encoding} is the format chosen, @var{size} is the number
-of bytes that the format occupies, @var{addr} is the @code{SYMBOL_REF}
-to be emitted.
-@end defmac
-
-@defmac MD_FALLBACK_FRAME_STATE_FOR (@var{context}, @var{fs})
-This macro allows the target to add CPU and operating system specific
-code to the call-frame unwinder for use when there is no unwind data
-available.  The most common reason to implement this macro is to unwind
-through signal frames.
-
-This macro is called from @code{uw_frame_state_for} in
-@file{unwind-dw2.c}, @file{unwind-dw2-xtensa.c} and
-@file{unwind-ia64.c}.  @var{context} is an @code{_Unwind_Context};
-@var{fs} is an @code{_Unwind_FrameState}.  Examine @code{context->ra}
-for the address of the code being executed and @code{context->cfa} for
-the stack pointer value.  If the frame can be decoded, the register
-save addresses should be updated in @var{fs} and the macro should
-evaluate to @code{_URC_NO_REASON}.  If the frame cannot be decoded,
-the macro should evaluate to @code{_URC_END_OF_STACK}.
-
-For proper signal handling in Java this macro is accompanied by
-@code{MAKE_THROW_FRAME}, defined in @file{libjava/include/*-signal.h} headers.
-@end defmac
-
-@defmac MD_HANDLE_UNWABI (@var{context}, @var{fs})
-This macro allows the target to add operating system specific code to the
-call-frame unwinder to handle the IA-64 @code{.unwabi} unwinding directive,
-usually used for signal or interrupt frames.
-
-This macro is called from @code{uw_update_context} in libgcc's
-@file{unwind-ia64.c}.  @var{context} is an @code{_Unwind_Context};
-@var{fs} is an @code{_Unwind_FrameState}.  Examine @code{fs->unwabi}
-for the abi and context in the @code{.unwabi} directive.  If the
-@code{.unwabi} directive can be handled, the register save addresses should
-be updated in @var{fs}.
-@end defmac
-
-@defmac TARGET_USES_WEAK_UNWIND_INFO
-A C expression that evaluates to true if the target requires unwind
-info to be given comdat linkage.  Define it to be @code{1} if comdat
-linkage is necessary.  The default is @code{0}.
 @end defmac
 
 @node Stack Checking
@@ -4158,84 +4024,6 @@ the function prologue.  Normally, the profiling code comes after.
 @deftypefn {Target Hook} bool TARGET_KEEP_LEAF_WHEN_PROFILED (void)
 This target hook returns true if the target wants the leaf flag for the current function to stay true even if it calls mcount.  This might make sense for targets using the leaf flag only to determine whether a stack frame needs to be generated or not and for which the call to mcount is generated before the function prologue.
 @end deftypefn
-
-@node Tail Calls
-@subsection Permitting tail calls
-@cindex tail calls
-
-@deftypefn {Target Hook} bool TARGET_FUNCTION_OK_FOR_SIBCALL (tree @var{decl}, tree @var{exp})
-True if it is OK to do sibling call optimization for the specified
-call expression @var{exp}.  @var{decl} will be the called function,
-or @code{NULL} if this is an indirect call.
-
-It is not uncommon for limitations of calling conventions to prevent
-tail calls to functions outside the current unit of translation, or
-during PIC compilation.  The hook is used to enforce these restrictions,
-as the @code{sibcall} md pattern can not fail, or fall over to a
-``normal'' call.  The criteria for successful sibling call optimization
-may vary greatly between different architectures.
-@end deftypefn
-
-@deftypefn {Target Hook} void TARGET_EXTRA_LIVE_ON_ENTRY (bitmap @var{regs})
-Add any hard registers to @var{regs} that are live on entry to the
-function.  This hook only needs to be defined to provide registers that
-cannot be found by examination of FUNCTION_ARG_REGNO_P, the callee saved
-registers, STATIC_CHAIN_INCOMING_REGNUM, STATIC_CHAIN_REGNUM,
-TARGET_STRUCT_VALUE_RTX, FRAME_POINTER_REGNUM, EH_USES,
-FRAME_POINTER_REGNUM, ARG_POINTER_REGNUM, and the PIC_OFFSET_TABLE_REGNUM.
-@end deftypefn
-
-@deftypefn {Target Hook} void TARGET_SET_UP_BY_PROLOGUE (struct hard_reg_set_container *@var{})
-This hook should add additional registers that are computed by the prologue to the hard regset for shrink-wrapping optimization purposes.
-@end deftypefn
-
-@deftypefn {Target Hook} bool TARGET_WARN_FUNC_RETURN (tree)
-True if a function's return statements should be checked for matching the function's return type.  This includes checking for falling off the end of a non-void function.  Return false if no such check should be made.
-@end deftypefn
-
-@node Stack Smashing Protection
-@subsection Stack smashing protection
-@cindex stack smashing protection
-
-@deftypefn {Target Hook} tree TARGET_STACK_PROTECT_GUARD (void)
-This hook returns a @code{DECL} node for the external variable to use
-for the stack protection guard.  This variable is initialized by the
-runtime to some random value and is used to initialize the guard value
-that is placed at the top of the local stack frame.  The type of this
-variable must be @code{ptr_type_node}.
-
-The default version of this hook creates a variable called
-@samp{__stack_chk_guard}, which is normally defined in @file{libgcc2.c}.
-@end deftypefn
-
-@deftypefn {Target Hook} tree TARGET_STACK_PROTECT_FAIL (void)
-This hook returns a @code{CALL_EXPR} that alerts the runtime that the
-stack protect guard variable has been modified.  This expression should
-involve a call to a @code{noreturn} function.
-
-The default version of this hook invokes a function called
-@samp{__stack_chk_fail}, taking no arguments.  This function is
-normally defined in @file{libgcc2.c}.
-@end deftypefn
-
-@deftypefn {Common Target Hook} bool TARGET_SUPPORTS_SPLIT_STACK (bool @var{report}, struct gcc_options *@var{opts})
-Whether this target supports splitting the stack when the options described in @var{opts} have been passed.  This is called after options have been parsed, so the target may reject splitting the stack in some configurations.  The default version of this hook returns false.  If @var{report} is true, this function may issue a warning or error; if @var{report} is false, it must simply return a value
-@end deftypefn
-
-@node Miscellaneous Register Hooks
-@subsection Miscellaneous register hooks
-@cindex miscellaneous register hooks
-
-@deftypevr {Target Hook} bool TARGET_CALL_FUSAGE_CONTAINS_NON_CALLEE_CLOBBERS
-Set to true if each call that binds to a local definition explicitly
-clobbers or sets all non-fixed registers modified by performing the call.
-That is, by the call pattern itself, or by code that might be inserted by the
-linker (e.g. stubs, veneers, branch islands), but not including those
-modifiable by the callee.  The affected registers may be mentioned explicitly
-in the call pattern, or included as clobbers in CALL_INSN_FUNCTION_USAGE.
-The default version of this hook is set to false.  The purpose of this hook
-is to enable the fipa-ra optimization.
-@end deftypevr
 
 @node Varargs
 @section Implementing the Varargs Macros
