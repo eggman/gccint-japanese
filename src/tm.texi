@@ -7835,67 +7835,69 @@ This describes how to specify debugging information.
 * DBX Hooks::          Hook macros for varying DBX format.
 * File Names and DBX:: Macros controlling output of file names in DBX format.
 * SDB and DWARF::      Macros for SDB (COFF) and DWARF formats.
-* VMS Debug::          Macros for VMS debug format.
 @end menu
 
 @node All Debuggers
 @subsection Macros Affecting All Debugging Formats
 
 @c prevent bad page break with this line
-These macros affect all debugging formats.
+以下のマクロは、全てのデバッグ情報形式に関係する。
 
 @defmac DBX_REGISTER_NUMBER (@var{regno})
-A C expression that returns the DBX register number for the compiler
-register number @var{regno}.  In the default macro provided, the value
-of this expression will be @var{regno} itself.  But sometimes there are
-some registers that the compiler knows about and DBX does not, or vice
-versa.  In such cases, some register may need to have one number in the
-compiler and another for DBX@.
+コンパイラが使用するレジスタ番号 @var{regno} に対応する、DBX のレジスタ
+番号を返す C の式。
+単純な場合は、この式の値は @var{regno} そのものになる。
+だが、コンパイラは知っているが DBX は知らないレジスタがあったり、
+その逆もある。
+そういう場合は、あるレジスタはコンパイラとDBX で別の番号を必要とする。
 
-If two registers have consecutive numbers inside GCC, and they can be
-used as a pair to hold a multiword value, then they @emph{must} have
-consecutive numbers after renumbering with @code{DBX_REGISTER_NUMBER}.
-Otherwise, debuggers will be unable to access such a pair, because they
-expect register pairs to be consecutive in their own numbering scheme.
+ある二つのレジスタが GNU CC 内部で連続する番号になっており、
+それらをペアとして使って複数ワードの値を保持する事ができるのであれば、
+@code{DBX_REGISTER_NUMBER} で番号を付け替えた後でも連続する
+番号になっていなければならない。
+そうなってないと、デバッガがそのレジスタのペアをアクセスできなく
+なってしまう。デバッガは、レジスタのペアは、
+デバッガ自身の番号付けの仕組みで連続になっていることを想定しているからである。
 
-If you find yourself defining @code{DBX_REGISTER_NUMBER} in way that
-does not preserve register pairs, then what you must do instead is
-redefine the actual register numbering scheme.
+@code{DEBX_REGISTER_NUMBER} を、レジスタのペアを保存しないようなやりかたで
+定義したことがわかったら、代わりにしなければならないことは
+実際のレジスタ番号付の仕組みの方を再定義することである。
 @end defmac
 
 @defmac DEBUGGER_AUTO_OFFSET (@var{x})
-A C expression that returns the integer offset value for an automatic
-variable having address @var{x} (an RTL expression).  The default
-computation assumes that @var{x} is based on the frame-pointer and
-gives the offset from the frame-pointer.  This is required for targets
-that produce debugging output for DBX or COFF-style debugging output
-for SDB and allow the frame-pointer to be eliminated when the
-@option{-g} options is used.
+アドレスが @var{x}(RTL式)である自動変数の整数オフセット値を
+返す C の式。
+デフォルトの計算方法では、@var{x} はフレームポインタをベースにしており、
+フレームポインタからのオフセットを与えると仮定している。
+このことは、DBX 向けのデバッグ情報出力や SDB 向けの COFF形式デバッグ情報出力
+を生成し、かつ、@samp{-g} オプションを指定したときにフレームポインタの
+消去を許すターゲットでは必要とされる。
 @end defmac
 
 @defmac DEBUGGER_ARG_OFFSET (@var{offset}, @var{x})
-A C expression that returns the integer offset value for an argument
-having address @var{x} (an RTL expression).  The nominal offset is
-@var{offset}.
+アドレスが @var{x}(RTL 式) である引数の整数のオフセット値を返す C の式。
+名目上のオフセットは @var{offset} である。
 @end defmac
 
 @defmac PREFERRED_DEBUGGING_TYPE
-A C expression that returns the type of debugging output GCC should
-produce when the user specifies just @option{-g}.  Define
-this if you have arranged for GCC to support more than one format of
-debugging output.  Currently, the allowable values are @code{DBX_DEBUG},
-@code{SDB_DEBUG}, @code{DWARF_DEBUG}, @code{DWARF2_DEBUG},
-@code{XCOFF_DEBUG}, @code{VMS_DEBUG}, and @code{VMS_AND_DWARF2_DEBUG}.
+単に @samp{-g} オプションを指定した場合に GNU CC が生成すべき
+デバッグ情報形式を返す C の式である。
+GNU CC がデバッグ情報出力の形式を複数サポートするにはこのマクロを定義する。
+現在、指定可能な値は、@code{DBX_DEBUG}、@code{SDB_DEBUG}、
+@code{DWARF_DEBUG}、@code{DWARF2_DEBUG} である。
 
-When the user specifies @option{-ggdb}, GCC normally also uses the
-value of this macro to select the debugging output format, but with two
-exceptions.  If @code{DWARF2_DEBUGGING_INFO} is defined, GCC uses the
-value @code{DWARF2_DEBUG}.  Otherwise, if @code{DBX_DEBUGGING_INFO} is
-defined, GCC uses @code{DBX_DEBUG}.
+ユーザが @samp{-ggdb} を指定したとき、GNU CC は通常このマクロの値を
+基にデバッグ情報の出力形式を選択する。しかし、例外が二つある。
+@code{DWARF2_DEBUGGING_INFO} は定義されているが
+ @code{LINKER_DOES_NOT_WORK_WITH_DWARF2} が定義されていない場合は、
+GNU CC は @code{DWARF2_DEBUG} という値を使う。
+そうではなくて、@code{DBX_DEBUGGING_INFO} が定義されている場合は、
+GNU CC は @code{DBX_DEBUG} を使う。
 
-The value of this macro only affects the default debugging output; the
-user can always get a specific type of output by using @option{-gstabs},
-@option{-gcoff}, @option{-gdwarf-2}, @option{-gxcoff}, or @option{-gvms}.
+このマクロの値が影響するのはデフォルトのデバッグ出力だけである。
+ユーザはいつでも、@samp{-gstabs}、@samp{-gcoff}、@samp{-gdwarf-1}、
+@samp{-gdwarf-2}、@samp{-gxcoff} を使って特定の出力形式を
+選ぶことができる。
 @end defmac
 
 @node DBX Options
