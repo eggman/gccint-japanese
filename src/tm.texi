@@ -1690,101 +1690,124 @@ definition of this macro is
 
 @cindex leaf functions
 @cindex functions, leaf
-On some machines, a leaf function (i.e., one which makes no calls) can run
-more efficiently if it does not make its own register window.  Often this
-means it is required to receive its arguments in the registers where they
-are passed by the caller, instead of the registers where they would
-normally arrive.
+機種によっては、末端関数(すなわち、他の関数の呼び出しがない関数)は、
+その関数自身のレジスタウィンドウを作らないのであれば、より効率良く
+実行させることができる。
+これが意味することは、通常届けられるレジスタの代わりに、
+呼びだし側によって渡されたレジスタで引数を受け取る必要があるということで
+ある。
 
-The special treatment for leaf functions generally applies only when
-other conditions are met; for example, often they may use only those
-registers for its own variables and temporaries.  We use the term ``leaf
-function'' to mean a function that is suitable for this special
-handling, so that functions with no calls are not necessarily ``leaf
-functions''.
+末端関数が特別に取り扱われるのは、一般には他に幾つかの条件も満たされるときに
+限られる。例えば、末端関数ではレジスタをその関数自身の変数や一時領域に
+しか使わない場合が多い。
+我々は「末端関数」という言葉で、この特別な取扱いが可能な関数を指すことにする。
+このため、関数呼び出しのない関数は必ずしも「末端関数」とは限らないことになる。
 
-GCC assigns register numbers before it knows whether the function is
-suitable for leaf function treatment.  So it needs to renumber the
-registers in order to output a leaf function.  The following macros
-accomplish this.
+GNU CC は、関数が末端関数としての取扱いに向いているかどうかを知る前に
+レジスタ番号を割り当てる。
+そのため、末端関数を出力するにはレジスタ番号の付け替えをする必要がある。
+以下のマクロでこの処理を行なう。
 
 @defmac LEAF_REGISTERS
-Name of a char vector, indexed by hard register number, which
-contains 1 for a register that is allowable in a candidate for leaf
-function treatment.
+あるベクトルの C の初期化子。ハードレジスタ番号が添え字となる。
+末端関数処理の対象候補で使えるレジスタに対しては要素が 1 となる。
 
-If leaf function treatment involves renumbering the registers, then the
-registers marked here should be the ones before renumbering---those that
-GCC would ordinarily allocate.  The registers which will actually be
-used in the assembler code, after renumbering, should not be marked with 1
-in this vector.
+末端関数用の処理の中にレジスタ番号の付け替えがあるなら、
+ここで印を付けたレジスタは番号付け替えの前のものであり、GNU CC が
+普通に割り当てたものである。
+番号付け替えの後で、アセンブラコード中で実際に使われるレジスタは、
+このベクトルの中で 1 と印を付けるべきである。
 
-Define this macro only if the target machine offers a way to optimize
-the treatment of leaf functions.
+ターゲット機種が末端関数の取扱いを最適化する手段を提供している場合にだけ
+このマクロを定義すること。
 @end defmac
 
 @defmac LEAF_REG_REMAP (@var{regno})
-A C expression whose value is the register number to which @var{regno}
-should be renumbered, when a function is treated as a leaf function.
+一個の C の式で、その値は、関数が末端関数として取り扱われるときは、
+@var{regno} を番号付け替えした後のレジスタ番号になる。
 
-If @var{regno} is a register number which should not appear in a leaf
-function before renumbering, then the expression should yield @minus{}1, which
-will cause the compiler to abort.
+@var{regno} が、番号付け替えの前には末端関数に現れるべきでないレジスタ番号
+なら、この式の値は -1 となるべきで、そうするとコンパイラがアボートする。
 
-Define this macro only if the target machine offers a way to optimize the
-treatment of leaf functions, and registers need to be renumbered to do
-this.
+このマクロは、ターゲット機種が末端関数の扱いを最適化する手段を提供しており、
+そのためにはレジスタの番号付け替えが必要である場合にのみ、定義する。
 @end defmac
 
 @findex current_function_is_leaf
 @findex current_function_uses_only_leaf_regs
-@code{TARGET_ASM_FUNCTION_PROLOGUE} and
-@code{TARGET_ASM_FUNCTION_EPILOGUE} must usually treat leaf functions
-specially.  They can test the C variable @code{current_function_is_leaf}
-which is nonzero for leaf functions.  @code{current_function_is_leaf} is
-set prior to local register allocation and is valid for the remaining
-compiler passes.  They can also test the C variable
-@code{current_function_uses_only_leaf_regs} which is nonzero for leaf
-functions which only use leaf registers.
-@code{current_function_uses_only_leaf_regs} is valid after all passes
-that modify the instructions have been run and is only useful if
-@code{LEAF_REGISTERS} is defined.
+通常、@code{FUNCTION_PROLOGUE} と @code{FUNCTION_EPILOGUE} は
+末端関数を特別に取り扱わなければならない。
+C の変数である @code{current_function_is_leaf} を調べてゼロでなければ
+末端関数である。
+@code{current_function_is_leaf} はローカルレジスタの割当に先だって
+設定され、以降のコンパイラパスで有効である。
+また、C の変数 @code{current_function_uses_only_leaf_regs} を調べて
+ゼロでなければ、末端レジスタしか使わない末端関数である。
+変数 @code{current_function_uses_only_leaf_regs} は、再ロード後に有効になり、
+@code{LEAF_REGISTERS} が定義されている場合にのみ意味がある。
 @c changed this to fix overfull.  ALSO:  why the "it" at the beginning
 @c of the next paragraph?!  --mew 2feb93
 
 @node Stack Registers
 @subsection Registers That Form a Stack
 
-There are special features to handle computers where some of the
-``registers'' form a stack.  Stack registers are normally written by
-pushing onto the stack, and are numbered relative to the top of the
-stack.
+「レジスタ」の幾つかがスタックを形成するような計算機を
+扱う特別な機能が存在する。このような計算機には 80386 向けの 80387 
+コプロセッサがある。スタック・レジスタは、通常、スタックにプッシュされる
+ことにより書き込まれ、スタックのてっぺんから相対的に番号が付けられる。
 
-Currently, GCC can only handle one group of stack-like registers, and
-they must be consecutively numbered.  Furthermore, the existing
-support for stack-like registers is specific to the 80387 floating
-point coprocessor.  If you have a new architecture that uses
-stack-like registers, you will need to do substantial work on
-@file{reg-stack.c} and write your machine description to cooperate
-with it, as well as defining these macros.
+現在、GNU CC は、スタック状レジスタのグループを一つしか扱えず、
+しかも、そのレジスタは連続した番号になっていなければならない。
 
 @defmac STACK_REGS
-Define this if the machine has any stack-like registers.
-@end defmac
-
-@defmac STACK_REG_COVER_CLASS
-This is a cover class containing the stack registers.  Define this if
-the machine has any stack-like registers.
+マシンに何らかのスタック様レジスタがあれば、これを定義する。
 @end defmac
 
 @defmac FIRST_STACK_REG
-The number of the first stack-like register.  This one is the top
-of the stack.
+先頭のスタック様レジスタの番号。これはスタックの一番上にあるものである。
 @end defmac
 
 @defmac LAST_STACK_REG
-The number of the last stack-like register.  This one is the bottom of
-the stack.
+最後のスタック様レジスタの番号。これはスタックの底にあるものである。
+@end defmac
+
+@node Obsolete Register Macros
+@subsection Obsolete Macros for Controlling Register Usage
+
+以下の機能はあまりちゃんとは動いていない。
+これらが存在するのは、80386 の 80387 コプロセッサ向けのコードを正しく
+生成するのに必要とされるからである。
+これはもはやマシン記述では使われておらず、将来のバージョンでは削除
+される可能性がある。なので使わないように。
+
+@defmac OVERLAPPING_REGNO_P (@var{regno})
+定義されていれば、C の式である。この式は、ハードレジスタ番号
+@var{regno} がオーバーラップレジスタなら、ゼロでない値となる。
+これは、あるハードレジスタが異なる番号のハードレジスタとオーバーラップ
+しているということを意味する。(このオーバーラップは望ましくないことだが、
+これがないとサポートできないようなマシンをサポートすることができる。)
+このマクロは、お互いにオーバーラップしている全てのレジスタについて
+ゼロでない値を返さなければならない。GNU CC は、オーバーラップレジスタを
+ある限られた方法でしか使うことができない。基本ブロック内の
+割当に使うことができ、再ロードで落とされてしまう可能性がある。
+それで全てである。
+
+このマクロが定義されていないと、お互いにオーバーラップする
+ハードレジスタはないということになる。それが普通だ。
+@end defmac
+
+@defmac INSN_CLOBBERS_REGNO_P (@var{insn}, @var{regno})
+定義されていれば、C の式である。この式の値は、
+insn @var{insn} が、ハードレジスタ番号 @var{regno} の内容を
+未知の力により破壊されてしまう効果を持っている場合は
+ゼロでない値にすべきである。
+「未知の力」とはこの場合、その insn の RTL 式はそのような効果を
+記述していないということである。
+
+このマクロが定義されていないと、未知の力でレジスタの内容を
+破壊する insn は存在しないということを意味する。
+それが普通の状況である。その他のものがすべて同じなら、
+RTL 式を見ればその全ての動作がわかるというのが最も良いのである。
 @end defmac
 
 @node Register Classes
