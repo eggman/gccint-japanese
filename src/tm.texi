@@ -1445,7 +1445,7 @@ C の定数式群で、それぞれ、エスケープ・シーケンス @samp{\v
 
 @findex fixed_regs
 @findex call_used_regs
-@deftypefn {Target Hook} CONDITIONAL_REGISTER_USAGE
+@defmac {Target Hook} CONDITIONAL_REGISTER_USAGE
 0個以上の C の文で、四つの変数 @code{fixed_regs} と @code{call_used_regs}、
 @code{global_regs}(この三つは @code{char []} 型)、@code{reg_class_contents}
 (@code{HARD_REG_SET} 型)を条件により更新する。
@@ -1475,7 +1475,7 @@ C の定数式群で、それぞれ、エスケープ・シーケンス @samp{\v
 このクラスを許す制約を持つ全ての insn のパターンが、ターゲットスイッチ
 により制御されるなら、GCC は、ターゲットスイッチが反対しているなら
 これらのレジスタを使うのを自動的に避ける。)
-@end deftypefn
+@end defmac
 
 @defmac NON_SAVING_SETJMP
 このマクロが定義されていてかつその値がゼロでない場合は、
@@ -1514,220 +1514,175 @@ register number.  Otherwise, do not define it.
 @cindex register allocation order
 
 @c prevent bad page break with this line
-Registers are allocated in order.
+レジスタの割り当てには順番がある。
 
 @defmac REG_ALLOC_ORDER
-If defined, an initializer for a vector of integers, containing the
-numbers of hard registers in the order in which GCC should prefer
-to use them (from most preferred to least).
+定義されていれば、整数のベクトルの初期化子である。
+GNU CC が優先して使うべき順番に並んでいる、ハードレジスタ番号群を含む。
+(最も優先すべきものから最も優先度の低いものへという順番である。)
 
-If this macro is not defined, registers are used lowest numbered first
-(all else being equal).
+このマクロが定義されていないと、レジスタは一番小さい番号から先に
+使われる(等しいもの以外は全て)。
 
-One use of this macro is on machines where the highest numbered
-registers must always be saved and the save-multiple-registers
-instruction supports only sequences of consecutive registers.  On such
-machines, define @code{REG_ALLOC_ORDER} to be an initializer that lists
-the highest numbered allocable register first.
+このマクロの使い道の一つは、一番大きな番号のレジスタを常にセーブする
+必要があり、かつ、 複数のレジスタをセーブする命令が連続したレジスタの
+列しかサポートしていない機種の場合である。
+そういう機種では、@code{REG_ALLOC_ORDER} を、
+割当可能な一番大きな番号のレジスタを先に列挙する初期化子になるように
+定義する。
 @end defmac
 
-@defmac ADJUST_REG_ALLOC_ORDER
-A C statement (sans semicolon) to choose the order in which to allocate
-hard registers for pseudo-registers local to a basic block.
+@defmac ORDER_REGS_FOR_LOCAL_ALLOC
+一個の C の文(セミコロンなし)であり、
+基本ブロックに局所的な疑似レジスタ用のハードレジスタを割り当てる
+順番を選択する。
 
-Store the desired register order in the array @code{reg_alloc_order}.
-Element 0 should be the register to allocate first; element 1, the next
-register; and so on.
+希望のレジスタの順番を配列 @code{reg_alloc_order} に格納する。
+要素 0 は最初に割り当てるレジスタとすべきである。
+要素 1 がその次のレジスタで、以下同様である。
 
-The macro body should not assume anything about the contents of
-@code{reg_alloc_order} before execution of the macro.
+マクロの本体では、このマクロの実行前の @code{reg_alloc_order} の内容に
+ついて何も仮定してはいけない。
 
-On most machines, it is not necessary to define this macro.
-@end defmac
-
-@defmac HONOR_REG_ALLOC_ORDER
-Normally, IRA tries to estimate the costs for saving a register in the
-prologue and restoring it in the epilogue.  This discourages it from
-using call-saved registers.  If a machine wants to ensure that IRA
-allocates registers in the order given by REG_ALLOC_ORDER even if some
-call-saved registers appear earlier than call-used ones, then define this
-macro as a C expression to nonzero. Default is 0.
-@end defmac
-
-@defmac IRA_HARD_REGNO_ADD_COST_MULTIPLIER (@var{regno})
-In some case register allocation order is not enough for the
-Integrated Register Allocator (@acronym{IRA}) to generate a good code.
-If this macro is defined, it should return a floating point value
-based on @var{regno}.  The cost of using @var{regno} for a pseudo will
-be increased by approximately the pseudo's usage frequency times the
-value returned by this macro.  Not defining this macro is equivalent
-to having it always return @code{0.0}.
-
-On most machines, it is not necessary to define this macro.
+大部分の機種では、このマクロを定義する必要はない。
 @end defmac
 
 @node Values in Registers
 @subsection How Values Fit in Registers
 
-This section discusses the macros that describe which kinds of values
-(specifically, which machine modes) each register can hold, and how many
-consecutive registers are needed for a given mode.
+この節では、どんな種類の値(特に、どのマシンモード)を各レジスタが
+保持できるのか、そして、指定されたモードに必要な連続するレジスタは
+いくつ必要なのかを記述するマクロについて説明する。
 
 @defmac HARD_REGNO_NREGS (@var{regno}, @var{mode})
-A C expression for the number of consecutive hard registers, starting
-at register number @var{regno}, required to hold a value of mode
-@var{mode}.  This macro must never return zero, even if a register
-cannot hold the requested mode - indicate that with HARD_REGNO_MODE_OK
-and/or CANNOT_CHANGE_MODE_CLASS instead.
+レジスタ番号は @var{regno} から始まり、モード @var{mode} の値を
+保持するのに必要とされる、連続するハードレジスタの数を表す C の式である。
 
-On a machine where all registers are exactly one word, a suitable
-definition of this macro is
+全てのレジスタがちょうど一ワードである機種では、このマクロの
+適切な定義は以下のようになる。
 
 @smallexample
 #define HARD_REGNO_NREGS(REGNO, MODE)            \
    ((GET_MODE_SIZE (MODE) + UNITS_PER_WORD - 1)  \
-    / UNITS_PER_WORD)
+    / UNITS_PER_WORD))
 @end smallexample
 @end defmac
 
-@defmac HARD_REGNO_NREGS_HAS_PADDING (@var{regno}, @var{mode})
-A C expression that is nonzero if a value of mode @var{mode}, stored
-in memory, ends with padding that causes it to take up more space than
-in registers starting at register number @var{regno} (as determined by
-multiplying GCC's notion of the size of the register when containing
-this mode by the number of registers returned by
-@code{HARD_REGNO_NREGS}).  By default this is zero.
+@defmac ALTER_HARD_SUBREG (@var{tgt_mode}, @var{word}, @var{src_mode}, @var{regno})
+一個の C の式であり、以下の式に対し調整済みハードレジスタ数を返す。
 
-For example, if a floating-point value is stored in three 32-bit
-registers but takes up 128 bits in memory, then this would be
-nonzero.
+@smallexample
+(subreg:@var{tgt_mode} (reg:@var{src_mode} @var{regno}) @var{word})
+@end smallexample
 
-This macros only needs to be defined if there are cases where
-@code{subreg_get_info}
-would otherwise wrongly determine that a @code{subreg} can be
-represented by an offset to the register number, when in fact such a
-@code{subreg} would contain some of the padding not stored in
-registers and so not be representable.
-@end defmac
-
-@defmac HARD_REGNO_NREGS_WITH_PADDING (@var{regno}, @var{mode})
-For values of @var{regno} and @var{mode} for which
-@code{HARD_REGNO_NREGS_HAS_PADDING} returns nonzero, a C expression
-returning the greater number of registers required to hold the value
-including any padding.  In the example above, the value would be four.
-@end defmac
-
-@defmac REGMODE_NATURAL_SIZE (@var{mode})
-Define this macro if the natural size of registers that hold values
-of mode @var{mode} is not the word size.  It is a C expression that
-should give the natural size in bytes for the specified mode.  It is
-used by the register allocator to try to optimize its results.  This
-happens for example on SPARC 64-bit where the natural size of
-floating-point registers is still 32-bit.
+これは、ターゲット機種に、SPARC V9 のように、サイズの入り交じった
+ビッグエンディアンのレジスタがある場合に必要になるかもしれない。
 @end defmac
 
 @defmac HARD_REGNO_MODE_OK (@var{regno}, @var{mode})
-A C expression that is nonzero if it is permissible to store a value
-of mode @var{mode} in hard register number @var{regno} (or in several
-registers starting with that one).  For a machine where all registers
-are equivalent, a suitable definition is
+モード @var{mode} の値を @var{regno} 番のハードレジスタ
+(あるいは、そのレジスタで始まる複数のレジスタ)に格納することが
+可能なら、ゼロでない値を取る C の式。
+全てのレジスタが同じ大きさの機種では、適切な定義は以下のようになる。
 
 @smallexample
 #define HARD_REGNO_MODE_OK(REGNO, MODE) 1
 @end smallexample
 
-You need not include code to check for the numbers of fixed registers,
-because the allocation mechanism considers them to be always occupied.
+固定レジスタの数を検査するコードをこれに入れる必要はない。
+割当機構はそれらが常に占有されていると想定しているからである。
 
 @cindex register pairs
-On some machines, double-precision values must be kept in even/odd
-register pairs.  You can implement that by defining this macro to reject
-odd register numbers for such modes.
+機種によっては、倍精度の値は偶数番と奇数番のレジスタ対に保持しなければ
+ならない。
+これを実装するには、倍精度のモードでは奇数番のレジスタをはじくように、
+このマクロを定義すれば良い。
 
-The minimum requirement for a mode to be OK in a register is that the
-@samp{mov@var{mode}} instruction pattern support moves between the
-register and other hard register in the same class and that moving a
-value into the register and back out not alter it.
+あるモードをあるレジスタにいれても大丈夫なための最低限の要件は、
+@samp{mov@var{mode}} 命令パターンがそのレジスタと、同じクラスの
+他のハードレジスタの間での移動をサポートし、かつ、ある値を
+そのレジスタに移動して取り出してもその値を変えないことである。
 
-Since the same instruction used to move @code{word_mode} will work for
-all narrower integer modes, it is not necessary on any machine for
-@code{HARD_REGNO_MODE_OK} to distinguish between these modes, provided
-you define patterns @samp{movhi}, etc., to take advantage of this.  This
-is useful because of the interaction between @code{HARD_REGNO_MODE_OK}
-and @code{MODES_TIEABLE_P}; it is very desirable for all integer modes
-to be tieable.
+@code{word_mode} を移動するのに使ったのと同じ命令が、
+それより幅の狭い全ての整数モードに対して動作するので、
+れを利用する @samp{movhi} 等のパターンを定義していれば、
+どのマシンでも @code{HARD_REGNO_MODE_OK} がこれらのモードを区別する
+必要はない。
+これは、@code{HARD_REGNO_MODE_OK} と @code{MODES_TIEABLE_P} の間の
+相互作用のために便利である。全ての整数モードが結合可能であることが
+望まれる。
 
-Many machines have special registers for floating point arithmetic.
-Often people assume that floating point machine modes are allowed only
-in floating point registers.  This is not true.  Any registers that
-can hold integers can safely @emph{hold} a floating point machine
-mode, whether or not floating arithmetic can be done on it in those
-registers.  Integer move instructions can be used to move the values.
+多くの機種には、浮動小数点算術演算用の特別なレジスタがある。
+浮動小数点マシンモードは浮動小数点レジスタでのみ許されると
+思ってしまう人がよくいる。それは正しくない。
+整数を保持できるどんなレジスタでも、浮動小数点マシンモードを
+安全に@emph{保持}できる。これは、浮動小数演算がそのレジスタで
+行なえるかどうかには関係しない。
+整数の移動命令を使って、この浮動小数点値を移動することができる。
 
-On some machines, though, the converse is true: fixed-point machine
-modes may not go in floating registers.  This is true if the floating
-registers normalize any value stored in them, because storing a
-non-floating value there would garble it.  In this case,
-@code{HARD_REGNO_MODE_OK} should reject fixed-point machine modes in
-floating registers.  But if the floating registers do not automatically
-normalize, if you can store any bit pattern in one and retrieve it
-unchanged without a trap, then any machine mode may go in a floating
-register, so you can define this macro to say so.
+だが、機種によっては、その逆は真である。
+固定小数点マシンモードは浮動小数点レジスタに入れることができない。
+これは、浮動小数点レジスタが、そこに格納された値を正規化する場合に
+真になる。なぜなら、浮動小数点数でない値を格納すると正しくない
+値に変えられてしまうからである。
+それに該当する場合は、@code{HARD_REGNO_MODE_OK} では、
+浮動小数点レジスタ中の固定小数点マシンモードを拒絶すべきである。
+だが浮動小数点レジスタが自動的には正規化を行なわない場合は、
+任意のビットパターンをそのレジスタに格納することができ、問題なく、
+その値を変えずに取り出すことができるなら、
+どのマシンモードも浮動小数点レジスタに入れることができ、
+このマクロをそうするように定義できる。
 
-The primary significance of special floating registers is rather that
-they are the registers acceptable in floating point arithmetic
-instructions.  However, this is of no concern to
-@code{HARD_REGNO_MODE_OK}.  You handle it by writing the proper
-constraints for those instructions.
+特別な浮動小数点レジスタで一番大事なことは、
+浮動小数点算術命令で受け付けるレジスタであるということである。
+だが、これは @code{HARD_REGNO_MODE_OK} とは何の関係もない。
+そういう命令については適切な制約を書くことで扱える。
 
-On some machines, the floating registers are especially slow to access,
-so that it is better to store a value in a stack frame than in such a
-register if floating point arithmetic is not being done.  As long as the
-floating registers are not in class @code{GENERAL_REGS}, they will not
-be used unless some pattern's constraint asks for one.
-@end defmac
-
-@defmac HARD_REGNO_RENAME_OK (@var{from}, @var{to})
-A C expression that is nonzero if it is OK to rename a hard register
-@var{from} to another hard register @var{to}.
-
-One common use of this macro is to prevent renaming of a register to
-another register that is not saved by a prologue in an interrupt
-handler.
-
-The default is always nonzero.
+機種によっては、浮動小数点レジスタはアクセスが特に遅いことがあるので、
+浮動小数点演算を行なわないのであれば、浮動小数点レジスタよりも
+スタックフレームに値を格納したほうが良いだろう。
+浮動小数点レジスタがクラス @code{GENERAL_REGS} に入っていない限り、
+何かのパターンの制約で要求しない限り浮動小数点レジスタが使われることは
+ない。
 @end defmac
 
 @defmac MODES_TIEABLE_P (@var{mode1}, @var{mode2})
-A C expression that is nonzero if a value of mode
-@var{mode1} is accessible in mode @var{mode2} without copying.
+モード @var{mode1} の値を、コピーすることなしに、モード @var{mode2} で
+アクセス可能ならゼロでない値を持つ C の式。
 
-If @code{HARD_REGNO_MODE_OK (@var{r}, @var{mode1})} and
-@code{HARD_REGNO_MODE_OK (@var{r}, @var{mode2})} are always the same for
-any @var{r}, then @code{MODES_TIEABLE_P (@var{mode1}, @var{mode2})}
-should be nonzero.  If they differ for any @var{r}, you should define
-this macro to return zero unless some other mechanism ensures the
-accessibility of the value in a narrower mode.
+@code{HARD_REGNO_MODE_OK (@var{r}, @var{mode1})} と
+@code{HARD_REGNO_MODE_OK (@var{r}, @var{mode2})} が、どの @var{r} に
+ついても常に同じなら、@code{MODES_TIEABLE_P (@var{mode1}, @var{mode2})} は
+ゼロでない値になるべきである。
+任意の @var{r} について両者が異なるなら、
+何か他の機構により、より狭いモードでその値をアクセス出来ることが
+保証されない限りは、このマクロが 0 を返すようにすべきである。
 
-You should define this macro to return nonzero in as many cases as
-possible since doing so will allow GCC to perform better register
-allocation.
+このマクロは、可能な限り多くの場合にゼロでない値を返すように定義すべき
+である。そうしておくと、GNU CC のレジスタ割当がより良いものになる。
 @end defmac
 
-@deftypefn {Target Hook} bool TARGET_HARD_REGNO_SCRATCH_OK (unsigned int @var{regno})
-This target hook should return @code{true} if it is OK to use a hard register
-@var{regno} as scratch reg in peephole2.
-
-One common use of this macro is to prevent using of a register that
-is not saved by a prologue in an interrupt handler.
-
-The default version of this hook always returns @code{true}.
-@end deftypefn
-
 @defmac AVOID_CCMODE_COPIES
-Define this macro if the compiler should avoid copies to/from @code{CCmode}
-registers.  You should only define this macro if support for copying to/from
-@code{CCmode} is incomplete.
+GCC が @code{CCmode} レジスタとの間のコピーを避けるべきならこのマクロを
+定義する。@code{CCmode} との間のコピーのサポートが不完全な場合だけ
+このマクロを定義すること。
+@end defmac
+
+@defmac hard_regno_nregs (@var{regno}, @var{mode})
+a c expression for the number of consecutive hard registers, starting
+at register number @var{regno}, required to hold a value of mode
+@var{mode}.  this macro must never return zero, even if a register
+cannot hold the requested mode - indicate that with hard_regno_mode_ok
+and/or cannot_change_mode_class instead.
+
+on a machine where all registers are exactly one word, a suitable
+definition of this macro is
+
+@smallexample
+#define hard_regno_nregs(regno, mode)            \
+   ((get_mode_size (mode) + units_per_word - 1)  \
+    / units_per_word)
+@end smallexample
 @end defmac
 
 @node Leaf Functions
