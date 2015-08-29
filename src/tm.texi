@@ -1815,86 +1815,89 @@ RTL 式を見ればその全ての動作がわかるというのが最も良い�
 @cindex register class definitions
 @cindex class definitions, register
 
-On many machines, the numbered registers are not all equivalent.
-For example, certain registers may not be allowed for indexed addressing;
-certain registers may not be allowed in some instructions.  These machine
-restrictions are described to the compiler using @dfn{register classes}.
+多くのマシンでは、番号のついたレジスタが全て等価であるとは限らない。
+例えば、あるレジスタ群はインデックスアドレッシングには使用できないとか、
+あるレジスタ群は一部の命令では使用できない等々。
+このようなマシンによる制限は、@dfn{レジスタクラス} を使って、
+コンパイラに知らせる。
 
-You define a number of register classes, giving each one a name and saying
-which of the registers belong to it.  Then you can specify register classes
-that are allowed as operands to particular instruction patterns.
+レジスタクラスはたくさん定義することができ、それぞれに名前を与えて、
+どのレジスタがそのクラスに所属するかを指定する。
+そうしておけば、オペランドとして許されるレジスタクラスを特定の
+命令パターンに対して指定することができる。
 
 @findex ALL_REGS
 @findex NO_REGS
-In general, each register will belong to several classes.  In fact, one
-class must be named @code{ALL_REGS} and contain all the registers.  Another
-class must be named @code{NO_REGS} and contain no registers.  Often the
-union of two classes will be another class; however, this is not required.
+一般に、各レジスタは色々なクラスに所属することになる。
+事実、@code{ALL_REGS} というクラスを作り、全てのレジスタを所属させなくては
+ならない。もう一つ別の、@code{NO_REGS} というクラスを作らなくてはならず、
+このクラスに所属するレジスタはない。
+二つのクラスの和を作ると別のクラスになることもあるが、
+必須ではない。
 
 @findex GENERAL_REGS
-One of the classes must be named @code{GENERAL_REGS}.  There is nothing
-terribly special about the name, but the operand constraint letters
-@samp{r} and @samp{g} specify this class.  If @code{GENERAL_REGS} is
-the same as @code{ALL_REGS}, just define it as a macro which expands
-to @code{ALL_REGS}.
+必須のクラスの一つに @code{GENERAL_REGS} がある。
+この名前には何も特別な意味はないが、オペランドの制約文字 @samp{r} と
+@samp{g} はこのクラスを指す。
+@code{GENERAL_REGS} と @code{ALL_REGS} が同じなら、単に @code{ALL_REGS}
+に展開されるマクロとして定義する。
 
-Order the classes so that if class @var{x} is contained in class @var{y}
-then @var{x} has a lower class number than @var{y}.
+クラスを順序付けて、クラス @var{x} がクラス @var{y} に
+含まれるなら、@var{x} のクラス番号は @var{y} の番号より小さくなるように
+する。
 
-The way classes other than @code{GENERAL_REGS} are specified in operand
-constraints is through machine-dependent operand constraint letters.
-You can define such letters to correspond to various classes, then use
-them in operand constraints.
+@code{GENERAL_REGS} 以外のクラスのオペランド制約での指定方法は、
+機種依存のオペランド制約文字によって行なわれる。
+色々なクラスに対応する制約文字を定義し、オペランド制約でそれを
+使うことができる。
 
-You must define the narrowest register classes for allocatable
-registers, so that each class either has no subclasses, or that for
-some mode, the move cost between registers within the class is
-cheaper than moving a register in the class to or from memory
-(@pxref{Costs}).
+ある命令が二つのクラスを両方とも許すような場合は常に、その二つのクラスの
+和となるクラスを定義すべきである。
+例えば、ある命令のある特定のオペランドとして、浮動小数点(コプロセッサ)
+レジスタと汎用レジスタのどちらでも使えるなら、その両方を含む、
+@code{FLOAT_OR_GENERAL_REGS} というクラスを定義すべきである。
+そうしないと生成されるコードが最上のものではなくなる。
 
-You should define a class for the union of two classes whenever some
-instruction allows both classes.  For example, if an instruction allows
-either a floating point (coprocessor) register or a general register for a
-certain operand, you should define a class @code{FLOAT_OR_GENERAL_REGS}
-which includes both of them.  Otherwise you will get suboptimal code,
-or even internal compiler errors when reload cannot find a register in the
-class computed via @code{reg_class_subunion}.
+また、そのレジスタクラスについて、ある種の冗長な情報を指定しなければ
+ならない。
+クラス毎に、そのクラスを含んでいるクラスと、そのクラスに
+含まれるクラスを指定し、クラスの対毎に、その対の和に含まれる最大のクラスを
+指定する。
 
-You must also specify certain redundant information about the register
-classes: for each class, which classes contain it and which ones are
-contained in it; for each pair of classes, the largest class contained
-in their union.
+複数の連続するレジスタを占める値がある特定のクラスに入ることが
+期待されるときは、それに使われるレジスタが全てそのクラスに所属
+しなければならない。
+このため、レジスタクラスを使って、レジスタ対を偶数番レジスタで始まるように
+強制的に要求することは出来ない。そのためには、@code{HARD_REGNO_MODE_OK} を
+使う。
 
-When a value occupying several consecutive registers is expected in a
-certain class, all the registers used must belong to that class.
-Therefore, register classes cannot be used to enforce a requirement for
-a register pair to start with an even-numbered register.  The way to
-specify this requirement is with @code{HARD_REGNO_MODE_OK}.
-
-Register classes used for input-operands of bitwise-and or shift
-instructions have a special requirement: each such class must have, for
-each fixed-point machine mode, a subclass whose registers can transfer that
-mode to or from memory.  For example, on some machines, the operations for
-single-byte values (@code{QImode}) are limited to certain registers.  When
-this is so, each register class that is used in a bitwise-and or shift
-instruction must have a subclass consisting of registers from which
-single-byte values can be loaded or stored.  This is so that
-@code{PREFERRED_RELOAD_CLASS} can always have a possible value to return.
+ビット毎の論理積やシフト命令の入力オペランドに使われるレジスタクラスには
+特別な要件がある。そのようなクラスはそれぞれ、
+固定小数点マシンモード毎に、そのモードからメモリへ、あるいはメモリから
+そのモードへ転送可能なレジスタのサブクラスがなければならない。
+例えば、機種によっては、一バイト値(@code{QImode})についての
+演算は特定のレジスタに限られる。
+その場合、ビット毎の論理積やシフト命令で使われる各レジスタクラスは、
+それから一バイト値をロードしたりストア可能なレジスタからなるサブクラス
+がなければならない。
+これは、@code{PREFERRED_RELOAD_CLASS} が常に可能な値を返すことができる
+ようにするためである。
 
 @deftp {Data type} {enum reg_class}
-An enumerated type that must be defined with all the register class names
-as enumerated values.  @code{NO_REGS} must be first.  @code{ALL_REGS}
-must be the last register class, followed by one more enumerated value,
-@code{LIM_REG_CLASSES}, which is not a register class but rather
-tells how many classes there are.
+ある列挙型で、全てのレジスタクラス名を列挙値として定義しなければならない。
+@code{NO_REGS} は先頭に来なければならない。
+@code{ALL_REGS} は最後のレジスタクラスとならなくてはならず、
+その後にさらに一個の列挙値 @code{LIM_REG_CLASSES} が続く。
+@code{LIB_REG_CLASSES} は、レジスタクラスではないが、クラスが幾つあるかを
+知らせるためにある。
 
-Each register class has a number, which is the value of casting
-the class name to type @code{int}.  The number serves as an index
-in many of the tables described below.
+各レジスタクラスは番号を持っており、それは クラス名を @code{int} 型に
+キャストした値である。この番号は、以下に説明する多くの表の添え字として
+使われる。
 @end deftp
 
 @defmac N_REG_CLASSES
-The number of distinct register classes, defined as follows:
+区別できるレジスタクラスの数であり、以下のように定義される。
 
 @smallexample
 #define N_REG_CLASSES (int) LIM_REG_CLASSES
@@ -1902,535 +1905,348 @@ The number of distinct register classes, defined as follows:
 @end defmac
 
 @defmac REG_CLASS_NAMES
-An initializer containing the names of the register classes as C string
-constants.  These names are used in writing some of the debugging dumps.
+レジスタクラス名を C の文字列定数として持つ初期化子。
+この名前は、デバッグ出力で使われることがある。
 @end defmac
 
 @defmac REG_CLASS_CONTENTS
-An initializer containing the contents of the register classes, as integers
-which are bit masks.  The @var{n}th integer specifies the contents of class
-@var{n}.  The way the integer @var{mask} is interpreted is that
-register @var{r} is in the class if @code{@var{mask} & (1 << @var{r})} is 1.
+レジスタクラスの内容をビットマスクである整数として含む初期化子。
+@var{n} 番目の整数は、クラス @var{n} の内容を指定する。
+整数 @var{mask} は次のように解釈される。
+もし、@code{@var{mask} & (1 << @var{r})} が 1 なら、レジスタ @var{r} は
+そのクラスに所属する。
 
-When the machine has more than 32 registers, an integer does not suffice.
-Then the integers are replaced by sub-initializers, braced groupings containing
-several integers.  Each sub-initializer must be suitable as an initializer
-for the type @code{HARD_REG_SET} which is defined in @file{hard-reg-set.h}.
-In this situation, the first integer in each sub-initializer corresponds to
-registers 0 through 31, the second integer to registers 32 through 63, and
-so on.
+レジスタが 32 より多い機種では、このためには一個の整数では足りない。
+その時は、整数は副初期化子で置き換えられる。副初期化子は、複数の整数を
+中括弧で囲んだものである。
+各副初期化子は、@file{hard-reg-set.h} で定義されている @code{HARD_REG_SET}
+型の初期化子として適切でなければならない。
 @end defmac
 
 @defmac REGNO_REG_CLASS (@var{regno})
-A C expression whose value is a register class containing hard register
-@var{regno}.  In general there is more than one such class; choose a class
-which is @dfn{minimal}, meaning that no smaller class also contains the
-register.
+ハードレジスタ @var{regno} を含むレジスタクラスを表す値を持つ C の式。
+一般にはそのようなクラスは複数ある。その場合、「最小」のクラス、
+つまり、そのレジスタを含むそれ以上小さなクラスがないようなクラスを選ぶ。
 @end defmac
 
 @defmac BASE_REG_CLASS
-A macro whose definition is the name of the class to which a valid
-base register must belong.  A base register is one used in an address
-which is the register value plus a displacement.
-@end defmac
-
-@defmac MODE_BASE_REG_CLASS (@var{mode})
-This is a variation of the @code{BASE_REG_CLASS} macro which allows
-the selection of a base register in a mode dependent manner.  If
-@var{mode} is VOIDmode then it should return the same value as
-@code{BASE_REG_CLASS}.
-@end defmac
-
-@defmac MODE_BASE_REG_REG_CLASS (@var{mode})
-A C expression whose value is the register class to which a valid
-base register must belong in order to be used in a base plus index
-register address.  You should define this macro if base plus index
-addresses have different requirements than other base register uses.
-@end defmac
-
-@defmac MODE_CODE_BASE_REG_CLASS (@var{mode}, @var{address_space}, @var{outer_code}, @var{index_code})
-A C expression whose value is the register class to which a valid
-base register for a memory reference in mode @var{mode} to address
-space @var{address_space} must belong.  @var{outer_code} and @var{index_code}
-define the context in which the base register occurs.  @var{outer_code} is
-the code of the immediately enclosing expression (@code{MEM} for the top level
-of an address, @code{ADDRESS} for something that occurs in an
-@code{address_operand}).  @var{index_code} is the code of the corresponding
-index expression if @var{outer_code} is @code{PLUS}; @code{SCRATCH} otherwise.
+ベースレジスタとして有効なレジスタが所属しなければならないクラス名を
+定義するマクロである。
+ベースレジスタとは、レジスタの値に変位を加算したものをアドレスとするときに
+使われるレジスタである。
 @end defmac
 
 @defmac INDEX_REG_CLASS
-A macro whose definition is the name of the class to which a valid
-index register must belong.  An index register is one used in an
-address where its value is either multiplied by a scale factor or
-added to another register (as well as added to a displacement).
+インデックスレジスタとして有効なレジスタが所属しなければならないクラス名を
+定義するマクロである。
+インデックスレジスタとは、その値をスケール因子分掛けたものか、
+別のレジスタに加算した(同様に変位にも加算される)ものをアドレスとするときに
+使われるレジスタである。
+@end defmac
+
+@defmac REG_CLASS_FROM_LETTER (@var{char})
+レジスタクラスについての機種依存のオペランド制約文字を定義する
+C の式。@var{char} があるオペランド制約文字なら、
+この値は対応するレジスタクラスとなる。
+オペランド制約文字以外なら、この値は @code{NO_REGS} とする。
+@code{GENERAL_REGS} クラスに対応するレジスタ文字 @samp{r} は、
+このマクロには渡されないであろうから、それを扱う必要はない。
 @end defmac
 
 @defmac REGNO_OK_FOR_BASE_P (@var{num})
-A C expression which is nonzero if register number @var{num} is
-suitable for use as a base register in operand addresses.
+レジスタ番号 @var{num} がオペランドのアドレスのベースレジスタとして
+使うのに適当なものなら、0 でない値を持つ C の式。
+適切なハードレジスタか、あるいは適切なハードレジスタが割り当て済の
+疑似レジスタのどちらでも良い。
 @end defmac
 
 @defmac REGNO_MODE_OK_FOR_BASE_P (@var{num}, @var{mode})
-A C expression that is just like @code{REGNO_OK_FOR_BASE_P}, except that
-that expression may examine the mode of the memory reference in
-@var{mode}.  You should define this macro if the mode of the memory
-reference affects whether a register may be used as a base register.  If
-you define this macro, the compiler will use it instead of
-@code{REGNO_OK_FOR_BASE_P}.  The mode may be @code{VOIDmode} for
-addresses that appear outside a @code{MEM}, i.e., as an
-@code{address_operand}.
-@end defmac
-
-@defmac REGNO_MODE_OK_FOR_REG_BASE_P (@var{num}, @var{mode})
-A C expression which is nonzero if register number @var{num} is suitable for
-use as a base register in base plus index operand addresses, accessing
-memory in mode @var{mode}.  It may be either a suitable hard register or a
-pseudo register that has been allocated such a hard register.  You should
-define this macro if base plus index addresses have different requirements
-than other base register uses.
-
-Use of this macro is deprecated; please use the more general
-@code{REGNO_MODE_CODE_OK_FOR_BASE_P}.
-@end defmac
-
-@defmac REGNO_MODE_CODE_OK_FOR_BASE_P (@var{num}, @var{mode}, @var{address_space}, @var{outer_code}, @var{index_code})
-A C expression which is nonzero if register number @var{num} is
-suitable for use as a base register in operand addresses, accessing
-memory in mode @var{mode} in address space @var{address_space}.
-This is similar to @code{REGNO_MODE_OK_FOR_BASE_P}, except
-that that expression may examine the context in which the register
-appears in the memory reference.  @var{outer_code} is the code of the
-immediately enclosing expression (@code{MEM} if at the top level of the
-address, @code{ADDRESS} for something that occurs in an
-@code{address_operand}).  @var{index_code} is the code of the
-corresponding index expression if @var{outer_code} is @code{PLUS};
-@code{SCRATCH} otherwise.  The mode may be @code{VOIDmode} for addresses
-that appear outside a @code{MEM}, i.e., as an @code{address_operand}.
+@code{REGNO_OK_FOR_BASE_P} と同様の C の式だが、
+この式は @var{mode} のメモリ参照のモードを調べる。
+メモリ参照のモードが、あるレジスタをベースレジスタとして使って良いか
+どうかに影響するなら、このマクロを定義する。
+このマクロが定義してあると、コンパイラは @code{REGNO_OK_FOR_BASE_P} の
+代わりにこちらを使う。
 @end defmac
 
 @defmac REGNO_OK_FOR_INDEX_P (@var{num})
-A C expression which is nonzero if register number @var{num} is
-suitable for use as an index register in operand addresses.  It may be
-either a suitable hard register or a pseudo register that has been
-allocated such a hard register.
+レジスタ番号 @var{num} がオペランドのアドレスのインデックスレジスタとして
+使うのに適当なものなら、0 でない値を持つ C の式。
+適切なハードレジスタか、あるいは適切なハードレジスタが割り当て済の
+疑似レジスタのどちらでも良い。
 
-The difference between an index register and a base register is that
-the index register may be scaled.  If an address involves the sum of
-two registers, neither one of them scaled, then either one may be
-labeled the ``base'' and the other the ``index''; but whichever
-labeling is used must fit the machine's constraints of which registers
-may serve in each capacity.  The compiler will try both labelings,
-looking for one that is valid, and will reload one or both registers
-only if neither labeling works.
+インデックスレジスタとベースレジスタの違いは、インデックスレジスタは
+スケーリングされることである。
+あるアドレスが二つのレジスタの和を含んでいて、そのどちらもスケーリング
+されないのであれば、どちらか一つが「ベース」となり、他方は「インデックス」
+というラベルが貼られる。だが、どちらのラベル付が使われても、レジスタが
+それぞれの役割を果たす、その機種の制約に収まらなければならない。
+コンパイラは両方のラベル付を試して、有効なものを一つ見つけ出し、
+どちらのラベル付も動作しない場合にのみ、一方のレジスタ、あるいは両方の
+レジスタを再ロードする。
 @end defmac
 
-@deftypefn {Target Hook} reg_class_t TARGET_PREFERRED_RENAME_CLASS (reg_class_t @var{rclass})
-A target hook that places additional preference on the register class to use when it is necessary to rename a register in class @var{rclass} to another class, or perhaps @var{NO_REGS}, if no preferred register class is found or hook @code{preferred_rename_class} is not implemented. Sometimes returning a more restrictive class makes better code.  For example, on ARM, thumb-2 instructions using @code{LO_REGS} may be smaller than instructions using @code{GENERIC_REGS}.  By returning @code{LO_REGS} from @code{preferred_rename_class}, code size can be reduced.
-@end deftypefn
-
-@deftypefn {Target Hook} reg_class_t TARGET_PREFERRED_RELOAD_CLASS (rtx @var{x}, reg_class_t @var{rclass})
-A target hook that places additional restrictions on the register class
-to use when it is necessary to copy value @var{x} into a register in class
-@var{rclass}.  The value is a register class; perhaps @var{rclass}, or perhaps
-another, smaller class.
-
-The default version of this hook always returns value of @code{rclass} argument.
-
-Sometimes returning a more restrictive class makes better code.  For
-example, on the 68000, when @var{x} is an integer constant that is in range
-for a @samp{moveq} instruction, the value of this macro is always
-@code{DATA_REGS} as long as @var{rclass} includes the data registers.
-Requiring a data register guarantees that a @samp{moveq} will be used.
-
-One case where @code{TARGET_PREFERRED_RELOAD_CLASS} must not return
-@var{rclass} is if @var{x} is a legitimate constant which cannot be
-loaded into some register class.  By returning @code{NO_REGS} you can
-force @var{x} into a memory location.  For example, rs6000 can load
-immediate values into general-purpose registers, but does not have an
-instruction for loading an immediate value into a floating-point
-register, so @code{TARGET_PREFERRED_RELOAD_CLASS} returns @code{NO_REGS} when
-@var{x} is a floating-point constant.  If the constant can't be loaded
-into any kind of register, code generation will be better if
-@code{TARGET_LEGITIMATE_CONSTANT_P} makes the constant illegitimate instead
-of using @code{TARGET_PREFERRED_RELOAD_CLASS}.
-
-If an insn has pseudos in it after register allocation, reload will go
-through the alternatives and call repeatedly @code{TARGET_PREFERRED_RELOAD_CLASS}
-to find the best one.  Returning @code{NO_REGS}, in this case, makes
-reload add a @code{!} in front of the constraint: the x86 back-end uses
-this feature to discourage usage of 387 registers when math is done in
-the SSE registers (and vice versa).
-@end deftypefn
-
 @defmac PREFERRED_RELOAD_CLASS (@var{x}, @var{class})
-A C expression that places additional restrictions on the register class
-to use when it is necessary to copy value @var{x} into a register in class
-@var{class}.  The value is a register class; perhaps @var{class}, or perhaps
-another, smaller class.  On many machines, the following definition is
-safe:
+値 @var{x} をクラス @var{class} のレジスタにコピーする必要があるときに
+使うレジスタクラスについて制限を追加する C の式。
+この式の値はあるレジスタクラスである。おそらく @var{class} か、
+別のより小さなクラスである。多くの機種では、以下の定義が安全である。
 
 @smallexample
 #define PREFERRED_RELOAD_CLASS(X,CLASS) CLASS
 @end smallexample
 
-Sometimes returning a more restrictive class makes better code.  For
-example, on the 68000, when @var{x} is an integer constant that is in range
-for a @samp{moveq} instruction, the value of this macro is always
-@code{DATA_REGS} as long as @var{class} includes the data registers.
-Requiring a data register guarantees that a @samp{moveq} will be used.
+より制限の強いクラスを返したほうが良いコードが出るということが
+時々ある。
+例えば、68000 の場合には、@var{x} が @samp{moveq} 命令で有効な範囲内に
+ある整数定数であるときは、このマクロの値は @var{class} がデータレジスタを
+含んでいる限り、常に @code{DATA_REGS} になる。
 
-One case where @code{PREFERRED_RELOAD_CLASS} must not return
-@var{class} is if @var{x} is a legitimate constant which cannot be
-loaded into some register class.  By returning @code{NO_REGS} you can
-force @var{x} into a memory location.  For example, rs6000 can load
-immediate values into general-purpose registers, but does not have an
-instruction for loading an immediate value into a floating-point
-register, so @code{PREFERRED_RELOAD_CLASS} returns @code{NO_REGS} when
-@var{x} is a floating-point constant.  If the constant can't be loaded
-into any kind of register, code generation will be better if
-@code{TARGET_LEGITIMATE_CONSTANT_P} makes the constant illegitimate instead
-of using @code{TARGET_PREFERRED_RELOAD_CLASS}.
-
-If an insn has pseudos in it after register allocation, reload will go
-through the alternatives and call repeatedly @code{PREFERRED_RELOAD_CLASS}
-to find the best one.  Returning @code{NO_REGS}, in this case, makes
-reload add a @code{!} in front of the constraint: the x86 back-end uses
-this feature to discourage usage of 387 registers when math is done in
-the SSE registers (and vice versa).
+@var{x} が @code{const_dobule} の場合、@code{NO_REGS} を
+返すことにより @var{x} を強制的にメモリ定数とすることができる。
+これは、浮動小数点即値をある種のレジスタにはロード出来ないようなマシンで
+役に立つ。
 @end defmac
 
-@deftypefn {Target Hook} reg_class_t TARGET_PREFERRED_OUTPUT_RELOAD_CLASS (rtx @var{x}, reg_class_t @var{rclass})
-Like @code{TARGET_PREFERRED_RELOAD_CLASS}, but for output reloads instead of
-input reloads.
-
-The default version of this hook always returns value of @code{rclass}
-argument.
-
-You can also use @code{TARGET_PREFERRED_OUTPUT_RELOAD_CLASS} to discourage
-reload from using some alternatives, like @code{TARGET_PREFERRED_RELOAD_CLASS}.
-@end deftypefn
+@defmac PREFERRED_OUTPUT_RELOAD_CLASS (@var{x}, @var{class})
+@code{PREFERRED_RELOAD_CLASS} と同様だが、入力の再ロードではなく
+出力の再ロード向けである。
+このマクロを定義しない場合は、デフォルトは @var{class} がそのまま
+使われる。
+@end defmac
 
 @defmac LIMIT_RELOAD_CLASS (@var{mode}, @var{class})
-A C expression that places additional restrictions on the register class
-to use when it is necessary to be able to hold a value of mode
-@var{mode} in a reload register for which class @var{class} would
-ordinarily be used.
+一個の C の式。モード @var{mode} の値を、通常 クラス @var{class} が使われる
+再ロード・レジスタで保持することが可能であることが必要な場合に
+使うレジスタクラスについて制限を追加する。
 
-Unlike @code{PREFERRED_RELOAD_CLASS}, this macro should be used when
-there are certain modes that simply can't go in certain reload classes.
+@code{PREFERRED_RELOAD_CLASS} とは違って、このマクロは
+単純にはある再ロードクラスに入らない、ある種のモードが存在するときに
+使われるべきである。
 
-The value is a register class; perhaps @var{class}, or perhaps another,
-smaller class.
+この値はレジスタクラスである。おそらく、@var{class} か何か別の
+より小さなクラスであろう。
 
-Don't define this macro unless the target machine has limitations which
-require the macro to do something nontrivial.
+このマクロは、ターゲット機種の制限により、このマクロで何か自明では
+ないことをする必要があるとき以外は定義しないこと。
 @end defmac
-
-@deftypefn {Target Hook} reg_class_t TARGET_SECONDARY_RELOAD (bool @var{in_p}, rtx @var{x}, reg_class_t @var{reload_class}, machine_mode @var{reload_mode}, secondary_reload_info *@var{sri})
-Many machines have some registers that cannot be copied directly to or
-from memory or even from other types of registers.  An example is the
-@samp{MQ} register, which on most machines, can only be copied to or
-from general registers, but not memory.  Below, we shall be using the
-term 'intermediate register' when a move operation cannot be performed
-directly, but has to be done by copying the source into the intermediate
-register first, and then copying the intermediate register to the
-destination.  An intermediate register always has the same mode as
-source and destination.  Since it holds the actual value being copied,
-reload might apply optimizations to re-use an intermediate register
-and eliding the copy from the source when it can determine that the
-intermediate register still holds the required value.
-
-Another kind of secondary reload is required on some machines which
-allow copying all registers to and from memory, but require a scratch
-register for stores to some memory locations (e.g., those with symbolic
-address on the RT, and those with certain symbolic address on the SPARC
-when compiling PIC)@.  Scratch registers need not have the same mode
-as the value being copied, and usually hold a different value than
-that being copied.  Special patterns in the md file are needed to
-describe how the copy is performed with the help of the scratch register;
-these patterns also describe the number, register class(es) and mode(s)
-of the scratch register(s).
-
-In some cases, both an intermediate and a scratch register are required.
-
-For input reloads, this target hook is called with nonzero @var{in_p},
-and @var{x} is an rtx that needs to be copied to a register of class
-@var{reload_class} in @var{reload_mode}.  For output reloads, this target
-hook is called with zero @var{in_p}, and a register of class @var{reload_class}
-needs to be copied to rtx @var{x} in @var{reload_mode}.
-
-If copying a register of @var{reload_class} from/to @var{x} requires
-an intermediate register, the hook @code{secondary_reload} should
-return the register class required for this intermediate register.
-If no intermediate register is required, it should return NO_REGS.
-If more than one intermediate register is required, describe the one
-that is closest in the copy chain to the reload register.
-
-If scratch registers are needed, you also have to describe how to
-perform the copy from/to the reload register to/from this
-closest intermediate register.  Or if no intermediate register is
-required, but still a scratch register is needed, describe the
-copy  from/to the reload register to/from the reload operand @var{x}.
-
-You do this by setting @code{sri->icode} to the instruction code of a pattern
-in the md file which performs the move.  Operands 0 and 1 are the output
-and input of this copy, respectively.  Operands from operand 2 onward are
-for scratch operands.  These scratch operands must have a mode, and a
-single-register-class
-@c [later: or memory]
-output constraint.
-
-When an intermediate register is used, the @code{secondary_reload}
-hook will be called again to determine how to copy the intermediate
-register to/from the reload operand @var{x}, so your hook must also
-have code to handle the register class of the intermediate operand.
-
-@c [For later: maybe we'll allow multi-alternative reload patterns -
-@c   the port maintainer could name a mov<mode> pattern that has clobbers -
-@c   and match the constraints of input and output to determine the required
-@c   alternative.  A restriction would be that constraints used to match
-@c   against reloads registers would have to be written as register class
-@c   constraints, or we need a new target macro / hook that tells us if an
-@c   arbitrary constraint can match an unknown register of a given class.
-@c   Such a macro / hook would also be useful in other places.]
-
-
-@var{x} might be a pseudo-register or a @code{subreg} of a
-pseudo-register, which could either be in a hard register or in memory.
-Use @code{true_regnum} to find out; it will return @minus{}1 if the pseudo is
-in memory and the hard register number if it is in a register.
-
-Scratch operands in memory (constraint @code{"=m"} / @code{"=&m"}) are
-currently not supported.  For the time being, you will have to continue
-to use @code{SECONDARY_MEMORY_NEEDED} for that purpose.
-
-@code{copy_cost} also uses this target hook to find out how values are
-copied.  If you want it to include some extra cost for the need to allocate
-(a) scratch register(s), set @code{sri->extra_cost} to the additional cost.
-Or if two dependent moves are supposed to have a lower cost than the sum
-of the individual moves due to expected fortuitous scheduling and/or special
-forwarding logic, you can set @code{sri->extra_cost} to a negative amount.
-@end deftypefn
 
 @defmac SECONDARY_RELOAD_CLASS (@var{class}, @var{mode}, @var{x})
 @defmacx SECONDARY_INPUT_RELOAD_CLASS (@var{class}, @var{mode}, @var{x})
 @defmacx SECONDARY_OUTPUT_RELOAD_CLASS (@var{class}, @var{mode}, @var{x})
-These macros are obsolete, new ports should use the target hook
-@code{TARGET_SECONDARY_RELOAD} instead.
+多くの機種では、直接メモリへ、あるいはメモリからコピーできないレジスタが
+ある。あるいは、他の型のレジスタからのコピーさえもできないレジスタが
+存在することもある。
+例えば、@samp{MQ} レジスタは、多くの機種で、汎用レジスタとの間でしか
+コピー出来ず、メモリとの間でのコピーはできない。
+機種によっては全てのレジスタとメモリ間でのコピーを許しているものがあるが、
+あるメモリ位置(例えば、RT のシンボリック・アドレスや、PIC をコンパイルする
+時の SPARC の特定のシンボリック・アドレス等)を格納するには
+スクラッチレジスタを必要とするものがある。
+場合によっては、中間レジスタとスクラッチレジスタの両方が必要である。
 
-These are obsolete macros, replaced by the @code{TARGET_SECONDARY_RELOAD}
-target hook.  Older ports still define these macros to indicate to the
-reload phase that it may
-need to allocate at least one register for a reload in addition to the
-register to contain the data.  Specifically, if copying @var{x} to a
-register @var{class} in @var{mode} requires an intermediate register,
-you were supposed to define @code{SECONDARY_INPUT_RELOAD_CLASS} to return the
-largest register class all of whose registers can be used as
-intermediate registers or scratch registers.
+このマクロを定義して、再ロード・パスに、
+再ロードのためには、データを保持するレジスタに加えて、少なくとも一個の
+レジスタを割り当てる必要があることを知らせるようにすべきである。
+特に、@var{x} を @var{mode} のレジスタ @var{class} にコピーするのに
+中間レジスタが必要な場合は、@code{SECONDARY_INPUT_RELOAD_CLASS} を
+定義して、それに属する全てのレジスタが中間レジスタやスクラッチレジスタ
+として使えるような最大のレジスタを返すようにすべきである。
 
-If copying a register @var{class} in @var{mode} to @var{x} requires an
-intermediate or scratch register, @code{SECONDARY_OUTPUT_RELOAD_CLASS}
-was supposed to be defined be defined to return the largest register
-class required.  If the
-requirements for input and output reloads were the same, the macro
-@code{SECONDARY_RELOAD_CLASS} should have been used instead of defining both
-macros identically.
+@var{mode} のレジスタ @var{class} を @var{x} にコピーするのに
+中間レジスタやスクラッチレジスタが必要な場合は、
+@code{SECONDARY_OUTPUT_RELOAD_CLASS} を
+定義して、必要とされる最大のレジスタを返すようにすべきである。
+入力再ロードと出力再ロードの要件が同じなら、これらの二つのマクロを
+同じ定義にする代わりに、マクロ @code{SECONDARY_RELOAD_CLASS} を
+使うべきである。
 
-The values returned by these macros are often @code{GENERAL_REGS}.
-Return @code{NO_REGS} if no spare register is needed; i.e., if @var{x}
-can be directly copied to or from a register of @var{class} in
-@var{mode} without requiring a scratch register.  Do not define this
-macro if it would always return @code{NO_REGS}.
+これらのマクロが返す値はしばしば @code{GENERAL_REGS} となる。
+予備のレジスタが必要でない場合は @code{NO_REGS} を返す。
+これは、@var{x} と モード @var{mode} でクラス @var{class} のレジスタの
+間で、スクラッチレジスタなしで直接コピー可能な場合である。
+常に @code{NO_REGS} を返すのならこのマクロは定義しないこと。
 
-If a scratch register is required (either with or without an
-intermediate register), you were supposed to define patterns for
-@samp{reload_in@var{m}} or @samp{reload_out@var{m}}, as required
-(@pxref{Standard Names}.  These patterns, which were normally
-implemented with a @code{define_expand}, should be similar to the
-@samp{mov@var{m}} patterns, except that operand 2 is the scratch
-register.
+スクラッチレジスタが必要な場合(中間レジスタの必要の有無に関わらず)、
+@pxref{Standard Names} で必要とされる、@samp{reload_in@var{m}} か
+@samp{reload_out@var{m}} のパターンを定義すべきである。
+これらのパターンは、通常 @code{define_expand} で実装され、
+オペランド 2 がスクラッチレジスタである点を除いて、@samp{mov@var{m}} の
+パターンと同じにすべきである。
 
-These patterns need constraints for the reload register and scratch
-register that
-contain a single register class.  If the original reload register (whose
-class is @var{class}) can meet the constraint given in the pattern, the
-value returned by these macros is used for the class of the scratch
-register.  Otherwise, two additional reload registers are required.
-Their classes are obtained from the constraints in the insn pattern.
+一個のレジスタクラスを含む再ロードレジスタとスクラッチレジスタに
+対する制約を定義する。元の再ロードレジスタ(クラスが @var{class})が
+パターンで指定された制約に当てはまるなら、このマクロが返す値が
+スクラッチレジスタのクラスとして使われる。
+当てはまらないのであれば、再ロードレジスタが二つ追加で必要になる。
+その二つのレジスタのクラスは、insn パターンの制約から得られる。
 
-@var{x} might be a pseudo-register or a @code{subreg} of a
-pseudo-register, which could either be in a hard register or in memory.
-Use @code{true_regnum} to find out; it will return @minus{}1 if the pseudo is
-in memory and the hard register number if it is in a register.
+@var{x} は、疑似レジスタか疑似レジスタの @code{subreg} でなければ
+ならない。これらは、ハードレジスタかメモリのどちらかにある。
+どちらにあるかは、@code{true_regnum} を使って調べる。
+疑似レジスタがメモリにあれば -1 を返し、レジスタにあればハードレジスタ
+番号を返す。
 
-These macros should not be used in the case where a particular class of
-registers can only be copied to memory and not to another class of
-registers.  In that case, secondary reload registers are not needed and
-would not be helpful.  Instead, a stack location must be used to perform
-the copy and the @code{mov@var{m}} pattern should use memory as an
-intermediate storage.  This case often occurs between floating-point and
-general registers.
+このマクロは、ある特定のクラスのレジスタはメモリにだけコピー可能であり、
+もう一つの別のクラスのレジスタにはコピーできないという場合は
+使うべきでない。その場合、二番目の再ロードレジスタは不要であり
+役に立たない。代わりに、スタック位置を使ってコピーを行なわなければならず、
+@code{mov@var{m}} パターンはメモリを中間の格納場所として使うべきである。
+これは、浮動小数点レジスタと汎用レジスタの間で良く起こることである。
 @end defmac
 
 @defmac SECONDARY_MEMORY_NEEDED (@var{class1}, @var{class2}, @var{m})
-Certain machines have the property that some registers cannot be copied
-to some other registers without using memory.  Define this macro on
-those machines to be a C expression that is nonzero if objects of mode
-@var{m} in registers of @var{class1} can only be copied to registers of
-class @var{class2} by storing a register of @var{class1} into memory
-and loading that memory location into a register of @var{class2}.
+特定の機種には、レジスタの幾つかはメモリを使わないと他のレジスタに
+コピーできないという性質がある。そういう機種では、このマクロを次の
+ような一個の C の式に定義する。すなわち、この式は、
+@var{class1} のレジスタにあるモード @var{m} のオブジェクトがクラス
+@var{class2} のレジスタにコピーできるのは、@var{class1} のレジスタを
+メモリにストアしてそのメモリ位置を @var{class2} のレジスタにロードする
+場合だけなら、ゼロでない値となる。
 
-Do not define this macro if its value would always be zero.
+このマクロは、値が常にゼロになるようなら定義しないこと。
 @end defmac
 
 @defmac SECONDARY_MEMORY_NEEDED_RTX (@var{mode})
-Normally when @code{SECONDARY_MEMORY_NEEDED} is defined, the compiler
-allocates a stack slot for a memory location needed for register copies.
-If this macro is defined, the compiler instead uses the memory location
-defined by this macro.
+@code{SECONDARY_MEMORY_NEEDED} が定義されていると普通、コンパイラが
+レジスタのコピーに必要なメモリ位置用のスタックスロットを割り当てる。
+このマクロが定義されていると、コンパイラは代わりに、このマクロで
+定義されるメモリ位置を使う。
 
-Do not define this macro if you do not define
-@code{SECONDARY_MEMORY_NEEDED}.
+@code{SECONDARY_MEMORY_NEEDED} を定義しない場合は、このマクロを
+定義しないこと。
 @end defmac
 
 @defmac SECONDARY_MEMORY_NEEDED_MODE (@var{mode})
-When the compiler needs a secondary memory location to copy between two
-registers of mode @var{mode}, it normally allocates sufficient memory to
-hold a quantity of @code{BITS_PER_WORD} bits and performs the store and
-load operations in a mode that many bits wide and whose class is the
-same as that of @var{mode}.
+コンパイラが、モード @var{mode} の二つのレジスタ間でコピーするのに
+第二のメモリ位置を必要とするときは、普通は、@code{BITS_PER_WORD} ビットの量を
+保持するのに充分なメモリを確保し、ストアとロード操作を、多ビット幅で
+そのクラスが @var{mode} のクラスと同じであるモードで実行する。
 
-This is right thing to do on most machines because it ensures that all
-bits of the register are copied and prevents accesses to the registers
-in a narrower mode, which some machines prohibit for floating-point
-registers.
+これはほとんどの機種でなすべき正しいことである。レジスタの全ビットが
+コピーされ、レジスタを狭いモードでアクセスするのを抑止しているからである。
+これにより、機種によっては浮動小数点レジスタを禁止する。
 
-However, this default behavior is not correct on some machines, such as
-the DEC Alpha, that store short integers in floating-point registers
-differently than in integer registers.  On those machines, the default
-widening will not work correctly and you must define this macro to
-suppress that widening in some cases.  See the file @file{alpha.h} for
-details.
+だが、このデフォルトの動作が正しくない機種もある。例えば、DEC Alpha が
+そうで、short 型の整数を浮動小数点レジスタにストアする仕方と
+整数レジスタにストアする仕方が異なる。こういう機種では、デフォルトの
+拡幅が正しく動作しないので、このマクロを定義して、ある場合には拡幅を
+抑制しなければならない。詳細については @file{alpha.h} を参照のこと。
 
-Do not define this macro if you do not define
-@code{SECONDARY_MEMORY_NEEDED} or if widening @var{mode} to a mode that
-is @code{BITS_PER_WORD} bits wide is correct for your machine.
+@code{SECONDARY_MEMORY_NEEDED} を定義しない場合や、@var{mode} を
+@code{BITS_PER_WORD} ビット長のモードに広げるのが正しい機種の場合は、
+このマクロを定義しないこと。
 @end defmac
 
-@deftypefn {Target Hook} bool TARGET_CLASS_LIKELY_SPILLED_P (reg_class_t @var{rclass})
-A target hook which returns @code{true} if pseudos that have been assigned
-to registers of class @var{rclass} would likely be spilled because
-registers of @var{rclass} are needed for spill registers.
+@defmac SMALL_REGISTER_CLASSES
+機種によっては、ハードレジスタを任意の insn 群を越えて生存させるのは
+危険が伴う場合がある。こういう機種は普通、特定のレジスタ(例えば
+アキュムレータ)に値が入っていないといけない命令を持っているので、
+必要とされるハードレジスタがこのような insn を越えて、別の目的に
+使われると、再ロードに失敗する。
 
-The default version of this target hook returns @code{true} if @var{rclass}
-has exactly one register and @code{false} otherwise.  On most machines, this
-default should be used.  For generally register-starved machines, such as
-i386, or machines with right register constraints, such as SH, this hook
-can be used to avoid excessive spilling.
+そういう機種では、@code{SMALL_REGISER_CLASSES} をゼロでない値を持つ
+式として定義する。このマクロの値がゼロでないと、コンパイラは
+ハードレジスタの生存期間を最小化することを試みる。
 
-This hook is also used by some of the global intra-procedural code
-transformations to throtle code motion, to avoid increasing register
-pressure.
-@end deftypefn
+このマクロをゼロでない値に定義するのは常に安全である。だが、
+不必要に定義すると、ある場合に実行可能な最適化の程度が減ることになる。
+必要な場合にこのマクロをゼロでない値に定義しないと、コンパイラは
+スピルレジスタを使いつくし、致命的エラーのメッセージを出力する。
+ほとんどの機種では、このマクロは何も定義すべきでない。
+@end defmac
 
-@deftypefn {Target Hook} {unsigned char} TARGET_CLASS_MAX_NREGS (reg_class_t @var{rclass}, machine_mode @var{mode})
-A target hook returns the maximum number of consecutive registers
-of class @var{rclass} needed to hold a value of mode @var{mode}.
+@deftypefn {Target Hook} CLASS_LIKELY_SPILLED_P (@var{class})
+一個の C の式。この式の値は、クラス @var{class} のレジスタに割り当てられた
+疑似レジスタが、@var{class} のレジスタはスピルレジスタとして必要
+であるために、スピルされそうならゼロでない値となる。
 
-This is closely related to the macro @code{HARD_REGNO_NREGS}.  In fact,
-the value returned by @code{TARGET_CLASS_MAX_NREGS (@var{rclass},
-@var{mode})} target hook should be the maximum value of
-@code{HARD_REGNO_NREGS (@var{regno}, @var{mode})} for all @var{regno}
-values in the class @var{rclass}.
-
-This target hook helps control the handling of multiple-word values
-in the reload pass.
-
-The default version of this target hook returns the size of @var{mode}
-in words.
+このマクロのデフォルト値は、@var{class} にレジスタがちょうど一個ある
+場合は 1 を返し、それ以外の場合はゼロを返す。
+ほとんどの機種では、このデフォルトを使うべきである。
+このマクロを何か他の式に定義するのは、@file{local-alloc.c} で割り当てられた
+疑似レジスタが、それ用のハードレジスタがスピルレジスタ用に必要であるために、
+結局メモリに取られる場合だけにすること。
+このマクロが指定されたクラスに対してゼロでない値を返すなら、そのクラスの
+疑似レジスタは @file{global.c} でだけ割り当てられる。@file{global.c} は、
+疑似レジスタを別のレジスタに再割当する方法を知っている。
+再割当に使える別のレジスタがない場合は、このマクロの定義を変えるべきでない。
+なぜなら、そういう場合は、定義を変えるとレジスタの割当を遅くするだけで
+あるから。
 @end deftypefn
 
 @defmac CLASS_MAX_NREGS (@var{class}, @var{mode})
-A C expression for the maximum number of consecutive registers
-of class @var{class} needed to hold a value of mode @var{mode}.
+C の式。モードが @var{mode} の値を保持するのに必要な、クラス @var{class}
+の連続するレジスタの最大数を表す。
 
-This is closely related to the macro @code{HARD_REGNO_NREGS}.  In fact,
-the value of the macro @code{CLASS_MAX_NREGS (@var{class}, @var{mode})}
-should be the maximum value of @code{HARD_REGNO_NREGS (@var{regno},
-@var{mode})} for all @var{regno} values in the class @var{class}.
+これは、マクロ @code{HARD_REGNO_NREGS} と密接に関係する。
+実際、マクロ @code{CLASS_MAX_NREGS (@var{class}, @var{mode})} の
+値は、クラス @var{class} の全ての @var{regno} の値について、
+@code{HARD_REGNO_NREGS (@var{regno}, @var{mode})} の最大値と
+なるべきである。
 
-This macro helps control the handling of multiple-word values
-in the reload pass.
+このマクロは、再ロードパスにおいて複数ワードの値の扱いを制御する
+手助けをする。
 @end defmac
 
-@defmac CANNOT_CHANGE_MODE_CLASS (@var{from}, @var{to}, @var{class})
-If defined, a C expression that returns nonzero for a @var{class} for which
-a change from mode @var{from} to mode @var{to} is invalid.
+@defmac CLASS_CANNOT_CHANGE_SIZE
+一個の C の式。定義されていれば、
+レジスタにロードしたときのモードと同じサイズのモードでコンパイラが常に
+アクセスしなければならないレジスタを含むクラスを表す。
 
-For the example, loading 32-bit integer or floating-point objects into
-floating-point registers on the Alpha extends them to 64 bits.
-Therefore loading a 64-bit object and then storing it as a 32-bit object
-does not store the low-order 32 bits, as would be the case for a normal
-register.  Therefore, @file{alpha.h} defines @code{CANNOT_CHANGE_MODE_CLASS}
-as below:
+例えば、Alpha の場合は、32ビットの整数オブジェクトか浮動小数点オブジェクトを
+浮動小数点レジスタにロードすると、64ビットに拡張される。
+したがって、64ビットのオブジェクトをロードし、次に 32 ビットのオブジェクト
+としてストアすると、普通のレジスタがそうであるように、
+下位の 32 ビットはストアされない。
+このため、@file{alpha.h} ではこのマクロを @code{FLOAT_REGS} として
+定義している。
 
-@smallexample
-#define CANNOT_CHANGE_MODE_CLASS(FROM, TO, CLASS) \
-  (GET_MODE_SIZE (FROM) != GET_MODE_SIZE (TO) \
-   ? reg_classes_intersect_p (FLOAT_REGS, (CLASS)) : 0)
-@end smallexample
+他に特別なマクロが三つあって、どのオペランドがどの制約文字に収まるかを
+記述する。
 @end defmac
 
-@deftypefn {Target Hook} reg_class_t TARGET_IRA_CHANGE_PSEUDO_ALLOCNO_CLASS (int, @var{reg_class_t})
-A target hook which can change allocno class for given pseudo from
-  allocno class calculated by IRA.
-  
-  The default version of this target hook always returns given class.
-@end deftypefn
+@defmac CONST_OK_FOR_LETTER_P (@var{value}, @var{c})
+一個の C の式。この式は、特定の範囲の整数値を指定する、
+機種依存のオペランド制約文字(@samp{I}、@samp{J}、@samp{K}、@dots{} @samp{P})
+を定義する。@var{c} がこれらの文字のどれかであれば、この式で、ある
+整数である @var{value} が適切な範囲にあるかどうかを調べ、そうであれば
+1 を返し、それ以外の場合は 0 を返す。@var{c} がこれらの文字でなければ、
+@var{value} の値によらずにこの式の値は 0 とすべきである。
+@end defmac
 
-@deftypefn {Target Hook} bool TARGET_LRA_P (void)
-A target hook which returns true if we use LRA instead of reload pass.  It means that LRA was ported to the target.    The default version of this target hook returns always false.
-@end deftypefn
+@defmac CONST_DOUBLE_OK_FOR_LETTER_P (@var{value}, @var{c})
+一個の C の式。この式は、特定の範囲の @code{const_double} の値を
+指定する機種依存のオペランド制約文字を定義する(@samp{G} か @samp{H})。
 
-@deftypefn {Target Hook} int TARGET_REGISTER_PRIORITY (int)
-A target hook which returns the register priority number to which the  register @var{hard_regno} belongs to.  The bigger the number, the  more preferable the hard register usage (when all other conditions are  the same).  This hook can be used to prefer some hard register over  others in LRA.  For example, some x86-64 register usage needs  additional prefix which makes instructions longer.  The hook can  return lower priority number for such registers make them less favorable  and as result making the generated code smaller.    The default version of this target hook returns always zero.
-@end deftypefn
+@var{c} がこれらの文字のどれかであれば、この式で、コード @code{const_double}
+の RTX である @var{value} を調べて、適切な範囲にあれば 1 を返し、
+それ以外の場合は 0 を返す。@var{c} がこれらの文字でなければ、@var{value}
+に関わらず、この式の値は 0 とすべきである。
 
-@deftypefn {Target Hook} bool TARGET_REGISTER_USAGE_LEVELING_P (void)
-A target hook which returns true if we need register usage leveling.  That means if a few hard registers are equally good for the  assignment, we choose the least used hard register.  The register  usage leveling may be profitable for some targets.  Don't use the  usage leveling for targets with conditional execution or targets  with big register files as it hurts if-conversion and cross-jumping  optimizations.    The default version of this target hook returns always false.
-@end deftypefn
+@code{const_double} は、全ての浮動小数点定数と @code{DImode} の
+固定小数点定数に使われる。与えられた文字は、どちか片方の値、
+あるいは両方の値を受け入れることができる。@code{GET_MODE} を
+使ってこの二つの種類を区別することができる。
+@end defmac
 
-@deftypefn {Target Hook} bool TARGET_DIFFERENT_ADDR_DISPLACEMENT_P (void)
-A target hook which returns true if an address with the same structure  can have different maximal legitimate displacement.  For example, the  displacement can depend on memory mode or on operand combinations in  the insn.    The default version of this target hook returns always false.
-@end deftypefn
+@defmac EXTRA_CONSTRAINT (@var{value}, @var{c})
+一個の C の式。オプションの機種依存制約文字(@samp{Q}、@samp{R}、@samp{S}、
+@samp{T}、@samp{U})を定義する。これらの式を使って、ターゲット機種の
+特定の型のオペランド、普通はメモリ参照を区別することができる。
+普通は、このマクロは定義されない。ある特定のターゲット機種で必要な
+場合は、@var{value} が、制約文字 @var{c} で表現されるオペランドの型に
+対応するなら 1 を返す必要がある。@var{c} が追加の制約として
+定義されていない場合は、返される値は @var{value} に関わらずに 0 に
+ならなければならない。
 
-@deftypefn {Target Hook} bool TARGET_CANNOT_SUBSTITUTE_MEM_EQUIV_P (rtx @var{subst})
-A target hook which returns @code{true} if @var{subst} can't
-substitute safely pseudos with equivalent memory values during
-register allocation.
-The default version of this target hook returns @code{false}.
-On most machines, this default should be used.  For generally
-machines with non orthogonal register usage for addressing, such
-as SH, this hook can be used to avoid excessive spilling.
-@end deftypefn
-
-@deftypefn {Target Hook} bool TARGET_LEGITIMIZE_ADDRESS_DISPLACEMENT (rtx *@var{disp}, rtx *@var{offset}, machine_mode @var{mode})
-A target hook which returns @code{true} if *@var{disp} is
-legitimezed to valid address displacement with subtracting *@var{offset}
-at memory mode @var{mode}.
-The default version of this target hook returns @code{false}.
-This hook will benefit machines with limited base plus displacement
-addressing.
-@end deftypefn
-
-@deftypefn {Target Hook} reg_class_t TARGET_SPILL_CLASS (reg_class_t, @var{machine_mode})
-This hook defines a class of registers which could be used for spilling  pseudos of the given mode and class, or @code{NO_REGS} if only memory  should be used.  Not defining this hook is equivalent to returning  @code{NO_REGS} for all inputs.
-@end deftypefn
-
-@deftypefn {Target Hook} machine_mode TARGET_CSTORE_MODE (enum insn_code @var{icode})
-This hook defines the machine mode to use for the boolean result of  conditional store patterns.  The ICODE argument is the instruction code  for the cstore being performed.  Not definiting this hook is the same  as accepting the mode encoded into operand 0 of the cstore expander  patterns.
-@end deftypefn
+例えば、ROMP では、ロード命令は、メモリ参照がシンボリックアドレスを
+含んでいれば、出力を r0 に置くことができない。
+制約文字 @samp{Q} が、シンボリックアドレスを含まないメモリアドレスを
+表現するものとして定義されている。ある選択肢が、入力に制約 @samp{Q} が、
+出力に @samp{r} が指定されている。次の選択肢は、入力に @samp{m} が、
+出力には r0 を含まないレジスタクラスが指定されている。
+@end defmac
 
 @node Stack and Calling
 @section Stack Layout and Calling Conventions
