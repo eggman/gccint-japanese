@@ -2275,249 +2275,141 @@ C の式。モードが @var{mode} の値を保持するのに必要な、クラ
 @cindex frame layout
 
 @c prevent bad page break with this line
-Here is the basic stack layout.
+基本的なスタック配置について説明する。
 
 @defmac STACK_GROWS_DOWNWARD
-Define this macro to be true if pushing a word onto the stack moves the stack
-pointer to a smaller address, and false otherwise.
-@end defmac
+ワードをスタック上にプッシュした場合に、スタックポインタの値が
+小さなアドレス方向に移動するなら、このマクロを定義する。
 
-@defmac STACK_PUSH_CODE
-This macro defines the operation used when something is pushed
-on the stack.  In RTL, a push operation will be
-@code{(set (mem (STACK_PUSH_CODE (reg sp))) @dots{})}
-
-The choices are @code{PRE_DEC}, @code{POST_DEC}, @code{PRE_INC},
-and @code{POST_INC}.  Which of these is correct depends on
-the stack direction and on whether the stack pointer points
-to the last item on the stack or whether it points to the
-space for the next item on the stack.
-
-The default is @code{PRE_DEC} when @code{STACK_GROWS_DOWNWARD} is
-true, which is almost always right, and @code{PRE_INC} otherwise,
-which is often wrong.
+以下で「もし @dots{} ならこのマクロを定義する」と書いてある場合は、
+コンパイラはこのマクロを @code{#ifdef} で調べるだけなので、
+何に定義されているかの詳細は関係がない。
 @end defmac
 
 @defmac FRAME_GROWS_DOWNWARD
-Define this macro to nonzero value if the addresses of local variable slots
-are at negative offsets from the frame pointer.
+局所変数用のスロットのアドレスのフレームポインタからのオフセットが
+負であれば、このマクロを定義する。
 @end defmac
 
 @defmac ARGS_GROW_DOWNWARD
-Define this macro if successive arguments to a function occupy decreasing
-addresses on the stack.
+関数の一連の引数がスタック上でアドレスが減少する方向に置かれるなら、
+このマクロを定義する。
 @end defmac
 
 @defmac STARTING_FRAME_OFFSET
-Offset from the frame pointer to the first local variable slot to be allocated.
+確保すべき局所変数のスロットの、フレームポインタからのオフセットである。
 
-If @code{FRAME_GROWS_DOWNWARD}, find the next slot's offset by
-subtracting the first slot's length from @code{STARTING_FRAME_OFFSET}.
-Otherwise, it is found by adding the length of the first slot to the
-value @code{STARTING_FRAME_OFFSET}.
+@code{FRAME_GROWS_DOWNWARD} であれば、次のスロットのオフセットを、
+@code{STARTING_FRAME_OFFSET} から先頭のスロットの長さを差し引くことで
+求める。
+@code{FRAME_GROWS_DOWNWARD} でなければ、先頭のスロットの長さを
+@code{STARTING_FRAME_OFFSET} に加算することで求める。
 @c i'm not sure if the above is still correct.. had to change it to get
 @c rid of an overfull.  --mew 2feb93
 @end defmac
 
-@defmac STACK_ALIGNMENT_NEEDED
-Define to zero to disable final alignment of the stack during reload.
-The nonzero default for this macro is suitable for most ports.
-
-On ports where @code{STARTING_FRAME_OFFSET} is nonzero or where there
-is a register save block following the local block that doesn't require
-alignment to @code{STACK_BOUNDARY}, it may be beneficial to disable
-stack alignment and do it in the backend.
-@end defmac
-
 @defmac STACK_POINTER_OFFSET
-Offset from the stack pointer register to the first location at which
-outgoing arguments are placed.  If not specified, the default value of
-zero is used.  This is the proper value for most machines.
+スタックポインタレジスタから、出力引数が置かれる先頭の位置へのオフセット
+を定義する。これが指定されていない場合は、デフォルト値のゼロが使われる。
+多くの機種ではゼロが適切な値である。
 
-If @code{ARGS_GROW_DOWNWARD}, this is the offset to the location above
-the first location at which outgoing arguments are placed.
+@code{ARGS_GROW_DOWNWARD} が定義されている場合は、これは、
+出力引数が置かれている先頭の位置の直前の位置へのオフセットになる。
 @end defmac
 
 @defmac FIRST_PARM_OFFSET (@var{fundecl})
-Offset from the argument pointer register to the first argument's
-address.  On some machines it may depend on the data type of the
-function.
+引数ポインタレジスタからの先頭の引数のアドレスのオフセットを定義する。
+マシンによっては、関数の戻り値型に依存する。
 
-If @code{ARGS_GROW_DOWNWARD}, this is the offset to the location above
-the first argument's address.
+@code{ARGS_GROW_DOWNWARD} が定義されている場合は、これは、
+先頭の引数のアドレスの直前の位置へのオフセットになる。
 @end defmac
 
 @defmac STACK_DYNAMIC_OFFSET (@var{fundecl})
-Offset from the stack pointer register to an item dynamically allocated
-on the stack, e.g., by @code{alloca}.
+スタックポインタレジスタから、例えば @code{alloca} により、スタック上に
+動的に確保されるものへのオフセットを定義する。
 
-The default value for this macro is @code{STACK_POINTER_OFFSET} plus the
-length of the outgoing arguments.  The default is correct for most
-machines.  See @file{function.c} for details.
-@end defmac
-
-@defmac INITIAL_FRAME_ADDRESS_RTX
-A C expression whose value is RTL representing the address of the initial
-stack frame. This address is passed to @code{RETURN_ADDR_RTX} and
-@code{DYNAMIC_CHAIN_ADDRESS}.  If you don't define this macro, a reasonable
-default value will be used.  Define this macro in order to make frame pointer
-elimination work in the presence of @code{__builtin_frame_address (count)} and
-@code{__builtin_return_address (count)} for @code{count} not equal to zero.
+このマクロのデフォルト値は、@code{STACK_POINTER_OFFSET} に出力引数の
+長さを足したものある。
+多くの機種ではこのデフォルト値で正しい値である。
+詳細は、@file{function.c} を参照のこと。
 @end defmac
 
 @defmac DYNAMIC_CHAIN_ADDRESS (@var{frameaddr})
-A C expression whose value is RTL representing the address in a stack
-frame where the pointer to the caller's frame is stored.  Assume that
-@var{frameaddr} is an RTL expression for the address of the stack frame
-itself.
+呼び出し側フレームへのポインタが格納されているスタックフレームのアドレスを
+表す RTL を値とする C の式。
+@var{frameaddr} は、スタックフレーム自身のアドレスを表す RTL 式であると
+仮定する。
 
-If you don't define this macro, the default is to return the value
-of @var{frameaddr}---that is, the stack frame address is also the
-address of the stack word that points to the previous frame.
+このマクロを定義しない場合のデフォルトは、@var{frameaddr} の値を
+返すことである。すなわち、スタックフレームのアドレスが、
+前のフレームを指すスタックのワードのアドレスでもある。
 @end defmac
 
 @defmac SETUP_FRAME_ADDRESSES
-If defined, a C expression that produces the machine-specific code to
-setup the stack so that arbitrary frames can be accessed.  For example,
-on the SPARC, we must flush all of the register windows to the stack
-before we can access arbitrary stack frames.  You will seldom need to
-define this macro.
+定義されていれば、任意のフレームがアクセスできるようにスタックを設定する
+機種固有のコードを生成する C の式である。
+例えば、Sparc では、任意のスタックフレームをアクセス可能になる前に
+全てのレジスタ・ウィンドウをスタックにフラッシュしなければならない。
+このマクロを定義する必要は滅多にないだろう。
 @end defmac
 
-@deftypefn {Target Hook} rtx TARGET_BUILTIN_SETJMP_FRAME_VALUE (void)
-This target hook should return an rtx that is used to store
-the address of the current frame into the built in @code{setjmp} buffer.
-The default value, @code{virtual_stack_vars_rtx}, is correct for most
-machines.  One reason you may need to define this target hook is if
-@code{hard_frame_pointer_rtx} is the appropriate value on your machine.
-@end deftypefn
-
-@defmac FRAME_ADDR_RTX (@var{frameaddr})
-A C expression whose value is RTL representing the value of the frame
-address for the current frame.  @var{frameaddr} is the frame pointer
-of the current frame.  This is used for __builtin_frame_address.
-You need only define this macro if the frame address is not the same
-as the frame pointer.  Most machines do not need to define it.
+@defmac BUILTIN_SETJMP_FRAME_VALUE
+定義されていれば、C の式であり、現在のフレームのアドレスを
+組み込みの @code{setjmp} バッファに格納するのに使われる rtx を
+保持する。デフォルト値である @code{virtual_stack_vars_rtx} が、
+ほとんどの機種で正しい値である。このマクロを定義する必要が
+出てくる理由の一つは、@code{hard_frame_pointer_rtx} が読者の機種で
+このマクロに適した値の場合があるからである。
 @end defmac
 
 @defmac RETURN_ADDR_RTX (@var{count}, @var{frameaddr})
-A C expression whose value is RTL representing the value of the return
-address for the frame @var{count} steps up from the current frame, after
-the prologue.  @var{frameaddr} is the frame pointer of the @var{count}
-frame, or the frame pointer of the @var{count} @minus{} 1 frame if
-@code{RETURN_ADDR_IN_PREVIOUS_FRAME} is nonzero.
+一個の C の式。その値は、プロローグの後、現在のフレームから @var{count}
+段さかのぼったフレームの戻りアドレス値を表す RTL である。
+@var{frameaddr} は、@var{count} 番目のフレームのフレームポインタか、
+@code{RETURN_ADDR_IN_PREVIOUS_FRAME} が定義されているなら、
+@var{count} @minus{} 1 番目のフレームポインタである。
 
-The value of the expression must always be the correct address when
-@var{count} is zero, but may be @code{NULL_RTX} if there is no way to
-determine the return address of other frames.
+この式の値は @var{count} がゼロの場合は常に正しいアドレスに
+ならなければならない。だが、他のフレームの戻りアドレスを決める方法が
+ない場合は @code{NULL_RTX} でも良い。
 @end defmac
 
 @defmac RETURN_ADDR_IN_PREVIOUS_FRAME
-Define this macro to nonzero value if the return address of a particular
-stack frame is accessed from the frame pointer of the previous stack
-frame.  The zero default for this macro is suitable for most ports.
+ある特定のスタックフレームの戻りアドレスが直前のスタックフレームの
+フレームポインタからアクセスされるなら、このマクロを定義する。
 @end defmac
 
 @defmac INCOMING_RETURN_ADDR_RTX
-A C expression whose value is RTL representing the location of the
-incoming return address at the beginning of any function, before the
-prologue.  This RTL is either a @code{REG}, indicating that the return
-value is saved in @samp{REG}, or a @code{MEM} representing a location in
-the stack.
+一個の C の式。この式の値は、任意の関数の先頭で、プロローグの前においての
+入力戻りアドレスの位置を表す RTL である。この RTL はある @code{REG}か、
+ある @code{MEM} のどちらかである。@code{REG} は、戻り値が @samp{REG} に
+セーブされることを示し、@code{MEM} はスタック上の位置を表す。
 
-You only need to define this macro if you want to support call frame
-debugging information like that provided by DWARF 2.
-
-If this RTL is a @code{REG}, you should also define
-@code{DWARF_FRAME_RETURN_COLUMN} to @code{DWARF_FRAME_REGNUM (REGNO)}.
+このマクロを定義する必要があるのは、DWARF 2 で提供されているような
+呼び出しフレームデバッグ情報をサポートしたいときだけである。
 @end defmac
-
-@defmac DWARF_ALT_FRAME_RETURN_COLUMN
-A C expression whose value is an integer giving a DWARF 2 column
-number that may be used as an alternative return column.  The column
-must not correspond to any gcc hard register (that is, it must not
-be in the range of @code{DWARF_FRAME_REGNUM}).
-
-This macro can be useful if @code{DWARF_FRAME_RETURN_COLUMN} is set to a
-general register, but an alternative column needs to be used for signal
-frames.  Some targets have also used different frame return columns
-over time.
-@end defmac
-
-@defmac DWARF_ZERO_REG
-A C expression whose value is an integer giving a DWARF 2 register
-number that is considered to always have the value zero.  This should
-only be defined if the target has an architected zero register, and
-someone decided it was a good idea to use that register number to
-terminate the stack backtrace.  New ports should avoid this.
-@end defmac
-
-@deftypefn {Target Hook} void TARGET_DWARF_HANDLE_FRAME_UNSPEC (const char *@var{label}, rtx @var{pattern}, int @var{index})
-This target hook allows the backend to emit frame-related insns that
-contain UNSPECs or UNSPEC_VOLATILEs.  The DWARF 2 call frame debugging
-info engine will invoke it on insns of the form
-@smallexample
-(set (reg) (unspec [@dots{}] UNSPEC_INDEX))
-@end smallexample
-and
-@smallexample
-(set (reg) (unspec_volatile [@dots{}] UNSPECV_INDEX)).
-@end smallexample
-to let the backend emit the call frame instructions.  @var{label} is
-the CFI label attached to the insn, @var{pattern} is the pattern of
-the insn and @var{index} is @code{UNSPEC_INDEX} or @code{UNSPECV_INDEX}.
-@end deftypefn
 
 @defmac INCOMING_FRAME_SP_OFFSET
-A C expression whose value is an integer giving the offset, in bytes,
-from the value of the stack pointer register to the top of the stack
-frame at the beginning of any function, before the prologue.  The top of
-the frame is defined to be the value of the stack pointer in the
-previous frame, just before the call instruction.
+一個の C の式。この式の値は、任意の関数の先頭で、プロローグの前においての
+スタックポインタレジスタの値から、スタックフレームの頂上までのオフセットを
+バイト数で与える整数である。
+フレームの頂上は、直前のフレームでのコール命令の直前でのスタックポインタ
+の値として定義される。
 
-You only need to define this macro if you want to support call frame
-debugging information like that provided by DWARF 2.
+このマクロを定義する必要があるのは、DWARF 2 で提供されているような
+呼び出しフレームデバッグ情報をサポートしたいときだけである。
 @end defmac
 
-@defmac ARG_POINTER_CFA_OFFSET (@var{fundecl})
-A C expression whose value is an integer giving the offset, in bytes,
-from the argument pointer to the canonical frame address (cfa).  The
-final value should coincide with that calculated by
-@code{INCOMING_FRAME_SP_OFFSET}.  Which is unfortunately not usable
-during virtual register instantiation.
+@defmac ARG_POINTER_CFA_OFFSET
+C の式である。引数ポインタから正規フレームアドレス(canonical frame
+address (cfa))へのオフセットをバイト数で表した整数である。
+最終的な値は、@code{INCOMING_FRAME_SP_OFFSET} で計算した値と
+一致する必要がある。残念なことに、@code{INCOMING_FRAME_SP_OFFSET} は
+レジスタが仮想的な実体である間は使えないのである。
 
-The default value for this macro is
-@code{FIRST_PARM_OFFSET (fundecl) + crtl->args.pretend_args_size},
-which is correct for most machines; in general, the arguments are found
-immediately before the stack frame.  Note that this is not the case on
-some targets that save registers into the caller's frame, such as SPARC
-and rs6000, and so such targets need to define this macro.
-
-You only need to define this macro if the default is incorrect, and you
-want to support call frame debugging information like that provided by
-DWARF 2.
-@end defmac
-
-@defmac FRAME_POINTER_CFA_OFFSET (@var{fundecl})
-If defined, a C expression whose value is an integer giving the offset
-in bytes from the frame pointer to the canonical frame address (cfa).
-The final value should coincide with that calculated by
-@code{INCOMING_FRAME_SP_OFFSET}.
-
-Normally the CFA is calculated as an offset from the argument pointer,
-via @code{ARG_POINTER_CFA_OFFSET}, but if the argument pointer is
-variable due to the ABI, this may not be possible.  If this macro is
-defined, it implies that the virtual register instantiation should be
-based on the frame pointer instead of the argument pointer.  Only one
-of @code{FRAME_POINTER_CFA_OFFSET} and @code{ARG_POINTER_CFA_OFFSET}
-should be defined.
-@end defmac
-
-@defmac CFA_FRAME_BASE_OFFSET (@var{fundecl})
-If defined, a C expression whose value is an integer giving the offset
-in bytes from the canonical frame address (cfa) to the frame base used
-in DWARF 2 debug information.  The default is zero.  A different value
-may reduce the size of debug information on some ports.
+このマクロを定義する必要があるのは、DWARF 2 で提供されているような
+呼び出しフレームデバッグ情報をサポートしたいときだけである。
 @end defmac
 
 @node Stack Checking
