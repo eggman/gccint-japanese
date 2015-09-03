@@ -2699,168 +2699,153 @@ GNU CC はそういう場合を認識し、@code{FRAME_POINTER_REQUIRED} の値�
 @cindex arguments on stack
 @cindex stack arguments
 
-The macros in this section control how arguments are passed
-on the stack.  See the following section for other macros that
-control passing certain arguments in registers.
+この節で説明するマクロ群は、引数がスタック上にどのように渡されるかを
+制御する。引数のレジスタ渡しを制御するマクロについては、次の節で
+参照のこと。
 
-@deftypefn {Target Hook} bool TARGET_PROMOTE_PROTOTYPES (const_tree @var{fntype})
-This target hook returns @code{true} if an argument declared in a
-prototype as an integral type smaller than @code{int} should actually be
-passed as an @code{int}.  In addition to avoiding errors in certain
-cases of mismatch, it also makes for better code on certain machines.
-The default is to not promote prototypes.
-@end deftypefn
-
-@defmac PUSH_ARGS
-A C expression.  If nonzero, push insns will be used to pass
-outgoing arguments.
-If the target machine does not have a push instruction, set it to zero.
-That directs GCC to use an alternate strategy: to
-allocate the entire argument block and then store the arguments into
-it.  When @code{PUSH_ARGS} is nonzero, @code{PUSH_ROUNDING} must be defined too.
-@end defmac
-
-@defmac PUSH_ARGS_REVERSED
-A C expression.  If nonzero, function arguments will be evaluated from
-last to first, rather than from first to last.  If this macro is not
-defined, it defaults to @code{PUSH_ARGS} on targets where the stack
-and args grow in opposite directions, and 0 otherwise.
+@defmac PROMOTE_PROTOTYPES
+プロトタイプ宣言で @code{int} 型より小さい整数型として宣言されている
+引数を、実際には @code{int} 型として渡すべきである場合には
+このマクロを定義する。ある種の型の不一致によるエラーを避けるだけでなく、
+マシンによってはより良いコードを生成することがある。
 @end defmac
 
 @defmac PUSH_ROUNDING (@var{npushed})
-A C expression that is the number of bytes actually pushed onto the
-stack when an instruction attempts to push @var{npushed} bytes.
+ある命令が @var{npushed} バイトをプッシュしようとしたときに
+実際にスタックにプッシュされるバイト数を表す C の式を定義する。
 
-On some machines, the definition
+ターゲットマシンにプッシュ命令がないのなら、このマクロは定義しないこと。
+このマクロが定義されていなければ、GNU CC は別の戦略をとる。
+つまり、引数全体のブロックを割り当て、引数をそこに格納する。
+
+マシンによっては、
 
 @smallexample
 #define PUSH_ROUNDING(BYTES) (BYTES)
 @end smallexample
 
 @noindent
-will suffice.  But on other machines, instructions that appear
-to push one byte actually push two bytes in an attempt to maintain
-alignment.  Then the definition should be
+という定義で充分である。
+しかし、別のマシンでは、一バイトをプッシュするように見える命令が
+実際にはアラインメントを維持するために二バイトをプッシュすることがある。
+そういう場合は以下のように定義する。
 
 @smallexample
 #define PUSH_ROUNDING(BYTES) (((BYTES) + 1) & ~1)
 @end smallexample
-
-If the value of this macro has a type, it should be an unsigned type.
 @end defmac
 
-@findex outgoing_args_size
-@findex crtl->outgoing_args_size
+@findex current_function_outgoing_args_size
 @defmac ACCUMULATE_OUTGOING_ARGS
-A C expression.  If nonzero, the maximum amount of space required for outgoing arguments
-will be computed and placed into
-@code{crtl->outgoing_args_size}.  No space will be pushed
-onto the stack for each call; instead, the function prologue should
-increase the stack frame size by this amount.
+このマクロが定義されていると、出力引数に必要とされるメモリスペースの
+最大量は、計算されたうえで、@code{current_function_outgoing_args_size}
+という変数に置かれる。
+各呼び出しではスタックにはスペースはプッシュされない。
+代わりに、呼び出される関数のプロローグがこの量だけスタックフレームの
+大きさを増やす必要がある。
 
-Setting both @code{PUSH_ARGS} and @code{ACCUMULATE_OUTGOING_ARGS}
-is not proper.
+@code{PUSH_ROUNDING} と @code{ACCUMULATE_OUTGOING_ARGS} の両方を
+定義するのは正しくない。
 @end defmac
 
 @defmac REG_PARM_STACK_SPACE (@var{fndecl})
-Define this macro if functions should assume that stack space has been
-allocated for arguments even when their values are passed in
-registers.
+引数の値がレジスタで渡される場合でも、その引数用にスタックが
+割り当てられていると、関数の方で仮定すべきであるなら、このマクロを
+定義する。
 
-The value of this macro is the size, in bytes, of the area reserved for
-arguments passed in registers for the function represented by @var{fndecl},
-which can be zero if GCC is calling a library function.
-The argument @var{fndecl} can be the FUNCTION_DECL, or the type itself
-of the function.
+このマクロの値は、@var{fndecl} で表される関数にレジスタで渡される
+引数用の領域の大きさをバイト数で表したものである。
+この値は、GNU CC がライブラリ関数を呼び出すときはゼロになりうる。
 
-This space can be allocated by the caller, or be a part of the
-machine-dependent stack frame: @code{OUTGOING_REG_PARM_STACK_SPACE} says
-which.
-@end defmac
+この領域は呼びだし側で割り当てることも可能だし、マシン依存のスタック
+フレームの一部であっても良い。@code{OUTGOING_REG_PARM_STACK_SPACE} で
+どちらかを指定する。
 @c above is overfull.  not sure what to do.  --mew 5feb93  did
 @c something, not sure if it looks good.  --mew 10feb93
-
-@defmac INCOMING_REG_PARM_STACK_SPACE (@var{fndecl})
-Like @code{REG_PARM_STACK_SPACE}, but for incoming register arguments.
-Define this macro if space guaranteed when compiling a function body
-is different to space required when making a call, a situation that
-can arise with K&R style function definitions.
 @end defmac
 
-@defmac OUTGOING_REG_PARM_STACK_SPACE (@var{fntype})
-Define this to a nonzero value if it is the responsibility of the
-caller to allocate the area reserved for arguments passed in registers
-when calling a function of @var{fntype}.  @var{fntype} may be NULL
-if the function called is a library function.
+@defmac MAYBE_REG_PARM_STACK_SPACE
+@defmacx FINAL_REG_PARM_STACK_SPACE (@var{const_size}, @var{var_size})
+関数が、その引数値がレジスタで渡される場合でもスタックスペースを
+割り当てる場合は、上記のマクロに加えてこれらのマクロを定義する。
+これらのマクロは、レジスタにある引数用に割り当てられたスタックスペース
+が、その関数宣言に依存しない単なる定数ではない場合に使うべきである。
 
-If @code{ACCUMULATE_OUTGOING_ARGS} is defined, this macro controls
-whether the space for these arguments counts in the value of
-@code{crtl->outgoing_args_size}.
+最初のマクロの値は、レジスタで渡される引数用に予約されると最初に
+仮定した領域の大きさをバイト数で表したものである。
+
+二番目のマクロの値は、レジスタで渡される引数用に予約される領域の
+実際の大きさをバイト数で表したものである。このマクロは引数を
+二つ取る。スタック上に取られる固定長の引数のバイト数を表す整数と、
+スタック上に取られる可変長の引数のバイト数を表すツリーである。
+
+これらのマクロが定義されていると、@code{REG_PARM_STACK_SPACE} は
+以下の関数に対してだけ呼び出される。すなわち、libcall 関数、現在の関数、
+それに、このようなスタックスペースを割り当てなければならないことが
+知られているとき呼び出される関数である。
+どの場合にも、このマクロの値は簡単に計算できる。
+
+呼び出された関数がこのようなスタックスペースを必要とするか、必要な
+場合はどれだけのスペースを予約すれば良いのかを決めるときに、GNU CC は
+@code{REG_PARM_STACK_SPACE} の代わりにこの二つのマクロを使う。
+@end defmac
+
+@defmac OUTGOING_REG_PARM_STACK_SPACE
+レジスタで渡された引数用の予約領域を割り当てるのが、呼び出し側の
+責任であるなら、これを定義する。
+
+@code{ACCUMULATE_OUTGOING_ARGS} が定義されている場合は、
+このマクロは、これらの引数用領域を
+@code{current_function_outgoing_args_size} の値に含めるかどうかを
+制御する。
 @end defmac
 
 @defmac STACK_PARMS_IN_REG_PARM_AREA
-Define this macro if @code{REG_PARM_STACK_SPACE} is defined, but the
-stack parameters don't skip the area specified by it.
+@code{REG_PARM_STACK_SPACE} は定義されているが、スタック上のパラメータが
+それで指定された領域をスキップしない場合はこのマクロを定義する。
 @c i changed this, makes more sens and it should have taken care of the
 @c overfull.. not as specific, tho.  --mew 5feb93
 
-Normally, when a parameter is not passed in registers, it is placed on the
-stack beyond the @code{REG_PARM_STACK_SPACE} area.  Defining this macro
-suppresses this behavior and causes the parameter to be passed on the
-stack in its natural location.
+普通、パラメータがレジスタで渡されない場合は、@code{REG_PARM_STACK_SPACE}
+領域を越えたスタック上に置かれる。このマクロを定義するとこの動作を
+抑制し、パラメータをスタック上の自然な位置に渡すようにする。
 @end defmac
 
-@deftypefn {Target Hook} int TARGET_RETURN_POPS_ARGS (tree @var{fundecl}, tree @var{funtype}, int @var{size})
-This target hook returns the number of bytes of its own arguments that
-a function pops on returning, or 0 if the function pops no arguments
-and the caller must therefore pop them all after the function returns.
+@defmac RETURN_POPS_ARGS (@var{fundecl}, @var{funtype}, @var{stack-size})
+関数が戻るときにポップする自分自身の引数のバイト数を表す C の式。
+あるいは、その関数は自分では引数をポップしないために呼びだし側が、
+その関数が戻った後で、全部ポップしなければならないときは、0 である。
 
-@var{fundecl} is a C variable whose value is a tree node that describes
-the function in question.  Normally it is a node of type
-@code{FUNCTION_DECL} that describes the declaration of the function.
-From this you can obtain the @code{DECL_ATTRIBUTES} of the function.
+@var{fundecl} は一個の C の変数であり、その値は
+問題の関数を記述する木ノードである。
+通常、このノードの型は、関数の宣言を記述する @code{FUNCTION_DECL} である。
+これから、その関数の @code{DECL_MACHINE_ATTRIBUTES} を得ることができる。
 
-@var{funtype} is a C variable whose value is a tree node that
-describes the function in question.  Normally it is a node of type
-@code{FUNCTION_TYPE} that describes the data type of the function.
-From this it is possible to obtain the data types of the value and
-arguments (if known).
+@var{funtype} は一個の C の変数であり、その値は
+問題の関数を記述する木ノードである。
+通常、このノードの型は、関数のデータ型を
+記述する @code{FUNCTION_TYPE} である。
+これから、戻り値と引数(既知であれば)のデータ型を得ることができる。
 
-When a call to a library function is being considered, @var{fundecl}
-will contain an identifier node for the library function.  Thus, if
-you need to distinguish among various library functions, you can do so
-by their names.  Note that ``library function'' in this context means
-a function used to perform arithmetic, whose name is known specially
-in the compiler and was not mentioned in the C code being compiled.
+ライブラリ関数の呼び出しを考えるときは、@var{fundecl} には
+そのライブラリ関数の識別子ノードが入る。つまり、色々なライブラリ関数を
+区別する必要があるときは、名前で区別することができるのである。
+ここで「ライブラリ関数」というのは、算術演算を行なうのに使われる関数で、
+コンパイラが特別にその名前を知っているものであり、コンパイルされる
+C のコードには現れないものである。
 
-@var{size} is the number of bytes of arguments passed on the
-stack.  If a variable number of bytes is passed, it is zero, and
-argument popping will always be the responsibility of the calling function.
+@var{stack-size} は、スタックで渡される引数のバイト数である。
+可変のバイト数が渡される場合は、@var{stack-size} はゼロになり、
+引数のポップは常に呼び出し側関数の責任になる。
 
-On the VAX, all functions always pop their arguments, so the definition
-of this macro is @var{size}.  On the 68000, using the standard
-calling convention, no functions pop their arguments, so the value of
-the macro is always 0 in this case.  But an alternative calling
-convention is available in which functions that take a fixed number of
-arguments pop them but other functions (such as @code{printf}) pop
-nothing (the caller pops all).  When this convention is in use,
-@var{funtype} is examined to determine whether a function takes a fixed
-number of arguments.
-@end deftypefn
-
-@defmac CALL_POPS_ARGS (@var{cum})
-A C expression that should indicate the number of bytes a call sequence
-pops off the stack.  It is added to the value of @code{RETURN_POPS_ARGS}
-when compiling a function call.
-
-@var{cum} is the variable in which all arguments to the called function
-have been accumulated.
-
-On certain architectures, such as the SH5, a call trampoline is used
-that pops certain registers off the stack, depending on the arguments
-that have been passed to the function.  Since this is a property of the
-call site, not of the called function, @code{RETURN_POPS_ARGS} is not
-appropriate.
+VAX の場合は、全ての関数が引数をポップするので、このマクロの定義は
+@var{stack-size} になる。68000 では、標準の呼び出し規約を使うと、
+引数をポップする関数はないので、このマクロの値は常にゼロになる。
+ただし、別の呼び出し規約も利用可能で、その場合固定数の引数を取る関数は
+その引数をポップするが、それ以外の関数(例えば @code{printf}) は
+何もポップしない(呼び出し側が全部ポップする)。
+後者の規約が使われるときは、@var{funtype} を調べて、関数が固定数の
+引数を取るかどうかが決定される。
 @end defmac
 
 @node Register Arguments
