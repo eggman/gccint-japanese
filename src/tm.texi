@@ -2599,63 +2599,67 @@ GNU CC は、上記のマクロの値からデフォルト値を計算する。
 @subsection Eliminating Frame Pointer and Arg Pointer
 
 @c prevent bad page break with this line
-This is about eliminating the frame pointer and arg pointer.
+フレームポインタと引数ポインタの消去について説明する。
 
-@deftypefn {Target Hook} bool TARGET_FRAME_POINTER_REQUIRED (void)
-This target hook should return @code{true} if a function must have and use
-a frame pointer.  This target hook is called in the reload pass.  If its return
-value is @code{true} the function will have a frame pointer.
+@defmac FRAME_POINTER_REQUIRED
+ある関数がフレームポインタを持たなければならず、かつ使う必要がある場合は
+ゼロでない値を持つ C の式を定義する。
+この式は、再ロードのパスで評価される。
+この式の値がゼロでなければ、その関数はフレームポインタを持つようになる。
 
-This target hook can in principle examine the current function and decide
-according to the facts, but on most machines the constant @code{false} or the
-constant @code{true} suffices.  Use @code{false} when the machine allows code
-to be generated with no frame pointer, and doing so saves some time or space.
-Use @code{true} when there is no possible advantage to avoiding a frame
-pointer.
+原理的にはこの式で現在の関数を調べてその結果に従ってフレームポインタ
+の有無を決定することができるが、ほとんどのマシンでは定数 0 か定数 1 を
+使えば充分である。そのマシンがフレームポインタなしで生成したコードを
+許し、かつ、フレームポインタを使わないことで時間や空間の節約になるなら、
+0 を使う。
+フレームポインタを使わないことに何の利点もなければ、1 を使う。
 
-In certain cases, the compiler does not know how to produce valid code
-without a frame pointer.  The compiler recognizes those cases and
-automatically gives the function a frame pointer regardless of what
-@code{TARGET_FRAME_POINTER_REQUIRED} returns.  You don't need to worry about
-them.
+場合によっては、フレームポインタなしには正しいコードを生成する方法が
+分からない場合がある。
+GNU CC はそういう場合を認識し、@code{FRAME_POINTER_REQUIRED} の値に
+関わらず自動的に関数にフレームポインタを与える。
+読者が心配することはない。@refill
 
-In a function that does not require a frame pointer, the frame pointer
-register can be allocated for ordinary usage, unless you mark it as a
-fixed register.  See @code{FIXED_REGISTERS} for more information.
-
-Default return value is @code{false}.
-@end deftypefn
+フレームポインタを必要としない関数では、固定レジスタとしていない限り、
+フレームポインタレジスタを通常の使用目的に確保することができる。
+詳細は @code{FIXED_REGISTERS} の項を参照のこと。
+@end defmac
 
 @findex get_frame_size
 @defmac INITIAL_FRAME_POINTER_OFFSET (@var{depth-var})
-A C statement to store in the variable @var{depth-var} the difference
-between the frame pointer and the stack pointer values immediately after
-the function prologue.  The value would be computed from information
-such as the result of @code{get_frame_size ()} and the tables of
-registers @code{regs_ever_live} and @code{call_used_regs}.
+関数のプロローグの直後の時点でのフレームポインタとスタックポインタの
+値の差を変数 @var{depth-var} に格納する作業を行なう、C の文である。
+この値は、@code{get_frame_size ()} の結果と
+二つのレジスタのテーブル、@code{regs_ever_live} と @code{call_used_regs}
+等の情報から計算することができる。
 
-If @code{ELIMINABLE_REGS} is defined, this macro will be not be used and
-need not be defined.  Otherwise, it must be defined even if
-@code{TARGET_FRAME_POINTER_REQUIRED} always returns true; in that
-case, you may set @var{depth-var} to anything.
+@code{ELIMINABLE_REGS} が定義されているなら、このマクロは使われないので
+定義する必要がない。
+@code{ELIMINABLE_REGS} が定義されていなければ、
+@code{FRAME_POINTER_REQUIRED} が常に真になるように定義されていても、
+このマクロを定義しなければならない。@code{FRAME_POINTER_REQUIRED} が
+常に真の場合は、@var{depth-var} には何を設定しても良い。
 @end defmac
 
 @defmac ELIMINABLE_REGS
-If defined, this macro specifies a table of register pairs used to
-eliminate unneeded registers that point into the stack frame.  If it is not
-defined, the only elimination attempted by the compiler is to replace
-references to the frame pointer with references to the stack pointer.
+このマクロが定義されていれば、レジスタ対のテーブルを指す。
+このレジスタ対のテーブルは、スタックフレーム中を指すレジスタのうち
+不要なものを消去するために使うものである。
+このマクロが定義されていない場合は、GNU CC が試みる消去は、
+フレームポインタへの参照をスタックポインタへの参照に置き換えること
+だけである。
 
-The definition of this macro is a list of structure initializations, each
-of which specifies an original and replacement register.
+このマクロの定義は構造体の初期化式のリストからなり、
+リストの各要素は、置き換え前のレジスタと置き換え後のレジスタ対を指定する。
 
-On some machines, the position of the argument pointer is not known until
-the compilation is completed.  In such a case, a separate hard register
-must be used for the argument pointer.  This register can be eliminated by
-replacing it with either the frame pointer or the argument pointer,
-depending on whether or not the frame pointer has been eliminated.
+マシンによっては、引数ポインタの位置はコンパイルが完了するまでは
+分からない場合がある。そう言う場合は、別個のハードレジスタを引数ポインタ
+として使わなければならない。
+このハードレジスタは、フレームポインタか引数ポインタかのどちらかで
+置き換えることで消去可能である。どちらになるかは、フレームポインタが
+消去されたかどうかにより決まる。
 
-In this case, you might specify:
+この場合、以下のように指定しなければならない。
 @smallexample
 #define ELIMINABLE_REGS  \
 @{@{ARG_POINTER_REGNUM, STACK_POINTER_REGNUM@}, \
@@ -2663,26 +2667,31 @@ In this case, you might specify:
  @{FRAME_POINTER_REGNUM, STACK_POINTER_REGNUM@}@}
 @end smallexample
 
-Note that the elimination of the argument pointer with the stack pointer is
-specified first since that is the preferred elimination.
+引数ポインタをスタックポインタで置き換える消去が先頭に指定されているのは、
+それが望ましい消去だからであることに注意。
 @end defmac
 
-@deftypefn {Target Hook} bool TARGET_CAN_ELIMINATE (const int @var{from_reg}, const int @var{to_reg})
-This target hook should returns @code{true} if the compiler is allowed to
-try to replace register number @var{from_reg} with register number
-@var{to_reg}.  This target hook need only be defined if @code{ELIMINABLE_REGS}
-is defined, and will usually be @code{true}, since most of the cases
-preventing register elimination are things that the compiler already
-knows about.
-
-Default return value is @code{true}.
-@end deftypefn
+@defmac CAN_ELIMINATE (@var{from-reg}, @var{to-reg})
+レジスタ番号 @var{from-reg} をレジスタ番号 @var{to-reg} で置き換える
+試みが許されているならゼロでない値を返す C の式である。
+このマクロは @code{ELIMINABLE_REGS} が定義されている場合にのみ
+定義すれば良く、通常は定数 1 になる。
+というのは、レジスタ消去を妨げるほとんどの場合は、GNU CC が既に
+知っていることだからである。
+@end defmac
 
 @defmac INITIAL_ELIMINATION_OFFSET (@var{from-reg}, @var{to-reg}, @var{offset-var})
-This macro is similar to @code{INITIAL_FRAME_POINTER_OFFSET}.  It
-specifies the initial difference between the specified pair of
-registers.  This macro must be defined if @code{ELIMINABLE_REGS} is
-defined.
+このマクロは、@code{INITIAL_FRAME_POINTER_OFFSET} に似ている。
+指定されたレジスタ対の差の初期値を指定する。
+@code{ELIMINABLE_REGS} が定義されているなら、このマクロを定義しなければ
+ならない。
+@end defmac
+
+@defmac LONGJMP_RESTORE_FROM_STACK
+関数 @code{longjmp} が、@code{setjmp}が明示的に退避したレジスタではなく、
+スタックフレームからレジスタを復帰する場合は、このマクロを定義する。
+このような機種では、ある種の量は、@code{setjmp} の呼び出しを越えて
+レジスタに保存されてはならない。
 @end defmac
 
 @node Stack Arguments
