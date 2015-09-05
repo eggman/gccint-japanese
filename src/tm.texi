@@ -3058,141 +3058,105 @@ C の式である。これを評価すると、@var{type} 単独でレジスタ�
 @cindex values, returned by functions
 @cindex scalars, returned as values
 
-This section discusses the macros that control returning scalars as
-values---values that can fit in registers.
+この節では、スカラを値として返す方法を制御するマクロについて議論する。
+スカラ値とは、レジスタに収まる値である。
 
-@deftypefn {Target Hook} rtx TARGET_FUNCTION_VALUE (const_tree @var{ret_type}, const_tree @var{fn_decl_or_type}, bool @var{outgoing})
-
-Define this to return an RTX representing the place where a function
-returns or receives a value of data type @var{ret_type}, a tree node
-representing a data type.  @var{fn_decl_or_type} is a tree node
-representing @code{FUNCTION_DECL} or @code{FUNCTION_TYPE} of a
-function being called.  If @var{outgoing} is false, the hook should
-compute the register in which the caller will see the return value.
-Otherwise, the hook should return an RTX representing the place where
-a function returns a value.
-
-On many machines, only @code{TYPE_MODE (@var{ret_type})} is relevant.
-(Actually, on most machines, scalar values are returned in the same
-place regardless of mode.)  The value of the expression is usually a
-@code{reg} RTX for the hard register where the return value is stored.
-The value can also be a @code{parallel} RTX, if the return value is in
-multiple places.  See @code{TARGET_FUNCTION_ARG} for an explanation of the
-@code{parallel} form.   Note that the callee will populate every
-location specified in the @code{parallel}, but if the first element of
-the @code{parallel} contains the whole return value, callers will use
-that element as the canonical location and ignore the others.  The m68k
-port uses this type of @code{parallel} to return pointers in both
-@samp{%a0} (the canonical location) and @samp{%d0}.
-
-If @code{TARGET_PROMOTE_FUNCTION_RETURN} returns true, you must apply
-the same promotion rules specified in @code{PROMOTE_MODE} if
-@var{valtype} is a scalar type.
-
-If the precise function being called is known, @var{func} is a tree
-node (@code{FUNCTION_DECL}) for it; otherwise, @var{func} is a null
-pointer.  This makes it possible to use a different value-returning
-convention for specific functions when all their calls are
-known.
-
-Some target machines have ``register windows'' so that the register in
-which a function returns its value is not the same as the one in which
-the caller sees the value.  For such machines, you should return
-different RTX depending on @var{outgoing}.
-
-@code{TARGET_FUNCTION_VALUE} is not used for return values with
-aggregate data types, because these are returned in another way.  See
-@code{TARGET_STRUCT_VALUE_RTX} and related macros, below.
-@end deftypefn
+@defmac TRADITIONAL_RETURN_FLOAT
+@samp{-traditional} オプションを指定した場合、
+@code{float} を返すように宣言された関数がその値を @code{double} 型に変換
+させるようにすべきでなければ、このマクロを定義する。
+@end defmac
 
 @defmac FUNCTION_VALUE (@var{valtype}, @var{func})
-This macro has been deprecated.  Use @code{TARGET_FUNCTION_VALUE} for
-a new target instead.
+ある関数がデータ型 @var{valtype} の値を返す場所を表す
+RTL を作る C の式である。
+@var{valtype} は、あるデータ型を表す木ノードである。
+その型を表すのに使われるマシンモードを得るには 
+@code{TYPE_MODE (@var{valtype})} を使う。
+多くの機種では、そのモードだけが適切である。
+(実際に、ほとんどの機種では、スカラ値は、モードに関わらず同じ場所に
+返される。)@refill
+
+この式の値は、通常、戻り値が格納されるハードレジスタについては
+@code{reg} RTX となる。
+この値は、戻り値が複数の場所に置かれるなら、@code{parallel} RTX でも良い。
+@code{parallel} 形式の説明については、@code{FUNCTION_ARG} を参照のこと。
+
+@code{PROMOTE_FUNCTION_RETURN} が定義されている場合は、
+@var{valtype} がスカラ型なら、@code{PROMOTE_MODE} で指定されているのと
+同じ規則を適用しなければならない。
+
+呼び出される具体的な関数が分かっているのなら、
+@var{func} はその関数を表す木ノード(@code{FUNCTION_DECL})である。
+分かっていない場合は、@var{func} はヌルポインタである。
+このため、特定の関数について、その呼び出し側が全部わかっている場合は、
+戻り値を返すのに異なる規約を使うことが可能になる。@refill
+
+@code{FUNCTION_VALUE} は集合型のデータ型の戻り値には使われない。
+これらはまた別の方法で返されるからである。
+以下の、@code{STRUCT_VALUE_REGNUM} と関連マクロを参照のこと。
+@end defmac
+
+@defmac FUNCTION_OUTGOING_VALUE (@var{valtype}, @var{func})
+ターゲット機種に「レジスタ・ウィンドウ」があるため、
+ある関数がその値を返すのに入れるレジスタが、呼び出し側がその値を
+見つけるレジスタと同じでない場合は、このマクロを定義する。
+
+そういう機種では、@code{FUNCTION_VALUE} が、
+呼び出し側がその値を見いだすレジスタを計算する。
+@code{FUNCTION_OUTGOING_VALUE} は、同様な形式で定義し、
+その関数に値をどこに置くかを知らせるようにすべきである。@refill
+
+@code{FUNCTION_OUTGOING_VALUE} が定義されていない場合は、
+@code{FUNCTION_VALUE} が両方の目的を果たす。@refill
+
+@code{FUNCTION_OUTGOING_VALUE} は集合型のデータ型の戻り値には使われない。
+これらはまた別の方法で返されるからである。
+以下の、@code{STRUCT_VALUE_REGNUM} と関連マクロを参照のこと。
 @end defmac
 
 @defmac LIBCALL_VALUE (@var{mode})
-A C expression to create an RTX representing the place where a library
-function returns a value of mode @var{mode}.
+あるライブラリ関数がモード@var{mode} の値を返す場所を表す
+RTL を作り出す C の式である。
+呼び出される具体的な関数が分かっているのなら、
+@var{func} はその関数を表す木ノード(@code{FUNCTION_DECL})である。
+分かっていない場合は、@var{func} はヌルポインタである。
+このため、特定の関数について、その呼び出し側が全部わかっている場合は、
+戻り値を返すのに異なる規約を使うことが可能になる。@refill
 
-Note that ``library function'' in this context means a compiler
-support routine, used to perform arithmetic, whose name is known
-specially by the compiler and was not mentioned in the C code being
-compiled.
+ここで言う「ライブラリ関数」とは、コンパイラのサポートルーチンであり、
+算術演算を実行するのに使われることに注意すること。
+ライブラリ関数名は、コンパイラが特別に知っており、コンパイルされる
+C のコードには現れない。
+
+@code{LIBIRARY_VALUE} の定義は、集合データ型については気にする必要はない。
+集合データを返すようなライブラリ関数は一つもないからである。
 @end defmac
-
-@deftypefn {Target Hook} rtx TARGET_LIBCALL_VALUE (machine_mode @var{mode}, const_rtx @var{fun})
-Define this hook if the back-end needs to know the name of the libcall
-function in order to determine where the result should be returned.
-
-The mode of the result is given by @var{mode} and the name of the called
-library function is given by @var{fun}.  The hook should return an RTX
-representing the place where the library function result will be returned.
-
-If this hook is not defined, then LIBCALL_VALUE will be used.
-@end deftypefn
 
 @defmac FUNCTION_VALUE_REGNO_P (@var{regno})
-A C expression that is nonzero if @var{regno} is the number of a hard
-register in which the values of called function may come back.
+@var{regno} が、呼び出された関数の値が戻ってくるハードレジスタの
+番号なら、ゼロでない値となる C の式。
 
-A register whose use for returning values is limited to serving as the
-second of a pair (for a value of type @code{double}, say) need not be
-recognized by this macro.  So for most machines, this definition
-suffices:
+値を戻すのに使われる役割が、レジスタ対(例えば、@code{double}
+型の値用)の二番目に限定されているならレジスタなら、このマクロで認識する
+必要はない。
+このため、ほとんどの機種では、以下の定義で充分である。
 
-@smallexample
+@example
 #define FUNCTION_VALUE_REGNO_P(N) ((N) == 0)
-@end smallexample
+@end example
 
-If the machine has register windows, so that the caller and the called
-function use different registers for the return value, this macro
-should recognize only the caller's register numbers.
-
-This macro has been deprecated.  Use @code{TARGET_FUNCTION_VALUE_REGNO_P}
-for a new target instead.
+レジスタウィンドウを持つ機種で、呼び出し側と被呼び出し側関数が
+戻り値に異なるレジスタを使う場合は、このマクロは呼び出し側の
+レジスタ番号だけを認識すべきである。
 @end defmac
-
-@deftypefn {Target Hook} bool TARGET_FUNCTION_VALUE_REGNO_P (const unsigned int @var{regno})
-A target hook that return @code{true} if @var{regno} is the number of a hard
-register in which the values of called function may come back.
-
-A register whose use for returning values is limited to serving as the
-second of a pair (for a value of type @code{double}, say) need not be
-recognized by this target hook.
-
-If the machine has register windows, so that the caller and the called
-function use different registers for the return value, this target hook
-should recognize only the caller's register numbers.
-
-If this hook is not defined, then FUNCTION_VALUE_REGNO_P will be used.
-@end deftypefn
 
 @defmac APPLY_RESULT_SIZE
-Define this macro if @samp{untyped_call} and @samp{untyped_return}
-need more space than is implied by @code{FUNCTION_VALUE_REGNO_P} for
-saving and restoring an arbitrary return value.
+@samp{untyped_call} と @samp{untyped_return} が、
+任意の戻り値のセーブとリストアについて @code{FUNCTION_VALUE_REGNO_P}
+で暗示されるよりも、多くのスペースを必要とするなら、このマクロを
+定義する。
 @end defmac
-
-@deftypevr {Target Hook} bool TARGET_OMIT_STRUCT_RETURN_REG
-Normally, when a function returns a structure by memory, the address
-is passed as an invisible pointer argument, but the compiler also
-arranges to return the address from the function like it would a normal
-pointer return value.  Define this to true if that behaviour is
-undesirable on your target.
-@end deftypevr
-
-@deftypefn {Target Hook} bool TARGET_RETURN_IN_MSB (const_tree @var{type})
-This hook should return true if values of type @var{type} are returned
-at the most significant end of a register (in other words, if they are
-padded at the least significant end).  You can assume that @var{type}
-is returned in a register; the caller is required to check this.
-
-Note that the register provided by @code{TARGET_FUNCTION_VALUE} must
-be able to hold the complete return value.  For example, if a 1-, 2-
-or 3-byte structure is returned at the most significant end of a
-4-byte register, @code{TARGET_FUNCTION_VALUE} should provide an
-@code{SImode} rtx.
-@end deftypefn
 
 @node Aggregate Return
 @subsection How Large Values Are Returned
